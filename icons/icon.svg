@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect width="1024" height="1024" fill="#0E1A35"></rect>
+  <rect width="1024" height="1024" fill="url(#grain)" opacity="0.06"></rect>
+  <defs>
+    <pattern id="grain" width="3" height="3" patternUnits="userSpaceOnUse">
+      <rect width="3" height="3" fill="#F5EFE4"></rect>
+      <rect x="1" y="1" width="1" height="1" fill="#0E1A35"></rect>
+    </pattern>
+  </defs>
+  <text x="512" y="708" font-family="Fraunces, 'Times New Roman', serif" font-weight="600" font-size="720" text-anchor="middle" fill="#F5EFE4" letter-spacing="-30">G</text>
+  <rect x="384" y="828" width="256" height="6" fill="#B5894A"></rect>
+</svg>

@@ -1,0 +1,60 @@
+{
+  "name": "gsTeam Scoreboard",
+  "short_name": "gsTeam",
+  "description": "GroundStandard internal team scoreboard — gamified scorecard, commissions, approvals.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#0B0E14",
+  "theme_color": "#0B0E14",
+  "categories": ["business", "productivity"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Today (CA)",
+      "short_name": "Today",
+      "description": "Open the CA Today screen",
+      "url": "/?shortcut=ca-today",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Approvals (Admin)",
+      "short_name": "Approvals",
+      "description": "Open the Admin approvals queue",
+      "url": "/?shortcut=admin-approvals",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Commissions (Sales)",
+      "short_name": "Commissions",
+      "description": "Open the Sales commissions calendar",
+      "url": "/?shortcut=sales-commissions",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

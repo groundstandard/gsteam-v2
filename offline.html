@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>gsTeam — No Internet</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#F5EFE4">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: #F5EFE4;
+    color: #0E1A35;
+    display: flex; align-items: center; justify-content: center;
+    padding:
+      max(env(safe-area-inset-top), 24px)
+      max(env(safe-area-inset-right), 24px)
+      max(env(safe-area-inset-bottom), 24px)
+      max(env(safe-area-inset-left), 24px);
+    min-height: 100dvh; min-height: 100vh;
+  }
+  .wrap {
+    width: 100%; max-width: 380px;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+  }
+  .icon-circle {
+    width: 132px; height: 132px; border-radius: 50%;
+    background: rgba(14, 26, 53, 0.08);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 28px;
+    position: relative;
+  }
+  .icon-circle::after {
+    content: ''; position: absolute; inset: 0; border-radius: 50%;
+    border: 1px solid rgba(14, 26, 53, 0.10);
+  }
+  .icon-circle svg { width: 56px; height: 56px; stroke: #0E1A35; }
+  h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 24px; font-weight: 600; color: #0E1A35;
+    margin: 0 0 12px; letter-spacing: -0.4px;
+  }
+  p {
+    font-size: 14.5px; line-height: 1.55; color: #5C6478;
+    margin: 0 0 36px; padding: 0 8px;
+  }
+  .actions { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+  button {
+    width: 100%; padding: 16px; border-radius: 14px;
+    font-family: inherit; font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: opacity 0.15s, transform 0.05s, background 0.15s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    letter-spacing: 0.1px;
+  }
+  button:active { transform: scale(0.985); }
+  .btn-primary {
+    background: #0E1A35; color: #F5EFE4; border: none;
+    box-shadow: 0 4px 12px rgba(14, 26, 53, 0.18);
+  }
+  .btn-primary:hover { background: #1a2a4a; }
+  .btn-secondary {
+    background: transparent; color: #0E1A35; border: 1.5px solid rgba(14, 26, 53, 0.18);
+  }
+  .btn-secondary:hover { background: rgba(14, 26, 53, 0.04); }
+  .footer {
+    font-size: 11px; color: #B5894A;
+    margin-top: 28px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600;
+  }
+  .accent-bar {
+    width: 28px; height: 2px; background: #B5894A;
+    margin: 14px auto 0;
+  }
+  /* Online toast — appears when connection restored */
+  #onlineToast {
+    position: fixed; left: 50%; top: max(env(safe-area-inset-top), 24px);
+    transform: translateX(-50%) translateY(-120%);
+    background: #0E1A35; color: #F5EFE4;
+    padding: 12px 20px; border-radius: 99px;
+    font-size: 13px; font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    transition: transform 0.3s ease;
+    z-index: 100;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  #onlineToast.show { transform: translateX(-50%) translateY(0); }
+  #onlineToast::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%; background: #B5894A;
+  }
+</style>
+</head>
+<body>
+
+<div id="onlineToast">Back online · reloading…</div>
+
+<div class="wrap">
+  <div class="icon-circle">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="1" y1="1" x2="23" y2="23"/>
+      <path d="M16.72 11.06A10.94 10.94 0 0119 12.55"/>
+      <path d="M5 12.55a10.94 10.94 0 015.17-2.39"/>
+      <path d="M10.71 5.05A16 16 0 0122.58 9"/>
+      <path d="M1.42 9a15.91 15.91 0 014.7-2.88"/>
+      <path d="M8.53 16.11a6 6 0 016.95 0"/>
+      <line x1="12" y1="20" x2="12.01" y2="20"/>
+    </svg>
+  </div>
+  <h1>No Internet Connection</h1>
+  <p>Please check your Wi-Fi or mobile data and try again.</p>
+  <div class="actions">
+    <button class="btn-primary" id="refreshBtn" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/>
+        <polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/>
+        <path d="M20.49 15a9 9 0 01-14.85 3.36L1 14"/>
+      </svg>
+      Refresh
+    </button>
+    <button class="btn-secondary" id="closeBtn" type="button">Close App</button>
+  </div>
+  <div class="footer">gsTeam</div>
+  <div class="accent-bar"></div>
+</div>
+
+<script>
+  document.getElementById('refreshBtn').addEventListener('click', function () {
+    if (navigator.onLine) window.location.replace('/');
+    else window.location.reload();
+  });
+
+  document.getElementById('closeBtn').addEventListener('click', function () {
+    window.close();
+    setTimeout(function () { window.location.href = 'about:blank'; }, 100);
+  });
+
+  function onBackOnline() {
+    var toast = document.getElementById('onlineToast');
+    toast.classList.add('show');
+    setTimeout(function () { window.location.replace('/'); }, 800);
+  }
+  window.addEventListener('online', onBackOnline);
+  setInterval(function () {
+    if (!navigator.onLine) return;
+    fetch('/manifest.webmanifest', { method: 'HEAD', cache: 'no-store' })
+      .then(function (r) { if (r && r.ok) onBackOnline(); })
+      .catch(function () {});
+  }, 4000);
+</script>
+</body>
+</html>
