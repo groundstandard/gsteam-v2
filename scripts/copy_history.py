@@ -15,7 +15,9 @@ nothing silently lands broken.
 
 Usage:  python scripts/copy_history.py <old-db-url> <new-db-url> [--commit]
 """
+import re
 import sys
+
 import psycopg
 from psycopg.types.json import Jsonb
 
@@ -92,6 +94,24 @@ def main():
         if COMMIT:
             dst.commit()
             print(f"committed {total} rows, {dropped_refs} references to the removed user nulled")
+
+            # Rows copied with explicit ids do not move the sequence behind them,
+            # so the next insert reuses an id that is already taken and fails.
+            # audit_log is the one that bites: its triggers fire on metrics,
+            # events and check-ins, so every one of those writes would have
+            # failed in the app. Missing this cost a working database for a day.
+            with dst.cursor() as c:
+                c.execute("""
+                    select table_name, column_name, column_default
+                    from information_schema.columns
+                    where table_schema = 'public' and column_default like 'nextval(%'
+                """)
+                for tbl, col, dflt in c.fetchall():
+                    seq = re.search(r"nextval\('([^']+)'", dflt).group(1).replace('public.', '').strip('"')
+                    c.execute(f'select coalesce(max("{col}"), 0) from public."{tbl}"')
+                    c.execute("select setval(%s, %s, true)", (f'public."{seq}"', max(c.fetchone()[0], 1)))
+                    print(f"  sequence {seq} advanced past the copied rows")
+            dst.commit()
 
             # Foreign keys were not enforced during the copy, so prove they hold now.
             with dst.cursor() as c:

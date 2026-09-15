@@ -41,16 +41,79 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
-const ALLOW_WRITES = process.env.GSTEAM_ALLOW_WRITES === '1';
+// ── Who is running this ───────────────────────────────────────────────────
+//
+// Two ways in, and only one of them belongs on someone else's laptop.
+//
+// **Sign-in (what the three people use).** The anon key — the same public key
+// the website ships — plus that person's own email and password. Postgres then
+// applies exactly the rules it applies in the app: Kurt reaches his own book and
+// no further, Bobby and Mike reach everything, and anyone not on the scoreboard
+// reaches nothing at all. Remove someone in the app and their server stops
+// working the same minute. No shared secret exists to leak or to rotate.
+//
+// **Service role (the maintainer's copy).** Bypasses row level security
+// completely — every table, every row, past every policy. It has to be asked for
+// deliberately with GSTEAM_SERVICE_MODE=1, because the failure it prevents is
+// somebody putting it on three laptops for convenience and quietly handing out
+// full database access to a scoreboard.
+const SUPABASE_URL  = process.env.SUPABASE_URL;
+const ANON_KEY      = process.env.SUPABASE_ANON_KEY;
+const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SERVICE_MODE  = process.env.GSTEAM_SERVICE_MODE === '1';
+const GSTEAM_EMAIL  = (process.env.GSTEAM_EMAIL || '').trim().toLowerCase();
+const GSTEAM_PASSWORD = process.env.GSTEAM_PASSWORD || '';
+const ALLOW_WRITES  = process.env.GSTEAM_ALLOW_WRITES === '1';
 
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error('gsteam-mcp: set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY before starting.');
+if (!SUPABASE_URL) {
+  console.error('gsteam-mcp: SUPABASE_URL is not set.');
   process.exit(1);
 }
 
-const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
+if (SERVICE_MODE) {
+  if (!SERVICE_KEY) {
+    console.error('gsteam-mcp: GSTEAM_SERVICE_MODE=1 needs SUPABASE_SERVICE_ROLE_KEY.');
+    process.exit(1);
+  }
+} else if (!ANON_KEY || !GSTEAM_EMAIL || !GSTEAM_PASSWORD) {
+  console.error(
+    'gsteam-mcp: sign in as yourself — set SUPABASE_ANON_KEY, GSTEAM_EMAIL and GSTEAM_PASSWORD.\n' +
+    '            (Maintainers debugging with the service role: GSTEAM_SERVICE_MODE=1.)');
+  process.exit(1);
+}
+
+const sb = SERVICE_MODE
+  ? createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } })
+  : createClient(SUPABASE_URL, ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: true },
+    });
+
+// Who the session belongs to. Filled by signIn() before any tool runs, so a
+// write is stamped with the person Postgres actually authenticated — not with an
+// address typed into a config file.
+let ME = null;
+
+export async function signIn() {
+  if (SERVICE_MODE) return;
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: GSTEAM_EMAIL,
+    password: GSTEAM_PASSWORD,
+  });
+  if (error) {
+    throw new Error(
+      `could not sign in as ${GSTEAM_EMAIL}: ${error.message}. ` +
+      `Check GSTEAM_EMAIL and GSTEAM_PASSWORD, or reset the password in the app.`);
+  }
+  const { data: profile, error: perr } = await sb
+    .from('profiles').select('id, email, display_name, role').eq('id', data.user.id).maybeSingle();
+  if (perr) throw new Error(`signed in, but could not read your profile: ${perr.message}`);
+  if (!profile) {
+    throw new Error(
+      `${GSTEAM_EMAIL} has a login but no profile on this scoreboard, so it can read nothing. ` +
+      `Ask Bobby to add you in the app under More → Roster.`);
+  }
+  ME = profile;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -133,19 +196,22 @@ function weekStartOf(v) {
 // The service role has no logged-in user behind it, so a write would otherwise
 // land with nobody's name on it. Passing who asked keeps the audit trail true:
 // this is Kurt asking through an agent, and the row should say Kurt.
+// Who a write belongs to. Signed in, it is the authenticated user and cannot be
+// anyone else. In service mode there is no user behind the connection at all, so
+// an address may be named — and if it matches nobody, the write says so rather
+// than landing with a blank owner nobody notices for a month.
 const _actorCache = new Map();
 async function resolveActor(email) {
+  if (ME) return { actor: ME, note: '' };
+
   const wanted = (email || process.env.GSTEAM_ACTOR_EMAIL || '').trim().toLowerCase();
-  if (!wanted) return { actor: null, note: '' };
+  if (!wanted) return { actor: null, note: ' Credited to nobody: this is a service-role session with no user behind it.' };
   if (!_actorCache.has(wanted)) {
     const rows = await must(
       sb.from('profiles').select('id, email, display_name').ilike('email', wanted).limit(1), 'profiles');
     _actorCache.set(wanted, rows[0] || null);
   }
   const actor = _actorCache.get(wanted);
-  // An address nobody on the scoreboard owns used to write a blank created_by
-  // without a word about it — which is how a row ends up belonging to nobody and
-  // no one notices for a month. Say it on every write it affects.
   return {
     actor,
     note: actor ? '' : ` Credited to nobody: ${wanted} is not on this scoreboard.`,
@@ -185,6 +251,8 @@ async function upsertRow(table, row) {
 }
 
 // check.js reads this to verify the payloads without a database round trip.
+export function whoAmI() { return ME; }
+
 export function takeDryWrites() {
   return _dryWrites.splice(0, _dryWrites.length);
 }
@@ -381,14 +449,24 @@ const READ_TOOLS = [
       return result(
         known
           ? `Connected to ${known.name} — ${known.app}, Supabase project ${project}. ` +
-            `Writes are ${ALLOW_WRITES ? (DRY_RUN ? 'enabled but in dry run, so nothing is saved' : 'live') : 'disabled'}.`
+            `Writes are ${ALLOW_WRITES ? (DRY_RUN ? 'enabled but in dry run, so nothing is saved' : 'live') : 'disabled'}. ` +
+            (ME
+              ? `Signed in as ${ME.display_name || ME.email} (${ME.role}); this session can only do what they can do in the app.`
+              : SERVICE_MODE
+                ? 'Running with the service role, which bypasses row level security entirely.'
+                : 'NOT signed in — no user behind this session, so almost nothing is readable.')
           : `Connected to Supabase project ${project}, which is not one of the two scoreboards this server knows about. ` +
             `Check SUPABASE_URL before trusting anything it says.`,
         {
           supabaseProject: project,
           app: known?.app || null,
           writes: ALLOW_WRITES ? (DRY_RUN ? 'dry-run' : 'live') : 'disabled',
-          creditWritesTo: process.env.GSTEAM_ACTOR_EMAIL || null,
+          signedInAs: ME ? { email: ME.email, role: ME.role, name: ME.display_name } : null,
+          access: ME
+            ? `signed in — Postgres limits this session to what ${ME.display_name || ME.email} can do in the app`
+            : SERVICE_MODE
+              ? 'service role — row level security does not apply to this session'
+              : 'not signed in — call signIn() first, or nothing here will be readable',
           clientsOnRecord: count ?? null,
           people: profiles.map(p => p.email),
         });
@@ -1044,6 +1122,9 @@ export function buildServer() {
     '  itself lives in the app\'s source; only the colour and the note are stored.',
     '• A lead\'s source is one of facebook, google, website, phone, referral, walk_in, other.',
     '',
+    ME
+      ? `You are acting as ${ME.display_name || ME.email} (${ME.role}). The database enforces that — a client outside their book simply will not be there, and a refused write is the rules working, not a bug.`
+      : 'This is a maintenance session with no user behind it. Writes land with no owner.',
     ALLOW_WRITES
       ? 'Writes are enabled. Say plainly what you wrote and to which client. Do not guess a client — if a name is ambiguous, ask which one. Numbers go in as given; do not round or estimate.'
       : 'This connection is read-only. Writes are disabled.',
@@ -1070,8 +1151,18 @@ export function buildServer() {
 
 // Only start a transport when run directly — check.js imports buildServer.
 if (process.argv[1] && process.argv[1].endsWith('server.js')) {
+  // Sign in before accepting a single request. A server that connects and then
+  // fails every call is harder to diagnose than one that refuses to start.
+  try {
+    await signIn();
+  } catch (err) {
+    console.error(`gsteam-mcp: ${err.message}`);
+    process.exit(1);
+  }
   const server = buildServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`gsteam-mcp ready — ${TOOLS.length} tools, writes ${ALLOW_WRITES ? 'on' : 'off'}`);
+  console.error(
+    `gsteam-mcp ready — ${TOOLS.length} tools, writes ${ALLOW_WRITES ? 'on' : 'off'}, ` +
+    (ME ? `signed in as ${ME.email} (${ME.role})` : 'service role, no user'));
 }

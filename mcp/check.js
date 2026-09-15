@@ -6,15 +6,29 @@
 // column named wrong — without firing the audit and retention-notification
 // triggers on someone's real client.
 //
-// Run:  GSTEAM_ALLOW_WRITES=1 GSTEAM_DRY_RUN=1 node check.js
-// Needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the environment.
+// Run as the maintainer, which is the only way to see every table:
+//   GSTEAM_SERVICE_MODE=1 GSTEAM_ALLOW_WRITES=1 GSTEAM_DRY_RUN=1 node check.js
+// Needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.
+//
+// It also runs signed in as a person (GSTEAM_EMAIL + GSTEAM_PASSWORD + the anon
+// key), which is how the three people actually run it. Expect fewer rows then —
+// that is row level security doing its job, not a failure.
+//
+// For what each person is allowed to do, see scripts/check_access.py, which asks
+// Postgres directly rather than inferring it from what the tools return.
 
 import { createClient } from '@supabase/supabase-js';
-import { TOOLS, READ_TOOLS, WRITE_TOOLS, takeDryWrites, callTool } from './server.js';
+import { TOOLS, READ_TOOLS, WRITE_TOOLS, takeDryWrites, callTool, signIn, whoAmI } from './server.js';
 
 const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });
+
+await signIn();
+const me = whoAmI();
+console.log(me
+  ? `signed in as ${me.email} (${me.role}) — results are limited to what they can see\n`
+  : 'service-role session — every row is visible\n');
 
 const failures = [];
 const ok = (name, extra) => console.log(`  ok   ${name}${extra ? ' — ' + extra : ''}`);

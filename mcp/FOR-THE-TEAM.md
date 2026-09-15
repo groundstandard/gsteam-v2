@@ -17,8 +17,9 @@ your name on it.
 1. **Claude Desktop** — the app, not the website. https://claude.ai/download
 2. **Node.js** — https://nodejs.org, the LTS button. Click through the installer.
 3. **Git** — https://git-scm.com/download/win
-4. **The service role key** — ask Angelo. It is the password to the whole scoreboard, so it
-   goes in your config file and nowhere else. Not in Slack, not in email.
+4. **Your own scoreboard password.** If you have only ever used the emailed sign-in link, you
+   do not have one yet — go to https://gsteam-v2.vercel.app, click Forgot password, and set one.
+   Nobody else needs to know it, Angelo included.
 
 ## Setting it up
 
@@ -28,15 +29,20 @@ Open PowerShell (Start → type "powershell") and paste these, one line at a tim
 cd ~\Desktop
 git clone https://github.com/groundstandard/gsteam-v2.git
 cd gsteam-v2\mcp
-powershell -ExecutionPolicy Bypass -File setup.ps1 -ServiceKey "PASTE-THE-KEY-HERE" -Email you@groundstandard.com
+powershell -ExecutionPolicy Bypass -File setup.ps1 -Email you@groundstandard.com -Password "your-password"
 ```
 
 Use your own address in that last line — `bobby@`, `kurt@` or `mike@groundstandard.com`. That is
 the name that ends up on everything you log, so it has to be yours.
 
-The script checks everything before it changes anything: that Node is new enough, that the key
-actually opens the scoreboard, and that your address is one of the three on it. If any of that
-fails it tells you which and stops, and your Claude settings are left untouched.
+The script checks everything before it changes anything: that Node is new enough, and that your
+email and password actually sign you in. If either fails it says so and stops, and your Claude
+settings are left untouched.
+
+You are signing in as yourself, not sharing a key. Claude can then do exactly what you can do in
+the app and nothing more — if you are a CA, other people's clients are not merely hidden from
+you, they are not reachable. And if Bobby removes someone from the scoreboard, their Claude
+stops working the same minute.
 
 ## Then — and this part trips everyone up
 

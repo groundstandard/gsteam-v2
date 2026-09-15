@@ -10,9 +10,12 @@
 # written, and the file is backed up first.
 
 param(
-  [Parameter(Mandatory = $true)][string]$ServiceKey,
   [Parameter(Mandatory = $true)][string]$Email,
+  [Parameter(Mandatory = $true)][string]$Password,
   [string]$SupabaseUrl = 'https://obfekzpumitnybxfgnol.supabase.co',
+  # The public key the website already ships. Not a secret, and not enough on its
+  # own — it only says which project; the password says who you are.
+  [string]$AnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZmVrenB1bWl0bnlieGZnbm9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MTQxMDEsImV4cCI6MjEwNDk5MDEwMX0.Oqh3S4XYojDTbU6hyiLBBIqZAJCixsKQfc1h5KFuI44',
   [switch]$ReadOnly,
   [switch]$SkipInstall
 )
@@ -58,20 +61,31 @@ if (-not $SkipInstall) {
   Good 'dependencies installed'
 }
 
-Step 'Testing the connection before touching any config'
+Step 'Signing you in before touching any config'
 $env:SUPABASE_URL = $SupabaseUrl
-$env:SUPABASE_SERVICE_ROLE_KEY = $ServiceKey
-$env:GSTEAM_ACTOR_EMAIL = $Email
+$env:SUPABASE_ANON_KEY = $AnonKey
+$env:GSTEAM_EMAIL = $Email
+$env:GSTEAM_PASSWORD = $Password
+$env:SUPABASE_SERVICE_ROLE_KEY = ''
+$env:GSTEAM_SERVICE_MODE = ''
 $env:GSTEAM_ALLOW_WRITES = if ($ReadOnly) { '0' } else { '1' }
 
 $probe = Join-Path $here 'probe.mjs'
 @'
 const m = await import('./server.js');
-const r = await m.callTool('connection_info', {});
-console.log(r.content[0].text.split('\n')[0]);
-// process.exit() here kills node mid-write and Windows turns that into a libuv
-// assertion instead of the message. Set the code and let it finish.
-if (r.isError) process.exitCode = 1;
+try {
+  await m.signIn();
+} catch (err) {
+  console.log(err.message);
+  process.exitCode = 1;
+}
+if (process.exitCode !== 1) {
+  const r = await m.callTool('connection_info', {});
+  console.log(r.content[0].text.split('\n')[0]);
+  // process.exit() here kills node mid-write and Windows turns that into a
+  // libuv assertion instead of the message. Set the code and let it finish.
+  if (r.isError) process.exitCode = 1;
+}
 '@ | Set-Content -Path $probe -Encoding utf8
 
 try {
@@ -84,37 +98,12 @@ try {
 }
 
 if ($code -ne 0 -or $answer -notmatch 'Connected to') {
-  Bad "could not reach the scoreboard:`n       $answer"
-  Write-Host '       Check the service role key. Nothing has been written to your Claude config.' -ForegroundColor Yellow
+  Bad "could not sign you in:`n       $answer"
+  Write-Host '       Nothing has been written to your Claude config.' -ForegroundColor Yellow
+  Write-Host '       If you have never set a password, use Forgot password at https://gsteam-v2.vercel.app' -ForegroundColor Yellow
   exit 1
 }
 Good $answer
-
-Step 'Checking who you are'
-# Three people can write to this board — Bobby, Kurt and Mike. Every write is
-# stamped with the asker's profile id, so an address that is not one of theirs
-# would land rows credited to nobody. Better to stop here than to find out later
-# from an audit log full of blanks.
-$peopleProbe = Join-Path $here 'people.mjs'
-@'
-const m = await import('./server.js');
-const r = await m.callTool('connection_info', {});
-const body = r.content[0].text.split('\n\n')[1];
-console.log(JSON.parse(body).people.join(','));
-'@ | Set-Content -Path $peopleProbe -Encoding utf8
-try {
-  Push-Location $here
-  $people = (& node people.mjs 2>&1) -split ','
-} finally {
-  Pop-Location
-  Remove-Item $peopleProbe -ErrorAction SilentlyContinue
-}
-if ($people -notcontains $Email.ToLower()) {
-  Bad "$Email is not on the scoreboard. It has: $($people -join ', ')"
-  Write-Host '       Use your own address from that list. Nothing has been written to your Claude config.' -ForegroundColor Yellow
-  exit 1
-}
-Good "$Email is on the scoreboard - writes will be credited to you"
 
 Step 'Writing the Claude Desktop config'
 $cfgPath = Join-Path $env:APPDATA 'Claude\claude_desktop_config.json'
@@ -134,10 +123,11 @@ $entry = [PSCustomObject]@{
   command = 'node'
   args    = @((Join-Path $here 'server.js'))
   env     = [PSCustomObject]@{
-    SUPABASE_URL              = $SupabaseUrl
-    SUPABASE_SERVICE_ROLE_KEY = $ServiceKey
-    GSTEAM_ALLOW_WRITES       = $(if ($ReadOnly) { '0' } else { '1' })
-    GSTEAM_ACTOR_EMAIL        = $Email
+    SUPABASE_URL        = $SupabaseUrl
+    SUPABASE_ANON_KEY   = $AnonKey
+    GSTEAM_EMAIL        = $Email
+    GSTEAM_PASSWORD     = $Password
+    GSTEAM_ALLOW_WRITES = $(if ($ReadOnly) { '0' } else { '1' })
   }
 }
 
@@ -162,5 +152,5 @@ if ($ReadOnly) {
   Write-Host "`nWrites are OFF for you — the write tools are not even listed." -ForegroundColor Yellow
 } else {
   Write-Host "`nWrites are ON and they are live. Anything you log shows up on the board for everyone," -ForegroundColor Yellow
-  Write-Host "credited to $Email." -ForegroundColor Yellow
+  Write-Host "under your name - and the database holds you to exactly what you can do in the app." -ForegroundColor Yellow
 }

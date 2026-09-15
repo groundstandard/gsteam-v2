@@ -98,13 +98,26 @@ Scoreboard v2, the Vercel URL and the Supabase project, with 90 clients and thre
 
 ## Environment
 
+Two ways in, and only one belongs on someone else's laptop.
+
+**Signed in — what the three people use.** No secret at all: the anon key is the same public key
+the website ships, and the password is their own.
+
 | | |
 |---|---|
 | `SUPABASE_URL` | Required. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Required. Server-side key — it never reaches a browser, and it must not be committed. |
+| `SUPABASE_ANON_KEY` | The public key. Says which project, nothing about who you are. |
+| `GSTEAM_EMAIL` / `GSTEAM_PASSWORD` | That person's own login. |
 | `GSTEAM_ALLOW_WRITES` | `1` turns the write tools on. Left off, they are not even listed. |
-| `GSTEAM_ACTOR_EMAIL` | Who to credit for writes when the agent does not say. Use the person's own address. |
 | `GSTEAM_DRY_RUN` | `1` reports what each write *would* do and writes nothing. |
+
+**Service role — the maintainer's copy.** Bypasses row level security completely.
+
+| | |
+|---|---|
+| `GSTEAM_SERVICE_MODE` | Must be exactly `1`. It has to be asked for, so it cannot be the accidental default. |
+| `SUPABASE_SERVICE_ROLE_KEY` | The key itself. |
+| `GSTEAM_ACTOR_EMAIL` | Optional. Names a person to credit; an address nobody owns says so on every write. |
 
 ## Two kinds of access, kept apart
 
@@ -118,12 +131,21 @@ default**, switched off only for a deliberate end-to-end check that is then clea
 address that is not on the scoreboard no longer writes a silent blank — every write says
 "Credited to nobody: <address> is not on this scoreboard."
 
-## Who gets the credit
+## Who gets the credit, and who is stopped
 
-The service role has no logged-in user behind it, so a write would otherwise land with nobody's
-name on it and the audit log would read "service role" forever. Every write tool takes a `by`
-email, falls back to `GSTEAM_ACTOR_EMAIL`, and stamps that person's profile id on the row. If
-Kurt asks, the row says Kurt.
+Signed in, the author is the authenticated user and cannot be anyone else — there is no address
+to type and therefore none to mistype or borrow.
+
+More to the point, the limits stop being this server's opinion. Postgres applies the same rules
+it applies in the app: Kurt reaches his own book and no further, Bobby and Mike reach everything,
+and someone with a login but no profile reaches nothing at all. Remove a person in the app and
+their server stops working the same minute — there is no shared key to rotate, because there is
+no shared key.
+
+`scripts/check_access.py` proves it by asking Postgres directly, as each person, inside a
+transaction it rolls back. It found two real holes the first time it ran: the calls board asked
+only whether the caller was logged in rather than whether they were on the scoreboard, and
+signups were open, so anyone at all could get a login. Both are closed.
 
 ## Checking it
 
