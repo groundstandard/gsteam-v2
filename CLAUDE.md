@@ -25,8 +25,15 @@ Roster carried over — 90 clients with tier, sign date, cancellation date and r
 CA and meeting time; the 13 cancel reasons; CA-01; sales_team AM-01; config; 45 calls-board
 rows; the GoHighLevel settings.
 
-Metrics deliberately left behind: monthly_metrics, weekly_metrics, check-ins, growth_events,
-edit_requests, audit_log all sit at zero. That is the brief, not an oversight.
+**Full history copied on 2026-09-15**, on James's instruction: *"dapat lahat nang laman na
+meron sa original... pero yung mga pinapaalis ni Bobby, alisin na."* Every table now matches the
+original row for row — 270 monthly metrics, 197 edit requests, 1,282 audit rows, 21 growth
+events, and the rest. The only removal is Dimitri; two columns that pointed at his profile were
+nulled rather than dropping the rows.
+
+Note this differs from Bobby's own words in the transcript, where the full data lives in the
+*clone* and the new version starts empty. It is one command to clear the metrics again if he
+asks.
 
 Users: bobby (owner) and kurt (ca) copied with their original ids so their magic links keep
 working, mike@groundstandard.com created as admin, dimitri removed. His sales_team row AM-01
@@ -49,6 +56,19 @@ failed sync. CTR and cost per lead are a view, never stored twice.
 5. No MCP server over the scoreboard yet.
 6. Not deployed. No Vercel project, no URL.
 7. The clone of v1 has not been made.
+
+### Copied beyond the tables
+
+- **Realtime**: the `supabase_realtime` publication with its 18 tables. Missing this is silent —
+  the calls board simply stops updating for everyone else. Restored 2026-09-15.
+- **Edge Functions**: `admin-edit-user` and `admin-invite-user`, downloaded from the original
+  with `functions download --use-api` and redeployed to v2. Both only use `SUPABASE_URL` and
+  `SUPABASE_SERVICE_ROLE_KEY`, which Supabase sets automatically, so no secrets to carry across.
+  **`verify_jwt` must be true** — the CLI deploys it false and ignores the flag, so it is set
+  afterwards through the Management API.
+- Storage buckets, cron jobs and vault secrets: none exist on the original, nothing to copy.
+- Still not carried: **auth settings** — redirect URLs, email templates, providers. Those are
+  dashboard configuration and have to be set on v2 before magic links will work on a new URL.
 
 ## Scripts
 
