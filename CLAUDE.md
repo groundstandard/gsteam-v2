@@ -52,7 +52,8 @@ failed sync. CTR and cost per lead are a view, never stored twice.
    and wants the name to say so, and it is otherwise not to be changed.
 3. No GoHighLevel or Facebook sync. Needs API access for both.
 4. No MCP server over the scoreboard yet.
-5. Not deployed. No Vercel project, no URL.
+5. Google sign-in is off. v1 has it on; v2 needs a new client secret from the Google console,
+   which is not retrievable from the old project.
 
 ### Copied beyond the tables
 
@@ -66,6 +67,15 @@ failed sync. CTR and cost per lead are a view, never stored twice.
 - Storage buckets, cron jobs and vault secrets: none exist on the original, nothing to copy.
 - Still not carried: **auth settings** — redirect URLs, email templates, providers. Those are
   dashboard configuration and have to be set on v2 before magic links will work on a new URL.
+
+## Where it lives
+
+| | |
+|---|---|
+| Repo | `groundstandard/gsteam-v2` on GitHub, public, branch `main`. |
+| Deploy | https://gsteam-v2.vercel.app — Vercel team Ground Standard Agency, imported from the repo, so a push to `main` deploys. |
+| Build | `vercel.json` runs `node scripts/build-config.js`, which writes `config.js` from the Vercel env vars. `SUPABASE_URL` and `SUPABASE_ANON_KEY` are set on production, preview and development. |
+| Auth redirects | `site_url` is the Vercel URL; the allow list also keeps `localhost:5180` so local work still logs in. |
 
 ## Scripts
 
