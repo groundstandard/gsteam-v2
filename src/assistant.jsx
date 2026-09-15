@@ -65,11 +65,17 @@ function AssistantLauncher({ theme, profile, isPhone }) {
           aria-label="Ask the assistant"
           className="cabt-btn-press"
           style={{
-            position: 'absolute', right: 18, bottom: 96, zIndex: 120,
+            // Bottom left, the corner every chat launcher lives in. On a phone it
+            // lifts clear of the floating tab pill; on a desktop it sits under the
+            // sidebar where nothing else is competing for the space.
+            position: 'absolute',
+            left: isPhone ? 18 : 20,
+            bottom: isPhone ? 96 : 22,
+            zIndex: 140,
             width: 54, height: 54, borderRadius: 27, border: 'none', cursor: 'pointer',
             background: theme.accent, color: theme.accentInk,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 10px 28px rgba(0,0,0,0.30), 0 2px 6px rgba(0,0,0,0.18)',
+            boxShadow: '0 10px 28px rgba(0,0,0,0.32), 0 2px 6px rgba(0,0,0,0.20)',
             WebkitTapHighlightColor: 'transparent',
           }}
         >
