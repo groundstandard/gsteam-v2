@@ -136,7 +136,161 @@ const DEFAULT_CONFIG = {
   quarterEnd: '2026-06-30',
 };
 
+// ── Reporting fixtures (v2) ─────────────────────────────────────────────────
+// The Leads and Ads sections read tables that no sync fills yet, so against the
+// live database they are honestly empty. Demo mode is where the shape can be
+// shown — to Bobby, to Kurt, to Mike — without a single invented row landing in
+// the client's Supabase.
+//
+// Deterministic on purpose: a seeded generator, not Math.random, so the demo
+// looks the same on every reload and a screenshot keeps matching the screen.
+let _rptSeed = 20260914;
+const rnd = () => {
+  _rptSeed = (_rptSeed * 1103515245 + 12345) & 0x7fffffff;
+  return _rptSeed / 0x7fffffff;
+};
+const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
+const between = (lo, hi) => lo + rnd() * (hi - lo);
+const daysAgoIso = (n) => {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+};
+
+// Four books' worth of advertising — enough for the platform tabs, the campaign
+// and ad set levels, and the at-a-glance comparison to have something to say.
+const RPT_DEMO_CLIENTS = ['C-001', 'C-003', 'C-005', 'C-008'];
+
+function genAdData() {
+  const accounts = [];
+  const campaigns = [];
+  const adSets = [];
+  const metrics = [];
+
+  RPT_DEMO_CLIENTS.forEach((clientId, i) => {
+    ['meta', 'google'].forEach(platform => {
+      const accId = `acct-${platform}-${i}`;
+      accounts.push({
+        id: accId, clientId, platform, accountId: `${platform}-${100000 + i}`,
+        name: `${clientId} ${platform === 'meta' ? 'Meta' : 'Google'} Ads`,
+        currency: 'USD', active: true,
+      });
+
+      const names = platform === 'meta'
+        ? ['Free Trial Class', 'Kids BJJ Interest', 'Adult Fundamentals']
+        : ['Search — Brand', 'Search — BJJ Near Me'];
+
+      names.forEach((name, ci) => {
+        const campId = `${accId}-camp-${ci}`;
+        campaigns.push({
+          id: campId, adAccountId: accId, platformId: `${23800 + ci}${i}`,
+          name, status: ci === 2 ? 'PAUSED' : 'ACTIVE',
+          objective: platform === 'meta' ? 'LEAD_GENERATION' : 'SEARCH',
+        });
+
+        // One campaign in three performs badly on purpose, so the "needs work"
+        // reading is visible rather than theoretical.
+        const poor = ci === 1;
+        for (let day = 0; day < 60; day++) {
+          const spend = Math.round(between(18, 65) * 100) / 100;
+          const impressions = Math.round(between(900, 5200));
+          const clicks = Math.round(impressions * between(poor ? 0.004 : 0.012, poor ? 0.009 : 0.031));
+          const leads = Math.max(0, Math.round(clicks * between(poor ? 0.018 : 0.028, poor ? 0.038 : 0.062)));
+          metrics.push({
+            id: `${campId}-m${day}`, day: daysAgoIso(day), level: 'campaign',
+            refId: campId, clientId, spend, impressions, clicks, leads,
+          });
+        }
+
+        if (platform === 'meta') {
+          ['Lookalike 1%', 'Interest — Martial Arts'].forEach((sName, si) => {
+            const setId = `${campId}-set-${si}`;
+            adSets.push({ id: setId, adCampaignId: campId, platformId: `${6100 + si}${ci}${i}`, name: sName, status: 'ACTIVE' });
+            for (let day = 0; day < 60; day++) {
+              const spend = Math.round(between(8, 34) * 100) / 100;
+              const impressions = Math.round(between(400, 2600));
+              const clicks = Math.round(impressions * between(0.008, 0.028));
+              const leads = Math.max(0, Math.round(clicks * between(0.02, 0.055)));
+              metrics.push({
+                id: `${setId}-m${day}`, day: daysAgoIso(day), level: 'adset',
+                refId: setId, clientId, spend, impressions, clicks, leads,
+              });
+            }
+          });
+        }
+      });
+    });
+  });
+
+  return { accounts, campaigns, adSets, metrics };
+}
+
+// The split Bobby asked for. Weighted so paid social leads the volume and the
+// phone trails it, which is what a gym's book actually looks like.
+const RPT_LEAD_SOURCES = ['facebook', 'facebook', 'facebook', 'google', 'google', 'website', 'website', 'phone', 'referral', 'walk_in'];
+const RPT_FIRST = ['Marco', 'Dani', 'Priya', 'Luis', 'Tess', 'Owen', 'Grace', 'Ivan', 'Nora', 'Sam', 'Ruth', 'Kai'];
+const RPT_LAST  = ['Alvarez', 'Boyd', 'Castillo', 'Dunne', 'Eriksen', 'Fahey', 'Gomez', 'Hart', 'Ibarra', 'Jain'];
+
+function genLeads() {
+  const out = [];
+  for (let i = 0; i < 260; i++) {
+    const clientId = pick(RPT_DEMO_CLIENTS);
+    const source = pick(RPT_LEAD_SOURCES);
+    const age = Math.floor(between(0, 60));
+    const created = new Date();
+    created.setDate(created.getDate() - age);
+    created.setHours(Math.floor(between(8, 20)), Math.floor(between(0, 59)), 0, 0);
+
+    const stamp = (offsetDays) => {
+      const d = new Date(created);
+      d.setDate(d.getDate() + offsetDays);
+      return d > new Date() ? null : d.toISOString();
+    };
+
+    // Funnel, thinning at each step the way a real one does.
+    const booked = rnd() < 0.55;
+    const showed = booked && rnd() < 0.68;
+    const signed = showed && rnd() < 0.42;
+    const lost   = !signed && rnd() < 0.25;
+
+    out.push({
+      id: `lead-${i}`,
+      clientId,
+      client: { id: clientId, name: (SEED_CLIENTS.find(c => c.id === clientId) || {}).name || clientId },
+      source,
+      sourceDetail: source === 'facebook' ? 'Instant Form' : source === 'google' ? 'Search — BJJ Near Me' : null,
+      platform: source === 'facebook' ? 'meta' : source === 'google' ? 'google' : null,
+      firstName: pick(RPT_FIRST),
+      lastName: pick(RPT_LAST),
+      email: null,
+      phone: null,
+      createdAt: created.toISOString(),
+      bookedAt: booked ? stamp(1) : null,
+      showedAt: showed ? stamp(3) : null,
+      signedAt: signed ? stamp(5) : null,
+      lostAt: lost ? stamp(7) : null,
+      lostReason: lost ? pick(['No answer', 'Price', 'Too far', 'Signed elsewhere']) : null,
+      value: signed ? Math.round(between(129, 249)) : null,
+      origin: source === 'walk_in' || source === 'phone' ? 'manual' : 'ghl',
+      confirmedAt: rnd() < 0.15 ? created.toISOString() : null,
+    });
+  }
+  return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+// Sync bookkeeping, including one failure — the case the screens exist to make
+// visible: a number missing because the job died, not because there was nothing.
+function genSyncRuns() {
+  const ago = (hours) => new Date(Date.now() - hours * 3600 * 1000).toISOString();
+  return [
+    { id: 'run-1', source: 'ghl',        status: 'ok',     startedAt: ago(6),  finishedAt: ago(6),  rowsWritten: 41 },
+    { id: 'run-2', source: 'meta',       status: 'ok',     startedAt: ago(7),  finishedAt: ago(7),  rowsWritten: 288 },
+    { id: 'run-3', source: 'google_ads', status: 'failed', startedAt: ago(7),  finishedAt: ago(7),  rowsWritten: 0, error: 'token expired' },
+  ];
+}
+
 function buildSeed() {
+  const adDemo = genAdData();
   return {
     cas: SEED_CAS,
     sales: SEED_SALES,
@@ -148,6 +302,13 @@ function buildSeed() {
     config: DEFAULT_CONFIG,
     pendingClients: SEED_PENDING_CLIENTS,
     pendingSync: [], // offline queue
+    // v2 reporting — demo mode only. Live mode reads the real tables.
+    leads: genLeads(),
+    adAccounts: adDemo.accounts,
+    adCampaigns: adDemo.campaigns,
+    adSets: adDemo.adSets,
+    adMetricsDaily: adDemo.metrics,
+    syncRuns: genSyncRuns(),
   };
 }
 
@@ -179,4 +340,6 @@ Object.assign(window, {
   CABT_saveState: saveState,
   CABT_resetState: resetState,
   CABT_buildSeed: buildSeed,
+  CABT_genLeads: genLeads,
+  CABT_genAdData: genAdData,
 });

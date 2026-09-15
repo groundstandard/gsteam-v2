@@ -699,6 +699,8 @@ function App() {
     return ({
       'home': 'CA Rollup',
       'dashboard': 'CA Rollup',
+      'leads': 'Leads',
+      'ads': 'Ad Management',
       'approvals': 'Approvals',
       'edits': 'Edit Requests',
       'reviews': 'Reviews Inbox',
@@ -750,6 +752,10 @@ function App() {
       // dashboard page"). Approvals moved to its own route + tab.
       case 'home':        return <AdminDashboard state={state} theme={theme} navigate={navigate}/>;
       case 'dashboard':   return <AdminDashboard state={state} theme={theme} navigate={navigate}/>;
+      // New in v2 — Bobby [3:51:14] and Mike [3:56:10]. Separate screens on
+      // purpose: the CA Rollup is left exactly as it was.
+      case 'leads':       return <LeadsSection state={state} theme={theme} navigate={navigate}/>;
+      case 'ads':         return <AdsSection state={state} theme={theme} navigate={navigate}/>;
       case 'approvals':   return <AdminApprovals state={state} theme={theme} navigate={navigate} onApprove={approveAdj} onReject={rejectAdj} onAssignCA={assignCA} onEditDecided={applyEditDecision}/>;
       case 'edits':       return <AdminEditApprovals state={state} theme={theme} onEditDecided={applyEditDecision}/>;
       case 'reviews':     return <AdminReviewsInbox state={state} theme={theme}/>;
@@ -789,7 +795,9 @@ function App() {
   // Tab order — Bobby 2026-05-06:
   //   CA:    Today, Log, CA Rollup, Accounts, Score, Me
   //   Sales: Home, Contract, Commissions, Adjust
-  //   Admin: CA Rollup, Clients, Revenue, Bonuses, Approvals, More
+  //   Admin: CA Rollup, Leads, Ads, Clients, Approvals, More — Mike 2026-09-14:
+  //          "Ad management should be its own tab." Revenue and Bonuses moved
+  //          into More to make room; both are still one tap away.
   const tabs = role === 'CA'
     ? [
         { name: 'home',       icon: 'nav-today',    label: 'Today' },
@@ -808,9 +816,9 @@ function App() {
       ]
     : [
         { name: 'home',      icon: 'chart',        label: 'CA Rollup' },
+        { name: 'leads',     icon: 'nav-today',    label: 'Leads' },
+        { name: 'ads',       icon: 'nav-score',    label: 'Ads' },
         { name: 'clients',   icon: 'nav-accounts', label: 'Clients' },
-        { name: 'revenue',   icon: 'nav-score',    label: 'Revenue' },
-        { name: 'bonus',     icon: 'cash',         label: 'Bonuses' },
         { name: 'approvals', icon: 'shield',       label: 'Approvals' },
         { name: 'more',      icon: 'cog',          label: 'More' },
       ];

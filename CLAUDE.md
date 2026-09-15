@@ -45,14 +45,38 @@ google, website, phone — plus campaign and ad set ids), `ad_accounts`, `ad_cam
 `ad_sets`, `ad_metrics_daily`, and `sync_runs` so a missing number can be told apart from a
 failed sync. CTR and cost per lead are a view, never stored twice.
 
+## The new sections
+
+Built 2026-09-15. `src/reporting.jsx` holds both; they are separate routes beside the CA
+Rollup, which is untouched.
+
+- **Leads** — total, booked, showed, signed over a chosen window, a by-source breakdown
+  (Facebook · Google · website · phone · referral · walk-in), and the lead list. Filters by
+  period, client and source.
+- **Ads** — a tab per platform, Meta split by campaign and by ad set, Google by campaign.
+  Spend, impressions, clicks, CTR, leads, cost per lead, with totals. The "at a glance"
+  column compares each row's cost per lead against the window's own average, which is what
+  Mike asked for. CTR and cost per lead are recomputed from the sums — never averaged from
+  the daily rows, which would be quietly wrong.
+- Both show the last sync and its status, so a missing number can be told apart from a failed
+  job, and both say plainly what they are waiting on instead of drawing zeros.
+
+Admin tab bar is now CA Rollup · Leads · Ads · Clients · Approvals · More. Revenue Ledger and
+Annual Bonus moved into More; nothing was removed.
+
+**Seeing it with numbers in it.** Live, the tables are empty until a sync exists. Demo mode has
+full fixtures — 260 leads, 20 campaigns, 24 ad sets, 2,640 daily rows, one deliberately failing
+sync. In the browser console: `localStorage.setItem('cabt_api_v1_mode','local')` then reload;
+`'supabase'` to go back. `npm run check` verifies those fixtures and the aggregation in node.
+
 ## What is not done
 
-1. No Leads section and no Ads section yet. That is the actual feature work — see SPEC §6.
-2. The existing dashboard still calls itself the dashboard. Bobby now calls it the CA rollup
-   and wants the name to say so, and it is otherwise not to be changed.
-3. No GoHighLevel or Facebook sync. Needs API access for both.
-4. No MCP server over the scoreboard yet.
-5. Google sign-in is off. v1 has it on; v2 needs a new client secret from the Google console,
+1. No GoHighLevel or Facebook sync. Needs API access for both. Until then the live screens are
+   empty by design.
+2. No MCP server over the scoreboard yet.
+3. Only Admin reaches Leads and Ads. Kurt is a CA, and Bobby expects Kurt to confirm lead data
+   — so either the CA tab bar gains Leads or Kurt's role changes. Open question for Bobby.
+4. Google sign-in is off. v1 has it on; v2 needs a new client secret from the Google console,
    which is not retrievable from the old project.
 
 ### Copied beyond the tables
