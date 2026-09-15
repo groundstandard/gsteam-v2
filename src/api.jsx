@@ -534,6 +534,43 @@ const CABT_api = {
     return { ok: true };
   },
 
+  // ── The assistant (v2) ───────────────────────────────────────────────────
+  // One thread, shared by everyone on the scoreboard. Reading it is an ordinary
+  // query under the caller's own session; asking it something goes through an
+  // edge function, which passes that same session on to the tools so the
+  // database decides what the person is allowed to do.
+  async fetchAssistantThread({ limit = 200 } = {}) {
+    if (CABT_getApiMode() !== 'supabase') return [];
+    const sb = await CABT_sb();
+    const { data, error } = await sb.from('assistant_messages')
+      .select('*').order('created_at', { ascending: true }).limit(limit);
+    if (error) throw error;
+    return toUI(data || []);
+  },
+
+  async askAssistant(message) {
+    if (CABT_getApiMode() !== 'supabase') {
+      throw new Error('The assistant only runs against the live scoreboard.');
+    }
+    const sb = await CABT_sb();
+    const { data: sess } = await sb.auth.getSession();
+    const token = sess?.session?.access_token;
+    if (!token) throw new Error('Your session expired — sign in again.');
+
+    const res = await fetch(`${CABT_SUPABASE_URL}/functions/v1/assistant`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: CABT_SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ message }),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(out.error || `The assistant is unavailable (${res.status}).`);
+    return out;
+  },
+
   // F1.1.3 — paginated audit_log fetch with optional filters.
   async fetchAuditLog({ actorId, tableName, action, fromDate, toDate, limit = 50, offset = 0 } = {}) {
     if (CABT_getApiMode() !== 'supabase') return { rows: [], hasMore: false };

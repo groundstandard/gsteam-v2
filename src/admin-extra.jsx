@@ -1776,6 +1776,7 @@ function AdminMore({ theme, navigate, profile, onSignOut }) {
   const items = [
     { name: 'calls-board', icon: 'nav-accounts', label: 'Weekly Client Calls', desc: 'Live per-account call-status board — click to cycle colors' },
     { name: 'dashboard', icon: 'chart', label: 'CA Rollup', desc: 'Compare every client’s metrics in one sortable table' },
+    { name: 'clients',   icon: 'nav-accounts', label: 'Client Rollup', desc: 'Every client, sortable, with tier and CA' },
     { name: 'revenue',   icon: 'nav-score', label: 'Revenue Ledger', desc: 'Monthly recurring revenue, client by client' },
     { name: 'bonus',     icon: 'cash',  label: 'Annual Bonus',    desc: 'Quarterly pot and payouts' },
     { name: 'edits',     icon: 'edit',  label: 'Edit Requests',   desc: 'Approve protected-field edits past grace' },

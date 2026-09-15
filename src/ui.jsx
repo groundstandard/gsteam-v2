@@ -69,6 +69,8 @@ const Icon = ({ name, size = 18, color = 'currentColor', stroke = 1.7 }) => {
     case 'home':       return <svg {...p}><path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /></svg>;
     case 'book':       return <svg {...p}><path d="M4 4h12a3 3 0 013 3v13H7a3 3 0 01-3-3V4z" /><path d="M4 4v13a3 3 0 003 3h12" /></svg>;
     case 'plus':       return <svg {...p}><path d="M12 5v14M5 12h14" /></svg>;
+    // A speech bubble, drawn in the same line-stroke family as the rest of the set.
+    case 'chat':       return <svg {...p}><path d="M4 5h16a2 2 0 012 2v8a2 2 0 01-2 2H9.5L5.5 20v-3H4a2 2 0 01-2-2V7a2 2 0 012-2z"/><path d="M7 9.5h10M7 12.5h6"/></svg>;
     case 'chart':      return <svg {...p}><path d="M3 21h18" /><path d="M6 17V10M11 17V6M16 17v-9M21 17v-4" /></svg>;
     case 'user':       return <svg {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-7 8-7s8 3 8 7" /></svg>;
     case 'cog':        return <svg {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06A1.65 1.65 0 0015 19.4a1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09c0 .67.39 1.27 1 1.51a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c.24.61.84 1 1.51 1H21a2 2 0 110 4h-.09c-.67 0-1.27.39-1.51 1z"/></svg>;

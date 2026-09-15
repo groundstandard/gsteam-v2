@@ -240,6 +240,9 @@ function genLeads() {
     const created = new Date();
     created.setDate(created.getDate() - age);
     created.setHours(Math.floor(between(8, 20)), Math.floor(between(0, 59)), 0, 0);
+    // A lead generated "today" between 8am and 8pm lands in the future if it is
+    // currently 3am. Pull anything ahead of now back behind it.
+    if (created > new Date()) created.setTime(Date.now() - Math.floor(between(1, 120)) * 60000);
 
     const stamp = (offsetDays) => {
       const d = new Date(created);
