@@ -341,6 +341,41 @@ const WINDOW_PROPS = {
 
 const READ_TOOLS = [
   {
+    name: 'connection_info',
+    description: 'Which scoreboard, which app and which database these tools are connected to, and whether writes are live. Answer "what am I connected to?" with this rather than guessing from the tool names.',
+    inputSchema: { type: 'object', properties: {} },
+    handler: async () => {
+      const project = (SUPABASE_URL.match(/https:\/\/([a-z0-9]+)\.supabase\.co/) || [])[1] || SUPABASE_URL;
+      const KNOWN = {
+        obfekzpumitnybxfgnol: { app: 'https://gsteam-v2.vercel.app', name: 'GS Team Scoreboard v2' },
+        wlaebsifygvnoyridobr: { app: 'https://team.groundstandard.com', name: 'GS Team Scoreboard v1 (the live original)' },
+      };
+      const known = KNOWN[project];
+
+      // Prove it rather than assert it: the counts come from the database this
+      // server is actually talking to, right now.
+      const [{ count }, profiles] = await Promise.all([
+        sb.from('clients').select('id', { count: 'exact', head: true }),
+        must(sb.from('profiles').select('email').order('email'), 'profiles').catch(() => []),
+      ]);
+
+      return result(
+        known
+          ? `Connected to ${known.name} — ${known.app}, Supabase project ${project}. ` +
+            `Writes are ${ALLOW_WRITES ? (DRY_RUN ? 'enabled but in dry run, so nothing is saved' : 'live') : 'disabled'}.`
+          : `Connected to Supabase project ${project}, which is not one of the two scoreboards this server knows about. ` +
+            `Check SUPABASE_URL before trusting anything it says.`,
+        {
+          supabaseProject: project,
+          app: known?.app || null,
+          writes: ALLOW_WRITES ? (DRY_RUN ? 'dry-run' : 'live') : 'disabled',
+          creditWritesTo: process.env.GSTEAM_ACTOR_EMAIL || null,
+          clientsOnRecord: count ?? null,
+          people: profiles.map(p => p.email),
+        });
+    },
+  },
+  {
     name: 'list_clients',
     description: 'The client roster: name, tier, sign date, assigned CA, and cancellation if there is one.',
     inputSchema: {

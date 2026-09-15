@@ -24,6 +24,7 @@ So Kurt says what happened, in a sentence, and the agent writes it to the scoreb
 
 | Tool | What it answers |
 |---|---|
+| `connection_info` | Which scoreboard, which app, which database, and whether writes are live — proved with the live client and people counts. |
 | `list_clients` | The roster — active, cancelled or all, filtered by CA or name. |
 | `get_client` | One client: the roster row, recent monthly metrics, leads by source. |
 | `ca_rollup` | One row per client with the metrics summed over a window — what a book looks like and how it is performing. |
@@ -75,7 +76,12 @@ Then add it to Claude. **Claude Desktop** — `claude_desktop_config.json`
 **Claude Code** — same shape, `claude mcp add gsteam node /path/to/mcp/server.js` then set the
 env vars, or drop the block above into `.mcp.json`.
 
-Restart Claude afterwards. It should list fourteen tools.
+Restart Claude afterwards — a full quit, not just closing the window. On Windows the app keeps
+running in the system tray and the server process with it, so a half-restart leaves the old code
+running and you debug a bug you already fixed.
+
+It should list fifteen tools. Ask it "what are you connected to?" — it should name GS Team
+Scoreboard v2, the Vercel URL and the Supabase project, with 90 clients and three people on it.
 
 ## Environment
 

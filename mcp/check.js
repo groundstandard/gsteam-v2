@@ -51,6 +51,13 @@ const missing = await call('get_client', { client: 'definitely-not-a-client-xyz'
 missing.isError ? ok('unknown client is a clean error', firstLine(missing))
                 : bad('unknown client is a clean error', 'expected an error');
 
+// The first thing anyone should be able to ask: what am I connected to?
+const conn = await call('connection_info', {});
+const connText = conn.content[0].text;
+connText.includes('gsteam-v2.vercel.app')
+  ? ok('connection_info names the app and database', firstLine(conn))
+  : bad('connection_info names the app and database', firstLine(conn));
+
 const rollup = await call('ca_rollup', { days: 400 });
 rollup.isError ? bad('ca_rollup', firstLine(rollup)) : ok('ca_rollup', firstLine(rollup));
 
