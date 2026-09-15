@@ -36,6 +36,10 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { createClient } from '@supabase/supabase-js';
+import fs from 'node:fs';
+import path from 'node:path';
+import vm from 'node:vm';
+import { fileURLToPath } from 'node:url';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
@@ -50,7 +54,15 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: fa
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const iso = (d) => d.toISOString().slice(0, 10);
+// Local calendar date, not UTC. toISOString() would have been the obvious
+// choice and is wrong here: at 1am in Manila it is still the previous day in
+// UTC, so "today" became yesterday, and a Monday week-start became Sunday. The
+// people using this mean the date on their own wall.
+const iso = (d) => [
+  d.getFullYear(),
+  String(d.getMonth() + 1).padStart(2, '0'),
+  String(d.getDate()).padStart(2, '0'),
+].join('-');
 const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
 
 // Every tool takes the same window, so it is resolved in one place. Defaults to
@@ -168,6 +180,64 @@ async function upsertRow(table, row) {
 // check.js reads this to verify the payloads without a database round trip.
 export function takeDryWrites() {
   return _dryWrites.splice(0, _dryWrites.length);
+}
+
+// The weekly call schedule — which account is called on which day, at what time —
+// lives in the app's source, not the database: `CALLS_GRID` in src/calls-board.jsx.
+// Only the colour and the note are stored in Postgres.
+//
+// Found the hard way. The first version of the calls_board tool claimed to show
+// "which accounts are scheduled when" and returned nothing of the sort, which
+// Claude noticed on the very first real question asked of it. Rather than quietly
+// narrow the description, the schedule is read from the file it actually lives in.
+//
+// The three declarations are plain literals, so they are extracted by matching
+// brackets and evaluated in an empty VM context — no app code runs, and nothing
+// from this process is reachable from inside it.
+const SCHEDULE_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'calls-board.jsx');
+
+function literalAfter(src, name) {
+  // The declarations are column-aligned in that file, so the spacing around the
+  // equals sign varies. Match it loosely rather than assuming one space.
+  const decl = new RegExp('const\\s+' + name + '\\s*=').exec(src);
+  if (!decl) return null;
+  let i = decl.index + decl[0].length;
+  while (i < src.length && /\s/.test(src[i])) i += 1;
+  const open = src[i];
+  const close = open === '[' ? ']' : open === '{' ? '}' : null;
+  if (!close) return null;
+  let depth = 0, inString = null;
+  for (let j = i; j < src.length; j += 1) {
+    const ch = src[j];
+    if (inString) {
+      if (ch === '\\') { j += 1; continue; }
+      if (ch === inString) inString = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') { inString = ch; continue; }
+    if (ch === open) depth += 1;
+    else if (ch === close) {
+      depth -= 1;
+      if (depth === 0) return src.slice(i, j + 1);
+    }
+  }
+  return null;
+}
+
+let _schedule;
+function loadSchedule() {
+  if (_schedule !== undefined) return _schedule;
+  try {
+    const src = fs.readFileSync(SCHEDULE_FILE, 'utf8');
+    const parts = ['CALLS_DAYS', 'CALLS_TIMES', 'CALLS_GRID'].map(n => literalAfter(src, n));
+    if (parts.some(p => !p)) throw new Error('could not find the grid declarations');
+    const [days, times, grid] = parts.map(p => vm.runInNewContext(`(${p})`, Object.create(null), { timeout: 1000 }));
+    _schedule = { days, times, grid };
+  } catch (err) {
+    // Reading the schedule is a convenience; the statuses still work without it.
+    _schedule = { error: err.message };
+  }
+  return _schedule;
 }
 
 // ── Tools ─────────────────────────────────────────────────────────────────
@@ -436,11 +506,70 @@ const READ_TOOLS = [
   },
   {
     name: 'calls_board',
-    description: 'The weekly client calls board — which accounts are scheduled when, and the status of each.',
-    inputSchema: { type: 'object', properties: {} },
-    handler: async () => {
+    description: 'The weekly client calls board: which account is called on which day and at what time, with its current colour and note.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        day: { type: 'string', description: 'One day only — Monday through Friday. Omit for the whole week.' },
+      },
+    },
+    handler: async ({ day } = {}) => {
       const rows = await must(sb.from('call_statuses').select('*'), 'call_statuses');
-      return result(`${rows.length} row${rows.length === 1 ? '' : 's'} on the calls board.`, rows);
+      const status = new Map(rows.map(r => [r.id.toLowerCase(), r]));
+      const sched = loadSchedule();
+
+      if (sched.error) {
+        return result(
+          `${rows.length} accounts have a status, but the schedule could not be read ` +
+          `(${sched.error}). It lives in src/calls-board.jsx, not in the database, so this ` +
+          `server has to sit beside the app to see it.`,
+          rows);
+      }
+
+      const wanted = day
+        ? sched.days.filter(d => d.toLowerCase().startsWith(day.toLowerCase().slice(0, 3)))
+        : sched.days;
+      if (day && !wanted.length) {
+        return failure(`"${day}" is not a day on the board. It runs ${sched.days.join(', ')}.`);
+      }
+
+      const week = [];
+      sched.times.forEach(time => {
+        const cells = sched.grid[time] || [];
+        sched.days.forEach((d, i) => {
+          const account = cells[i];
+          if (!account) return;
+          const s = status.get(account.toLowerCase());
+          week.push({
+            day: d, time, account,
+            status: s ? s.status : 'none',
+            note: s?.note || null,
+            statusUpdatedAt: s?.updated_at || null,
+          });
+        });
+      });
+      // The day filter narrows what is shown, not what counts as scheduled —
+      // otherwise asking for Wednesday would report the whole rest of the week
+      // as accounts with no slot on the board.
+      const calls = week.filter(c => wanted.includes(c.day));
+
+      // The colour is only as good as the last person who touched it — say how
+      // old it is rather than letting a July status read as this week's view.
+      const stamps = calls.map(c => c.statusUpdatedAt).filter(Boolean).sort();
+      const freshest = stamps[stamps.length - 1];
+      const staleness = freshest
+        ? ` The newest status is from ${freshest.slice(0, 10)}.`
+        : '';
+
+      const unscheduled = rows.filter(r =>
+        !week.some(c => c.account.toLowerCase() === r.id.toLowerCase()));
+
+      return result(
+        `${calls.length} call${calls.length === 1 ? '' : 's'} ${day ? `on ${wanted[0]}` : 'this week'}.` +
+        staleness +
+        (unscheduled.length ? ` ${unscheduled.length} account${unscheduled.length === 1 ? ' has' : 's have'} a status but no slot on the board.` : ''),
+        { calls, unscheduled: unscheduled.map(r => ({ account: r.id, status: r.status, note: r.note })) },
+      );
     },
   },
   {

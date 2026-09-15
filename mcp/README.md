@@ -30,7 +30,7 @@ So Kurt says what happened, in a sentence, and the agent writes it to the scoreb
 | `list_leads` | Leads over a window, with source and how far each got. |
 | `leads_by_source` | The Facebook / Google / website / phone split, with the funnel for each. |
 | `ad_performance` | Spend, clicks, CTR, leads and cost per lead by campaign or ad set. |
-| `calls_board` | The weekly client calls board. |
+| `calls_board` | The weekly calls board: which account is called on which day and at what time, with its colour and note. Takes one `day` or the whole week. |
 | `sync_status` | The last runs of each sync, so a missing number can be told from a failed job. |
 
 **Writing** — only with `GSTEAM_ALLOW_WRITES=1`
@@ -105,6 +105,12 @@ client's row.
 
 Last run: 8 read tools and 6 write tools, all passing, against 52 active clients and a
 45-row calls board.
+
+Two things the first real use of it found, both now fixed. `calls_board` promised "which
+accounts are scheduled when" and returned no schedule at all — the grid lives in
+`src/calls-board.jsx`, not in the database, so the server now reads it from there. And every
+date was a day early: `toISOString()` is UTC, and at 1am in Manila that is still yesterday, so
+"today" slipped back a day and a Monday week-start became Sunday.
 
 ## A caution worth keeping
 

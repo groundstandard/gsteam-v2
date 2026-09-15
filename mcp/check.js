@@ -128,10 +128,10 @@ if (sample) {
 
   // The board is keyed by the account name as it appears on it, not by client id.
   const board = await call('calls_board', {});
-  const boardRows = JSON.parse(board.content[0].text.split('\n\n')[1] || '[]');
+  const boardRows = (JSON.parse(board.content[0].text.split('\n\n')[1] || '{}').calls) || [];
   if (boardRows.length) {
     const cs = await call('set_call_status', {
-      account: boardRows[0].id, status: 'watch', note: 'dry run', by: 'kurt@groundstandard.com',
+      account: boardRows[0].account, status: 'watch', note: 'dry run', by: 'kurt@groundstandard.com',
     });
     cs.isError ? bad('set_call_status', firstLine(cs)) : ok('set_call_status', firstLine(cs));
     await checkPayload('set_call_status', takeDryWrites());
