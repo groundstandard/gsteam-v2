@@ -11,7 +11,7 @@ and the new version are two different databases, not one.
 |---|---|---|
 | Live v1 | `wlaebsifygvnoyridobr` | The scoreboard in use today at team.groundstandard.com. Untouched. |
 | **v2** | `obfekzpumitnybxfgnol` | This project. Same schema, roster only, plus the new reporting tables. |
-| Clone | not created yet | Bobby's "save it on the side" — a full copy of v1 with every row, kept as the reference to check incoming GoHighLevel and Facebook numbers against. |
+| Clone | a file, not a project | Bobby's "save it on the side" — taken 2026-09-15 to `Desktop\gsteam-v1-clone\2026-09-15\`. Full copy: schema, all 1,945 rows across 32 tables, auth users, realtime, edge functions. See its README. |
 
 Credentials are in `.env.local`, which is gitignored. The v1 connection is only ever used
 read-only.
@@ -47,15 +47,12 @@ failed sync. CTR and cost per lead are a view, never stored twice.
 
 ## What is not done
 
-1. The app still points at nothing. Needs `.env` with the v2 URL and anon key, then
-   `node scripts/build-config.js`.
-2. No Leads section and no Ads section yet. That is the actual feature work — see SPEC §6.
-3. The existing dashboard still calls itself the dashboard. Bobby now calls it the CA rollup
+1. No Leads section and no Ads section yet. That is the actual feature work — see SPEC §6.
+2. The existing dashboard still calls itself the dashboard. Bobby now calls it the CA rollup
    and wants the name to say so, and it is otherwise not to be changed.
-4. No GoHighLevel or Facebook sync. Needs API access for both.
-5. No MCP server over the scoreboard yet.
-6. Not deployed. No Vercel project, no URL.
-7. The clone of v1 has not been made.
+3. No GoHighLevel or Facebook sync. Needs API access for both.
+4. No MCP server over the scoreboard yet.
+5. Not deployed. No Vercel project, no URL.
 
 ### Copied beyond the tables
 
@@ -80,6 +77,9 @@ credentials.
 | `scripts/dump_schema.py <src> <out.sql>` | Reconstructs the public schema as SQL straight from the Postgres catalog. Read-only. |
 | `scripts/apply_sql.py <db> <file.sql>` | Applies a SQL file statement by statement, retrying until dependency order sorts itself out. |
 | `scripts/copy_roster.py <old> <new> [--commit]` | Copies logins and roster, leaves metrics behind. Dry run by default. |
+| `scripts/copy_history.py <old> <new> [--commit]` | The second pass — metrics, check-ins, growth events, edit requests, invites, audit log. Dry run by default. |
+| `scripts/dump_clone.py <src> <out-dir>` | Takes the full side copy: schema, every row as gzipped CSV, auth, realtime, sequences. Read-only. |
+| `scripts/restore_clone.py <target> <dir> [--commit]` | Puts a dump back on an empty project. Dry run by default. Written, not yet run against a real project. |
 
 ## Things that cost time, so they are written down
 
@@ -95,5 +95,7 @@ credentials.
   exclude generated columns.
 - **A comment-only SQL chunk can hang a naive splitter.** `(--[^\n]*\n?)+` backtracks
   exponentially on a long comment header; check line by line instead.
+- **A CSV row count is not a line count.** A jsonb field can hold a newline; CSV quotes it. Ask
+  Postgres for `count(*)` instead of counting line breaks in the copied stream.
 - **Chain of ownership to respect**: `clients.ae` → `sales_team` → `profiles` → `auth.users`.
   Removing a person means deciding what happens to the records that name them.
