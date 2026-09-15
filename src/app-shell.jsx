@@ -842,9 +842,13 @@ function App() {
       overflow: 'hidden',
     }}>
       {/* The assistant sits over whatever you are reading rather than taking a
-         tab from it. Only for people who are actually on the scoreboard —
-         signed out, there is nobody for it to act as. */}
-      {authedProfile && <AssistantLauncher theme={theme} profile={authedProfile} isPhone={isPhone} />}
+         tab from it. Shown whenever the app is on live data — not gated on the
+         profile alone, because CABT_currentProfile() returns null on a timeout
+         and a slow load would then hide the bubble for the rest of the session
+         with nothing to explain why. */}
+      {(state?._live || authedProfile) && (
+        <AssistantLauncher theme={theme} profile={authedProfile} isPhone={isPhone} />
+      )}
       {/* Top bar — uses env(safe-area-inset-top) so the iPhone status bar /
          Dynamic Island doesn't overlap content in standalone PWA mode. */}
       <div style={{

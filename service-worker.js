@@ -13,7 +13,7 @@
 // re-installs the SW (and re-fetches the SHELL precache) when this string
 // differs from the previously-installed copy.
 
-const VERSION = '1789499818';
+const VERSION = '1789500483';
 const CACHE   = `cabt-${VERSION}`;
 
 // Files known at install time. Other same-origin requests are cached on first hit.
@@ -29,6 +29,7 @@ const SHELL = [
   '/icons/icon-512.png',
   '/icons/icon-maskable-512.png',
   '/supabase.min.js',
+  '/src/formula-explanations.js',
   '/src/tweaks-panel.jsx',
   '/src/ios-frame.jsx',
   '/src/data.jsx',
@@ -44,6 +45,8 @@ const SHELL = [
   '/src/admin-extra.jsx',
   '/src/admin-queues.jsx',
   '/src/calls-board.jsx',
+  '/src/reporting.jsx',
+  '/src/assistant.jsx',
   '/src/auth-gate.jsx',
   '/src/app-shell.jsx',
 ];
