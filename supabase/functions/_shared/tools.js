@@ -816,7 +816,11 @@ export function createTools({
         if (error) return failure(`Could not set the note on ${name}: ${error.message}`);
         return result(
           (note ? `Note on ${name}: "${note}"` : `Cleared the note on ${name}.`) + actorNote,
-          data);
+          // Only what was written. The row still carries the dead `status`
+          // column, and handing that back made the assistant announce that Grit
+          // was "healthy" one sentence after reading 42 off the board — it had
+          // no way to know which of the two numbers in front of it was live.
+          { account: data?.id ?? name, note: data?.note ?? null, updatedAt: data?.updated_at ?? null });
       },
     },
     {
