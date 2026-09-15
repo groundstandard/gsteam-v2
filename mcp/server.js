@@ -886,9 +886,36 @@ export async function callTool(name, args = {}) {
 }
 
 export function buildServer() {
+  // An agent should not have to infer what it is connected to from the tool
+  // names. This says which company, which app, which database, and where the
+  // numbers show up afterwards — and it is generated from the configuration, so
+  // it cannot drift into describing a database the server is not pointed at.
+  const project = (SUPABASE_URL.match(/https:\/\/([a-z0-9]+)\.supabase\.co/) || [])[1] || SUPABASE_URL;
+  const instructions = [
+    'These tools read and write the GS Team Scoreboard — the client-health board Ground',
+    'Standard runs its client associates on. This is the v2 app at https://gsteam-v2.vercel.app,',
+    `backed by the Supabase project ${project}. Anything written here shows up in that app for`,
+    'Kurt, Mike and Bobby, live. It is production data about real paying clients, not a sandbox.',
+    '',
+    'Vocabulary, so the answers match how the team talks:',
+    '• CA — client associate. Each one owns a "book" of clients.',
+    '• The CA Rollup — the dashboard of every client\'s monthly numbers. Bobby\'s name for it.',
+    '• The calls board — the weekly call schedule, coloured by account health. The schedule',
+    '  itself lives in the app\'s source; only the colour and the note are stored.',
+    '• A lead\'s source is one of facebook, google, website, phone, referral, walk_in, other.',
+    '',
+    ALLOW_WRITES
+      ? 'Writes are enabled. Say plainly what you wrote and to which client. Do not guess a client — if a name is ambiguous, ask which one. Numbers go in as given; do not round or estimate.'
+      : 'This connection is read-only. Writes are disabled.',
+    DRY_RUN ? 'DRY RUN: writes are reported but nothing is saved. Say so when you report one.' : null,
+    '',
+    'It cannot create or cancel clients, change pay or bonus figures, or delete anything.',
+    'Those stay in the app, with a person and an approval behind them.',
+  ].filter(l => l !== null).join('\n');
+
   const server = new Server(
     { name: 'gsteam-scoreboard', version: '1.0.0' },
-    { capabilities: { tools: {} } },
+    { capabilities: { tools: {} }, instructions },
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
