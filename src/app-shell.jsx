@@ -680,7 +680,6 @@ function App() {
         'home': 'Today',
         'book': 'Accounts',
         'dashboard': 'CA Rollup',
-        'assistant': 'Assistant',
         'profile': 'Me',
         'client-detail': 'Client',
         'log-metrics': 'Log Metrics',
@@ -700,7 +699,6 @@ function App() {
     return ({
       'home': 'CA Rollup',
       'dashboard': 'CA Rollup',
-      'assistant': 'Assistant',
       'leads': 'Leads',
       'ads': 'Ad Management',
       'approvals': 'Approvals',
@@ -734,7 +732,6 @@ function App() {
         case 'log-checkin': return <LogCheckinForm state={state} ca={ca} theme={theme} presetClientId={route.params.clientId} navigate={navigate} onSubmit={submitCheckin}/>;
         case 'scorecard': return <CAScorecard state={state} ca={ca} theme={theme} viz={t.scorecardViz}/>;
         case 'calls-board': return <CallsBoard state={state} theme={theme} navigate={navigate} isAdmin={isAdminAuth} onSetNote={setCallNote}/>;
-        case 'assistant': return <AssistantChat state={state} theme={theme} profile={authedProfile}/>;
         case 'profile': return <CAProfile state={state} ca={ca} theme={theme} navigate={navigate} profile={authedProfile} onSignOut={signOutHandler}/>;
         default: return null;
       }
@@ -757,7 +754,6 @@ function App() {
       case 'dashboard':   return <AdminDashboard state={state} theme={theme} navigate={navigate}/>;
       // New in v2 — Bobby [3:51:14] and Mike [3:56:10]. Separate screens on
       // purpose: the CA Rollup is left exactly as it was.
-      case 'assistant':   return <AssistantChat state={state} theme={theme} profile={authedProfile}/>;
       case 'leads':       return <LeadsSection state={state} theme={theme} navigate={navigate}/>;
       case 'ads':         return <AdsSection state={state} theme={theme} navigate={navigate}/>;
       case 'approvals':   return <AdminApprovals state={state} theme={theme} navigate={navigate} onApprove={approveAdj} onReject={rejectAdj} onAssignCA={assignCA} onEditDecided={applyEditDecision}/>;
@@ -797,18 +793,18 @@ function App() {
   // share a consistent style — line stroke, optional accent dot — so the
   // bar reads as a single family.
   // Tab order — Bobby 2026-05-06:
-  //   CA:    Today, Log, Ask, Accounts, Score, Me — Ask replaces the CA Rollup
-  //          tab, which is still reachable from Accounts.
+  //   CA:    Today, Log, CA Rollup, Accounts, Score, Me
   //   Sales: Home, Contract, Commissions, Adjust
-  //   Admin: CA Rollup, Leads, Ads, Ask, Approvals, More — Clients moved into
-  //          More to make room; it is one tap away. — Mike 2026-09-14:
+  //   Admin: CA Rollup, Leads, Ads, Clients, Approvals, More
+  // The assistant is not here: it is a bubble in the corner, reachable from every
+  // screen rather than replacing one. — Mike 2026-09-14:
   //          "Ad management should be its own tab." Revenue and Bonuses moved
   //          into More to make room; both are still one tap away.
   const tabs = role === 'CA'
     ? [
         { name: 'home',       icon: 'nav-today',    label: 'Today' },
         { name: 'log-picker', icon: 'nav-log',      label: 'Log', primary: true },
-        { name: 'assistant',  icon: 'chat',         label: 'Ask' },
+        { name: 'dashboard',  icon: 'chart',        label: 'CA Rollup' },
         { name: 'book',       icon: 'nav-accounts', label: 'Accounts' },
         { name: 'scorecard',  icon: 'nav-score',    label: 'Score' },
         { name: 'profile',    icon: 'nav-me',       label: 'Me' },
@@ -824,7 +820,7 @@ function App() {
         { name: 'home',      icon: 'chart',        label: 'CA Rollup' },
         { name: 'leads',     icon: 'nav-today',    label: 'Leads' },
         { name: 'ads',       icon: 'nav-score',    label: 'Ads' },
-        { name: 'assistant', icon: 'chat',         label: 'Ask' },
+        { name: 'clients',   icon: 'nav-accounts', label: 'Clients' },
         { name: 'approvals', icon: 'shield',       label: 'Approvals' },
         { name: 'more',      icon: 'cog',          label: 'More' },
       ];
@@ -845,6 +841,10 @@ function App() {
       fontFamily: theme.sans, fontSize: 14 * t.fontScale,
       overflow: 'hidden',
     }}>
+      {/* The assistant sits over whatever you are reading rather than taking a
+         tab from it. Only for people who are actually on the scoreboard —
+         signed out, there is nobody for it to act as. */}
+      {authedProfile && <AssistantLauncher theme={theme} profile={authedProfile} isPhone={isPhone} />}
       {/* Top bar — uses env(safe-area-inset-top) so the iPhone status bar /
          Dynamic Island doesn't overlap content in standalone PWA mode. */}
       <div style={{
