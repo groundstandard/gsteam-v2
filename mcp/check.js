@@ -69,8 +69,14 @@ missing.isError ? ok('unknown client is a clean error', firstLine(missing))
 const conn = await call('connection_info', {});
 const connText = conn.content[0].text;
 connText.includes('gsteam-v2.vercel.app')
-  ? ok('connection_info names the app and database', firstLine(conn))
-  : bad('connection_info names the app and database', firstLine(conn));
+  ? ok('connection_info names the scoreboard', firstLine(conn))
+  : bad('connection_info names the scoreboard', firstLine(conn));
+
+// The project id is public, but it has no business being printed into every
+// chat transcript when the app name already answers the question.
+connText.includes('supabase.co') || /[a-z]{20}/.test(connText)
+  ? bad('connection_info keeps the project id out of its answer', firstLine(conn))
+  : ok('connection_info keeps the project id out of its answer');
 
 const rollup = await call('ca_rollup', { days: 400 });
 rollup.isError ? bad('ca_rollup', firstLine(rollup)) : ok('ca_rollup', firstLine(rollup));

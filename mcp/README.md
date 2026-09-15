@@ -24,7 +24,7 @@ So Kurt says what happened, in a sentence, and the agent writes it to the scoreb
 
 | Tool | What it answers |
 |---|---|
-| `connection_info` | Which scoreboard, which app, which database, and whether writes are live — proved with the live client and people counts. |
+| `connection_info` | Which scoreboard, which app, who you are signed in as, and whether writes are live — proved with the live client and people counts. Deliberately does not print the Supabase project id. |
 | `list_clients` | The roster — active, cancelled or all, filtered by CA or name. |
 | `get_client` | One client: the roster row, recent monthly metrics, leads by source. |
 | `ca_rollup` | One row per client with the metrics summed over a window — what a book looks like and how it is performing. |

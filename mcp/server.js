@@ -448,17 +448,22 @@ const READ_TOOLS = [
 
       return result(
         known
-          ? `Connected to ${known.name} — ${known.app}, Supabase project ${project}. ` +
+          ? `Connected to ${known.name} — ${known.app}. ` +
             `Writes are ${ALLOW_WRITES ? (DRY_RUN ? 'enabled but in dry run, so nothing is saved' : 'live') : 'disabled'}. ` +
             (ME
               ? `Signed in as ${ME.display_name || ME.email} (${ME.role}); this session can only do what they can do in the app.`
               : SERVICE_MODE
                 ? 'Running with the service role, which bypasses row level security entirely.'
                 : 'NOT signed in — no user behind this session, so almost nothing is readable.')
-          : `Connected to Supabase project ${project}, which is not one of the two scoreboards this server knows about. ` +
-            `Check SUPABASE_URL before trusting anything it says.`,
+          : `Connected to a database this server does not recognise as either scoreboard. ` +
+            `Check SUPABASE_URL in the config before trusting anything it says.`,
         {
-          supabaseProject: project,
+          // The project id is deliberately not here. It is public — it sits in
+          // the website's own config.js — so hiding it protects nothing, but
+          // printing an identifier into every chat transcript is a habit worth
+          // not having. The app name already answers the question this tool
+          // exists for: v1 or v2.
+          scoreboard: known?.name || 'unrecognised',
           app: known?.app || null,
           writes: ALLOW_WRITES ? (DRY_RUN ? 'dry-run' : 'live') : 'disabled',
           signedInAs: ME ? { email: ME.email, role: ME.role, name: ME.display_name } : null,
@@ -1108,12 +1113,11 @@ export function buildServer() {
   // names. This says which company, which app, which database, and where the
   // numbers show up afterwards — and it is generated from the configuration, so
   // it cannot drift into describing a database the server is not pointed at.
-  const project = (SUPABASE_URL.match(/https:\/\/([a-z0-9]+)\.supabase\.co/) || [])[1] || SUPABASE_URL;
   const instructions = [
     'These tools read and write the GS Team Scoreboard — the client-health board Ground',
-    'Standard runs its client associates on. This is the v2 app at https://gsteam-v2.vercel.app,',
-    `backed by the Supabase project ${project}. Anything written here shows up in that app for`,
-    'Kurt, Mike and Bobby, live. It is production data about real paying clients, not a sandbox.',
+    'Standard runs its client associates on. This is the v2 app at https://gsteam-v2.vercel.app.',
+    'Anything written here shows up in that app for Kurt, Mike and Bobby, live. It is production',
+    'data about real paying clients, not a sandbox.',
     '',
     'Vocabulary, so the answers match how the team talks:',
     '• CA — client associate. Each one owns a "book" of clients.',
