@@ -2,8 +2,13 @@
 # below is tooling that has no business being served from the app's domain — the
 # repo is public, so nothing secret leaks either way, but migrations and database
 # scripts answering on gsteam-v2.vercel.app is just untidy.
+#
+# scripts/ itself has to stay: vercel.json's build command is scripts/build-config.js,
+# and .vercelignore decides what is uploaded, not just what is served. Only the
+# database tooling inside it is excluded.
 mcp/
-scripts/
+scripts/*.py
+scripts/check-reporting.js
 supabase/
 docs/
 *.md
