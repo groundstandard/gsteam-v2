@@ -1,0 +1,9 @@
+# The deploy is the app: index.html, src/, and the assets around them. Everything
+# below is tooling that has no business being served from the app's domain — the
+# repo is public, so nothing secret leaks either way, but migrations and database
+# scripts answering on gsteam-v2.vercel.app is just untidy.
+mcp/
+scripts/
+supabase/
+docs/
+*.md
