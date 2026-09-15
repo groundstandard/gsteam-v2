@@ -106,6 +106,18 @@ Scoreboard v2, the Vercel URL and the Supabase project, with 90 clients and thre
 | `GSTEAM_ACTOR_EMAIL` | Who to credit for writes when the agent does not say. Use the person's own address. |
 | `GSTEAM_DRY_RUN` | `1` reports what each write *would* do and writes nothing. |
 
+## Two kinds of access, kept apart
+
+The scoreboard has exactly three people on it — Bobby, Kurt and Mike — and that is Bobby's
+call, not a technical limit to work around. Whoever maintains this server is not one of them and
+should not be added to the roster to make testing convenient.
+
+So the maintainer's copy is configured differently: **no `GSTEAM_ACTOR_EMAIL`**, because putting
+one of their addresses there signs their name to your test, and **`GSTEAM_DRY_RUN=1` by
+default**, switched off only for a deliberate end-to-end check that is then cleaned up. An
+address that is not on the scoreboard no longer writes a silent blank — every write says
+"Credited to nobody: <address> is not on this scoreboard."
+
 ## Who gets the credit
 
 The service role has no logged-in user behind it, so a write would otherwise land with nobody's

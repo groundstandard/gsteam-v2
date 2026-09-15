@@ -136,13 +136,20 @@ function weekStartOf(v) {
 const _actorCache = new Map();
 async function resolveActor(email) {
   const wanted = (email || process.env.GSTEAM_ACTOR_EMAIL || '').trim().toLowerCase();
-  if (!wanted) return null;
-  if (_actorCache.has(wanted)) return _actorCache.get(wanted);
-  const rows = await must(
-    sb.from('profiles').select('id, email, display_name').ilike('email', wanted).limit(1), 'profiles');
-  const actor = rows[0] || null;
-  _actorCache.set(wanted, actor);
-  return actor;
+  if (!wanted) return { actor: null, note: '' };
+  if (!_actorCache.has(wanted)) {
+    const rows = await must(
+      sb.from('profiles').select('id, email, display_name').ilike('email', wanted).limit(1), 'profiles');
+    _actorCache.set(wanted, rows[0] || null);
+  }
+  const actor = _actorCache.get(wanted);
+  // An address nobody on the scoreboard owns used to write a blank created_by
+  // without a word about it — which is how a row ends up belonging to nobody and
+  // no one notices for a month. Say it on every write it affects.
+  return {
+    actor,
+    note: actor ? '' : ` Credited to nobody: ${wanted} is not on this scoreboard.`,
+  };
 }
 
 
@@ -758,7 +765,7 @@ const WRITE_TOOLS = [
       if (!c) return failure(`No client matches "${args.client}".`);
       const month = monthStart(args.month);
       if (!month) return failure(`"${args.month}" is not a month I can read. Use YYYY-MM or YYYY-MM-DD.`);
-      const actor = await resolveActor(args.by);
+      const { actor, note: actorNote } = await resolveActor(args.by);
 
       const fields = {
         leads_generated:      args.leadsGenerated,
@@ -788,7 +795,7 @@ const WRITE_TOOLS = [
         const { data, error } = await updateRow('monthly_metrics',
           { ...patch, updated_at: new Date().toISOString(), source: 'mcp' }, existing[0].id);
         if (error) return failure(`Could not update ${c.name} for ${month}: ${error.message}`);
-        return result(`Updated ${c.name} (${c.id}) for ${month}: ${Object.keys(patch).join(', ')}.`, data);
+        return result(`Updated ${c.name} (${c.id}) for ${month}: ${Object.keys(patch).join(', ')}.` + actorNote, data);
       }
 
       if (!c.assigned_ca) return failure(`${c.name} has no assigned CA, and a metrics row needs one.`);
@@ -799,7 +806,7 @@ const WRITE_TOOLS = [
       const { data, error } = await insertRow('monthly_metrics', row);
       if (error) return failure(`Could not log ${c.name} for ${month}: ${error.message}`);
       return result(
-        `Logged ${c.name} (${c.id}) for ${month}${actor ? `, on behalf of ${actor.display_name || actor.email}` : ''}.`,
+        `Logged ${c.name} (${c.id}) for ${month}${actor ? `, on behalf of ${actor.display_name || actor.email}` : ''}.` + actorNote,
         data);
     },
   },
@@ -824,7 +831,7 @@ const WRITE_TOOLS = [
       const c = await findClient(args.client);
       if (!c) return failure(`No client matches "${args.client}".`);
       if (!c.assigned_ca) return failure(`${c.name} has no assigned CA, and a check-in needs one.`);
-      const actor = await resolveActor(args.by);
+      const { actor, note: actorNote } = await resolveActor(args.by);
       const week = weekStartOf(args.weekStart);
 
       const patch = {};
@@ -843,7 +850,7 @@ const WRITE_TOOLS = [
         const { data, error } = await updateRow('weekly_checkins',
           { ...patch, updated_at: new Date().toISOString() }, existing[0].id);
         if (error) return failure(`Could not update the check-in: ${error.message}`);
-        return result(`Updated the week of ${week} for ${c.name}.`, data);
+        return result(`Updated the week of ${week} for ${c.name}.` + actorNote, data);
       }
 
       const { data, error } = await insertRow('weekly_checkins', {
@@ -851,7 +858,7 @@ const WRITE_TOOLS = [
         created_by: actor?.id || null, ...patch,
       });
       if (error) return failure(`Could not record the check-in: ${error.message}`);
-      return result(`Recorded the week of ${week} for ${c.name} (${c.id}).`, data);
+      return result(`Recorded the week of ${week} for ${c.name} (${c.id}).` + actorNote, data);
     },
   },
   {
@@ -876,7 +883,7 @@ const WRITE_TOOLS = [
       const c = await findClient(args.client);
       if (!c) return failure(`No client matches "${args.client}".`);
       if (!c.assigned_ca) return failure(`${c.name} has no assigned CA, and an event needs one.`);
-      const actor = await resolveActor(args.by);
+      const { actor, note: actorNote } = await resolveActor(args.by);
       const when = args.date || iso(new Date());
       const { data, error } = await insertRow('growth_events', {
         id: newId('GE'), client_id: c.id, ca_id: c.assigned_ca,
@@ -887,7 +894,7 @@ const WRITE_TOOLS = [
         logged_by: actor?.display_name || actor?.email || 'mcp',
       });
       if (error) return failure(`Could not log the event: ${error.message}`);
-      return result(`Logged "${args.eventType}" for ${c.name} (${c.id}) on ${when}.`, data);
+      return result(`Logged "${args.eventType}" for ${c.name} (${c.id}) on ${when}.` + actorNote, data);
     },
   },
   {
@@ -911,14 +918,14 @@ const WRITE_TOOLS = [
         return failure(`"${account}" is not on the calls board. It has: ${all.join(', ')}.`);
       }
       const name = onBoard || account;
-      const actor = await resolveActor(by);
+      const { actor, note: actorNote } = await resolveActor(by);
       const { data, error } = await upsertRow('call_statuses', {
         id: name, note: note || null,
         updated_at: new Date().toISOString(), updated_by: actor?.id || null,
       });
       if (error) return failure(`Could not set the note on ${name}: ${error.message}`);
       return result(
-        note ? `Note on ${name}: "${note}"` : `Cleared the note on ${name}.`,
+        (note ? `Note on ${name}: "${note}"` : `Cleared the note on ${name}.`) + actorNote,
         data);
     },
   },
