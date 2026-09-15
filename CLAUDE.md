@@ -73,10 +73,9 @@ sync. In the browser console: `localStorage.setItem('cabt_api_v1_mode','local')`
 
 1. No GoHighLevel or Facebook sync. Needs API access for both. Until then the live screens are
    empty by design.
-2. No MCP server over the scoreboard yet.
-3. Only Admin reaches Leads and Ads. Kurt is a CA, and Bobby expects Kurt to confirm lead data
+2. Only Admin reaches Leads and Ads. Kurt is a CA, and Bobby expects Kurt to confirm lead data
    — so either the CA tab bar gains Leads or Kurt's role changes. Open question for Bobby.
-4. Google sign-in is off. v1 has it on; v2 needs a new client secret from the Google console,
+3. Google sign-in is off. v1 has it on; v2 needs a new client secret from the Google console,
    which is not retrievable from the old project.
 
 ### Copied beyond the tables
@@ -100,6 +99,22 @@ sync. In the browser console: `localStorage.setItem('cabt_api_v1_mode','local')`
 | Deploy | https://gsteam-v2.vercel.app — Vercel team Ground Standard Agency, imported from the repo, so a push to `main` deploys. |
 | Build | `vercel.json` runs `node scripts/build-config.js`, which writes `config.js` from the Vercel env vars. `SUPABASE_URL` and `SUPABASE_ANON_KEY` are set on production, preview and development. |
 | Auth redirects | `site_url` is the Vercel URL; the allow list also keeps `localhost:5180` so local work still logs in. |
+
+## The MCP server
+
+`mcp/` — the scoreboard as tools an agent can call, so Kurt can say what happened in a sentence
+and Claude writes it. Eight read tools (roster, CA rollup, leads, lead source split, ad
+performance, calls board, sync status) and six write tools (monthly metrics, weekly check-in,
+growth event, call status, record and correct a lead). It will not create or cancel clients,
+touch pay, or delete anything.
+
+Writes are off unless `GSTEAM_ALLOW_WRITES=1`, and `GSTEAM_DRY_RUN=1` reports what a write would
+do without doing it. Every write is credited to the person who asked — otherwise the service
+role has no user behind it and the audit log would read "service role" forever.
+
+Setup and the Claude config block are in [mcp/README.md](mcp/README.md). Checked with
+`node check.js`: reads live, writes as a dry run with every column verified against the real
+table, so the audit and retention-notification triggers never fire on a real client's row.
 
 ## Scripts
 

@@ -1,0 +1,16 @@
+{
+  "name": "gsteam-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server over the GS Team Scoreboard — Bobby's agents read and write the board from Claude.",
+  "bin": { "gsteam-mcp": "server.js" },
+  "scripts": {
+    "start": "node server.js",
+    "check": "node check.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@supabase/supabase-js": "^2.116.0"
+  }
+}
