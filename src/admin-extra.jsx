@@ -1775,7 +1775,7 @@ function AdminAuditLog({ state, theme }) {
 function AdminMore({ theme, navigate, profile, onSignOut }) {
   const items = [
     { name: 'calls-board', icon: 'nav-accounts', label: 'Weekly Client Calls', desc: 'Live per-account call-status board — click to cycle colors' },
-    { name: 'dashboard', icon: 'chart', label: 'All-accounts dashboard', desc: 'Compare every client’s metrics in one sortable table' },
+    { name: 'dashboard', icon: 'chart', label: 'CA Rollup', desc: 'Compare every client’s metrics in one sortable table' },
     { name: 'edits',     icon: 'edit',  label: 'Edit Requests',   desc: 'Approve protected-field edits past grace' },
     { name: 'reviews',   icon: 'star',  label: 'Reviews Inbox',   desc: 'Match incoming reviews to clients' },
     { name: 'pending-clients', icon: 'cash', label: 'Pending Clients', desc: 'Approve new Stripe customers' },
@@ -2353,6 +2353,12 @@ function AdminFormulaInspector({ state, theme, navigate }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// AdminDashboard — called the CA Rollup everywhere a user can see it. Bobby,
+// 2026-09-14 [3:52:37]: "This dashboard shouldn't be changed because it serves a
+// purpose... this is the client associate rollup, the CA rollup. Basically this is
+// just like what's my book look like and how is it performing. There's nothing to
+// do with actual reports." The name changed; nothing else about this screen did.
+//
 // AdminDashboard — Bobby 2026-05-05 ("dashboard that I can view that shows
 // me everything for all of the accounts in a clear view... compare booked
 // leads, showed leads, generated leads, monthly recurring revenue... I also
@@ -3139,7 +3145,7 @@ function AdminDashboard({ state, theme, navigate, scopeCa }) {
             Row 4 — custom date inputs (only when period = 'custom') */}
 
         {/* Row 1: title + one-line summary */}
-        <SectionLabel theme={theme}>All-accounts dashboard</SectionLabel>
+        <SectionLabel theme={theme}>CA Rollup</SectionLabel>
         <div style={{
           fontSize: 12, color: theme.inkMuted, marginTop: 4, marginBottom: 12,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',

@@ -679,7 +679,7 @@ function App() {
       return ({
         'home': 'Today',
         'book': 'Accounts',
-        'dashboard': 'Dashboard',
+        'dashboard': 'CA Rollup',
         'profile': 'Me',
         'client-detail': 'Client',
         'log-metrics': 'Log Metrics',
@@ -697,8 +697,8 @@ function App() {
       })[r.name] || 'Sales';
     }
     return ({
-      'home': 'Dashboard',
-      'dashboard': 'Dashboard',
+      'home': 'CA Rollup',
+      'dashboard': 'CA Rollup',
       'approvals': 'Approvals',
       'edits': 'Edit Requests',
       'reviews': 'Reviews Inbox',
@@ -787,14 +787,14 @@ function App() {
   // share a consistent style — line stroke, optional accent dot — so the
   // bar reads as a single family.
   // Tab order — Bobby 2026-05-06:
-  //   CA:    Today, Log, Dashboard, Accounts, Score, Me
+  //   CA:    Today, Log, CA Rollup, Accounts, Score, Me
   //   Sales: Home, Contract, Commissions, Adjust
-  //   Admin: Dashboard, Clients, Revenue, Bonuses, Approvals, More
+  //   Admin: CA Rollup, Clients, Revenue, Bonuses, Approvals, More
   const tabs = role === 'CA'
     ? [
         { name: 'home',       icon: 'nav-today',    label: 'Today' },
         { name: 'log-picker', icon: 'nav-log',      label: 'Log', primary: true },
-        { name: 'dashboard',  icon: 'chart',        label: 'Dashboard' },
+        { name: 'dashboard',  icon: 'chart',        label: 'CA Rollup' },
         { name: 'book',       icon: 'nav-accounts', label: 'Accounts' },
         { name: 'scorecard',  icon: 'nav-score',    label: 'Score' },
         { name: 'profile',    icon: 'nav-me',       label: 'Me' },
@@ -807,7 +807,7 @@ function App() {
         { name: 'log-adjustment', icon: 'edit',      label: 'Adjust' },
       ]
     : [
-        { name: 'home',      icon: 'chart',        label: 'Dashboard' },
+        { name: 'home',      icon: 'chart',        label: 'CA Rollup' },
         { name: 'clients',   icon: 'nav-accounts', label: 'Clients' },
         { name: 'revenue',   icon: 'nav-score',    label: 'Revenue' },
         { name: 'bonus',     icon: 'cash',         label: 'Bonuses' },
