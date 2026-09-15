@@ -124,6 +124,12 @@ function systemPrompt(me: { display_name?: string; email: string; role: string }
     `never estimate, never fill a gap with a plausible figure. Say plainly what you wrote`,
     `and to which client, and if a number looks wrong say so rather than writing it quietly.`,
     ``,
+    `Nothing in this thread happens unless you call a tool for it. Earlier messages where you`,
+    `reported a change are a record of tool calls, not a licence to report one now. Never say`,
+    `a thing is done, logged, noted, cleared or updated unless a tool call in THIS turn came`,
+    `back successful — if you have not called it yet, call it. A false "Done" is worse than`,
+    `any error, because the person stops checking.`,
+    ``,
     `Vocabulary: a CA is a client associate and owns a "book" of clients. The CA Rollup is`,
     `the dashboard of monthly numbers. The calls board is the weekly call schedule, coloured`,
     `by each account's score — that colour is computed, so it cannot be set; only the note`,
@@ -206,19 +212,30 @@ Deno.serve(async (req) => {
 
     const { data: history } = await asUser
       .from('assistant_messages')
-      .select('role, content, author_name')
+      .select('role, content, author_name, tool_calls')
       .order('created_at', { ascending: false })
       .limit(HISTORY);
 
     // Tool rows are the record for people reading the thread, not context for
     // the model — the model gets the tool results inside its own turn.
+    // Each past reply carries what it actually did. Without this the model cannot
+    // tell its own real "Done" from a hallucinated one, and a single false claim
+    // becomes a fact it defends: asked to note an account a second time, it
+    // answered "already set from the last request" about a note that never
+    // existed. The record has to say so.
     const messages: Record<string, unknown>[] = (history ?? [])
       .reverse()
       .filter(m => m.role !== 'tool')
-      .map(m => ({
-        role: m.role === 'user' ? 'user' : 'assistant',
-        content: m.role === 'user' && m.author_name ? `${m.author_name}: ${m.content}` : m.content,
-      }));
+      .map(m => {
+        if (m.role === 'user') {
+          return { role: 'user', content: m.author_name ? `${m.author_name}: ${m.content}` : m.content };
+        }
+        const names = (m.tool_calls ?? []).map((t: any) => t.name);
+        const stamp = names.length
+          ? `\n[tools run: ${names.join(', ')}]`
+          : '\n[no tools were run in this turn - nothing in the scoreboard changed]';
+        return { role: 'assistant', content: m.content + stamp };
+      });
 
     const toolDefs = TOOLS.map((t: any) => ({
       name: t.name, description: t.description, input_schema: t.inputSchema,
@@ -250,6 +267,42 @@ Deno.serve(async (req) => {
       }
       messages.push({ role: 'user', content: results });
       if (said) reply = said;
+    }
+
+    // A claim with no tool call behind it. It has happened: asked to note an
+    // account, it answered "Done" and touched nothing, and the person had no way
+    // to tell from the reply. Rather than police the wording, hand the model its
+    // own transcript and let it either do the thing or take it back.
+    const CLAIMS = /(done|logged|noted|recorded|cleared|updated|added|saved|set)/i;
+    if (!performed.length && CLAIMS.test(reply)) {
+      messages.push({ role: 'assistant', content: reply });
+      messages.push({
+        role: 'user',
+        content: 'System check: you called no tool in that turn, so nothing changed. '
+          + 'Either call the tool that actually performs it now, or correct yourself and say '
+          + 'plainly that it has not been done.',
+      });
+      const second = await askClaude(messages, toolDefs, systemPrompt(me));
+      const uses = (second.content ?? []).filter((c: any) => c.type === 'tool_use');
+      const said = (second.content ?? []).filter((c: any) => c.type === 'text')
+        .map((c: any) => c.text).join('\n').trim();
+
+      if (uses.length) {
+        messages.push({ role: 'assistant', content: second.content });
+        const results = [];
+        for (const use of uses) {
+          const out = await callTool(use.name, use.input ?? {});
+          const rendered = out.content?.[0]?.text ?? '';
+          performed.push({ name: use.name, arguments: use.input, result: rendered.slice(0, 2000) });
+          results.push({ type: 'tool_result', tool_use_id: use.id, content: rendered, is_error: !!out.isError });
+        }
+        messages.push({ role: 'user', content: results });
+        const third = await askClaude(messages, toolDefs, systemPrompt(me));
+        reply = (third.content ?? []).filter((c: any) => c.type === 'text')
+          .map((c: any) => c.text).join('\n').trim() || said || reply;
+      } else if (said) {
+        reply = said;
+      }
     }
 
     if (!reply) reply = 'I ran out of steps before I could answer that. Try asking for one thing at a time.';
