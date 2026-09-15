@@ -354,10 +354,22 @@ const READ_TOOLS = [
 
       // Prove it rather than assert it: the counts come from the database this
       // server is actually talking to, right now.
-      const [{ count }, profiles] = await Promise.all([
+      const [clientCount, profileRows] = await Promise.all([
         sb.from('clients').select('id', { count: 'exact', head: true }),
-        must(sb.from('profiles').select('email').order('email'), 'profiles').catch(() => []),
+        sb.from('profiles').select('email').order('email'),
       ]);
+
+      // "Connected" has to mean it could actually read. Without this the tool
+      // answered cheerfully on a bad key — the URL is right, so the name and the
+      // project id are right, and only the counts come back empty.
+      const reason = clientCount.error?.message || profileRows.error?.message;
+      if (reason) {
+        return failure(
+          `Configured for Supabase project ${project}, but nothing can be read from it: ${reason}. ` +
+          `The URL is right; check SUPABASE_SERVICE_ROLE_KEY.`);
+      }
+      const count = clientCount.count;
+      const profiles = profileRows.data || [];
 
       return result(
         known

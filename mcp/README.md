@@ -50,6 +50,19 @@ stay in the app, with a human and an approval behind them.
 
 ## Setup
 
+For Bobby, Kurt or Mike setting this up on their own machine, hand them
+[FOR-THE-TEAM.md](FOR-THE-TEAM.md) instead of this file — it assumes nothing and ends with one
+command:
+
+    powershell -ExecutionPolicy Bypass -File setup.ps1 -ServiceKey "<key>" -Email you@groundstandard.com
+
+That installs the dependencies, proves the key opens the scoreboard, refuses an address that is
+not one of the three people on it, writes the Claude Desktop config (backing up whatever was
+there and leaving other servers alone), and tells them to quit Claude from the tray rather than
+closing the window.
+
+By hand:
+
     cd mcp
     npm install
 
