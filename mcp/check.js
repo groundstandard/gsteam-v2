@@ -130,13 +130,26 @@ if (sample) {
   const board = await call('calls_board', {});
   const boardRows = (JSON.parse(board.content[0].text.split('\n\n')[1] || '{}').calls) || [];
   if (boardRows.length) {
-    const cs = await call('set_call_status', {
-      account: boardRows[0].account, status: 'watch', note: 'dry run', by: 'kurt@groundstandard.com',
+    const cs = await call('set_call_note', {
+      account: boardRows[0].account, note: 'dry run', by: 'kurt@groundstandard.com',
     });
-    cs.isError ? bad('set_call_status', firstLine(cs)) : ok('set_call_status', firstLine(cs));
-    await checkPayload('set_call_status', takeDryWrites());
+    cs.isError ? bad('set_call_note', firstLine(cs)) : ok('set_call_note', firstLine(cs));
+    await checkPayload('set_call_note', takeDryWrites());
+
+    // An account that is not on the board should be refused, not silently created —
+    // the old set_call_status happily invented rows nothing would ever display.
+    const offBoard = await call('set_call_note', { account: 'Not A Real Account', note: 'x' });
+    offBoard.isError ? ok('a note on an unknown account is refused', firstLine(offBoard))
+                     : bad('a note on an unknown account is refused', 'it went through');
+
+    // The colours must be the ones the app paints, not the dead status column.
+    const scored = boardRows.filter(c => c.health && c.health !== 'no score');
+    scored.length
+      ? ok('the board is coloured by score, like the app',
+           `${scored.length}/${boardRows.length} scored, e.g. ${scored[0].account} ${scored[0].health} (${scored[0].score})`)
+      : bad('the board is coloured by score, like the app', 'nothing scored — the engine did not load');
   } else {
-    bad('set_call_status', 'the calls board is empty, nothing to set');
+    bad('set_call_note', 'the calls board is empty, nothing to set');
   }
 
   // The person who asked must end up on the row, or the audit trail lies.

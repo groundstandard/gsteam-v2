@@ -30,7 +30,7 @@ So Kurt says what happened, in a sentence, and the agent writes it to the scoreb
 | `list_leads` | Leads over a window, with source and how far each got. |
 | `leads_by_source` | The Facebook / Google / website / phone split, with the funnel for each. |
 | `ad_performance` | Spend, clicks, CTR, leads and cost per lead by campaign or ad set. |
-| `calls_board` | The weekly calls board: which account is called on which day and at what time, with its colour and note. Takes one `day` or the whole week. |
+| `calls_board` | The weekly calls board: which account is called on which day and at what time, its health colour, and the note on that call. Takes one `day` or the whole week. |
 | `sync_status` | The last runs of each sync, so a missing number can be told from a failed job. |
 
 **Writing** — only with `GSTEAM_ALLOW_WRITES=1`
@@ -40,7 +40,7 @@ So Kurt says what happened, in a sentence, and the agent writes it to the scoreb
 | `log_monthly_metrics` | A client's month. Re-logging the same month updates that row instead of adding a second. |
 | `log_weekly_checkin` | The week's concern, win, and what each side is doing. |
 | `log_growth_event` | A gear sale, review, referral or seminar. |
-| `set_call_status` | An account's colour on the calls board. |
+| `set_call_note` | The shared note on an account's weekly call. The colour is not settable — see below. |
 | `record_lead` | A lead the automation missed — a phone call, a walk-in. |
 | `update_lead` | Correct a lead's source, or stamp it booked, showed, signed or lost. |
 
@@ -106,11 +106,29 @@ client's row.
 Last run: 8 read tools and 6 write tools, all passing, against 52 active clients and a
 45-row calls board.
 
-Two things the first real use of it found, both now fixed. `calls_board` promised "which
+## The board's colours are computed, not stored
+
+Worth knowing before anyone tries to "set" one. Each cell on the calls board is painted from
+that account's current score — Kurt, 2026-07-28: "auto-color by score" — computed by
+`CABT_clientSubScores` in `src/calc.jsx`. The colour moves when the client's numbers move, and
+nothing else changes it.
+
+The `status` column on `call_statuses` is what the board used *before* that change. Nothing has
+read it since; every row still holds whatever someone set in July. The first version of this
+server reported that column as the account's colour and offered a tool to write it — so it
+would have told Kurt that Grit was healthy while the board showed red, and let him "set" a
+value that changed nothing on screen.
+
+Now the server loads `calc.jsx` and scores the accounts with the same function the app uses —
+one engine, one answer, rather than a second implementation that drifts within a month. The
+only thing settable on that board is the note, which is what `set_call_note` does.
+
+Three things the first real use of it found, all now fixed. `calls_board` promised "which
 accounts are scheduled when" and returned no schedule at all — the grid lives in
 `src/calls-board.jsx`, not in the database, so the server now reads it from there. And every
 date was a day early: `toISOString()` is UTC, and at 1am in Manila that is still yesterday, so
-"today" slipped back a day and a Monday week-start became Sunday.
+"today" slipped back a day and a Monday week-start became Sunday. And the health colours came
+from a column the app stopped reading in July — see above.
 
 ## A caution worth keeping
 

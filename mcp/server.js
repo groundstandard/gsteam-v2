@@ -240,6 +240,97 @@ function loadSchedule() {
   return _schedule;
 }
 
+// The colours on the calls board are not stored anywhere. Each cell is painted
+// from that account's current score — Kurt, 2026-07-28: "auto-color by score" —
+// computed in the browser by CABT_clientSubScores in src/calc.jsx.
+//
+// The `status` column on call_statuses is what the board used before that change,
+// and nothing has read it since; every row still says what someone last set in
+// July. Reporting it as "the account's colour" was wrong twice over: stale, and
+// not the thing on the screen.
+//
+// So the score is computed here with the same function the app uses, loaded from
+// the same file. calc.jsx is plain JavaScript that hangs its exports on `window`,
+// so it runs in a VM with a small shim. One engine, one answer — a second
+// implementation here would drift from the board within a month.
+let _scoring;
+function loadScoring() {
+  if (_scoring !== undefined) return _scoring;
+  try {
+    const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
+    const sandbox = { console, Math, Date, JSON, Number, String, Object, Array, isNaN, parseFloat, parseInt };
+    sandbox.window = sandbox;
+    vm.createContext(sandbox);
+    vm.runInContext(fs.readFileSync(path.join(dir, 'calc.jsx'), 'utf8'), sandbox, { filename: 'calc.jsx' });
+
+    // Board label → fragment of the real client name, so a cell can find its client.
+    const matchSrc = literalAfter(fs.readFileSync(path.join(dir, 'calls-board.jsx'), 'utf8'), 'CALLS_CLIENT_MATCH');
+    // The scoring engine reads camelCase fields; Postgres gives snake_case, and a
+    // few names differ outright (appointments_booked → apptsBooked). Those aliases
+    // are parsed out of api.jsx rather than copied, so they cannot drift.
+    const aliasSrc = literalAfter(fs.readFileSync(path.join(dir, 'api.jsx'), 'utf8'), 'SNAKE_TO_CAMEL_OVERRIDES');
+    if (!matchSrc || !aliasSrc) throw new Error('could not read the label map or the field aliases');
+
+    _scoring = {
+      subScores: sandbox.CABT_clientSubScores,
+      toStatus: sandbox.CABT_scoreToStatus,
+      labelMatch: vm.runInNewContext(`(${matchSrc})`, Object.create(null), { timeout: 1000 }),
+      aliases: vm.runInNewContext(`(${aliasSrc})`, Object.create(null), { timeout: 1000 }),
+    };
+  } catch (err) {
+    _scoring = { error: err.message };
+  }
+  return _scoring;
+}
+
+// Same reshaping the app does on the way out of Postgres.
+function toCamel(row, aliases) {
+  const out = {};
+  for (const [k, v] of Object.entries(row)) {
+    out[aliases[k] || k.replace(/_([a-z])/g, (_, c) => c.toUpperCase())] = v;
+  }
+  return out;
+}
+
+const normName = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+// Returns Map(board label → { client, score, status }) — the same three things
+// the board's own tooltip shows.
+async function scoreByLabel() {
+  const s = loadScoring();
+  if (s.error) return { error: s.error };
+
+  const [clients, monthly, weekly, surveys, config] = await Promise.all([
+    must(sb.from('clients').select('*'), 'clients'),
+    must(sb.from('monthly_metrics').select('*'), 'monthly_metrics'),
+    must(sb.from('weekly_metrics').select('*'), 'weekly_metrics').catch(() => []),
+    must(sb.from('surveys').select('*'), 'surveys').catch(() => []),
+    sb.from('config').select('values').eq('id', 1).maybeSingle().then(r => r.data?.values || {}, () => ({})),
+  ]);
+
+  const c = clients.map(r => toCamel(r, s.aliases));
+  const mm = monthly.map(r => toCamel(r, s.aliases));
+  const wm = weekly.map(r => toCamel(r, s.aliases));
+  const sv = surveys.map(r => toCamel(r, s.aliases));
+
+  const byLabel = new Map();
+  for (const [label, fragment] of Object.entries(s.labelMatch)) {
+    const frag = normName(fragment);
+    const client = c.find(x => normName(x.name).includes(frag));
+    if (!client) continue;
+    const sub = s.subScores(client, mm, sv, config, new Date(), wm);
+    byLabel.set(label, {
+      client: { id: client.id, name: client.name },
+      score: sub.composite,
+      status: s.toStatus(sub.composite),
+    });
+  }
+  return { byLabel };
+}
+
+// The board paints green / yellow / red; the words on the screen are these.
+const SCORE_WORD = { green: 'on track', yellow: 'watch', red: 'at risk' };
+
 // ── Tools ─────────────────────────────────────────────────────────────────
 
 const WINDOW_PROPS = {
@@ -506,7 +597,7 @@ const READ_TOOLS = [
   },
   {
     name: 'calls_board',
-    description: 'The weekly client calls board: which account is called on which day and at what time, with its current colour and note.',
+    description: "The weekly client calls board: which account is called on which day and at what time, each one's health colour, and any note left for that call. The colour is the account's current score, the same number the board paints with.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -514,16 +605,15 @@ const READ_TOOLS = [
       },
     },
     handler: async ({ day } = {}) => {
-      const rows = await must(sb.from('call_statuses').select('*'), 'call_statuses');
-      const status = new Map(rows.map(r => [r.id.toLowerCase(), r]));
+      const notes = await must(sb.from('call_statuses').select('*'), 'call_statuses');
+      const noteFor = new Map(notes.map(r => [r.id.toLowerCase(), r.note]));
       const sched = loadSchedule();
+      const scored = await scoreByLabel();
 
       if (sched.error) {
-        return result(
-          `${rows.length} accounts have a status, but the schedule could not be read ` +
-          `(${sched.error}). It lives in src/calls-board.jsx, not in the database, so this ` +
-          `server has to sit beside the app to see it.`,
-          rows);
+        return failure(
+          `The schedule could not be read (${sched.error}). It lives in src/calls-board.jsx, ` +
+          `not in the database, so this server has to sit beside the app to see it.`);
       }
 
       const wanted = day
@@ -539,37 +629,31 @@ const READ_TOOLS = [
         sched.days.forEach((d, i) => {
           const account = cells[i];
           if (!account) return;
-          const s = status.get(account.toLowerCase());
+          const s = scored.byLabel?.get(account);
           week.push({
             day: d, time, account,
-            status: s ? s.status : 'none',
-            note: s?.note || null,
-            statusUpdatedAt: s?.updated_at || null,
+            client: s?.client.name || null,
+            health: s ? SCORE_WORD[s.status] : 'no score',
+            score: s?.score != null ? Math.round(s.score * 100) : null,
+            note: noteFor.get(account.toLowerCase()) || null,
           });
         });
       });
-      // The day filter narrows what is shown, not what counts as scheduled —
-      // otherwise asking for Wednesday would report the whole rest of the week
-      // as accounts with no slot on the board.
+
+      // The day filter narrows what is shown, not what counts as scheduled.
       const calls = week.filter(c => wanted.includes(c.day));
+      const attention = calls.filter(c => c.health === 'at risk' || c.health === 'watch');
 
-      // The colour is only as good as the last person who touched it — say how
-      // old it is rather than letting a July status read as this week's view.
-      const stamps = calls.map(c => c.statusUpdatedAt).filter(Boolean).sort();
-      const freshest = stamps[stamps.length - 1];
-      const staleness = freshest
-        ? ` The newest status is from ${freshest.slice(0, 10)}.`
-        : '';
+      const headline = scored.error
+        ? `${calls.length} call${calls.length === 1 ? '' : 's'} ${day ? `on ${wanted[0]}` : 'this week'}, ` +
+          `but the health colours could not be computed (${scored.error}), so only the schedule and notes are below.`
+        : `${calls.length} call${calls.length === 1 ? '' : 's'} ${day ? `on ${wanted[0]}` : 'this week'}. ` +
+          (attention.length
+            ? `${attention.length} need${attention.length === 1 ? 's' : ''} attention: ` +
+              attention.map(c => `${c.account} (${c.health})`).join(', ') + '.'
+            : 'All on track.');
 
-      const unscheduled = rows.filter(r =>
-        !week.some(c => c.account.toLowerCase() === r.id.toLowerCase()));
-
-      return result(
-        `${calls.length} call${calls.length === 1 ? '' : 's'} ${day ? `on ${wanted[0]}` : 'this week'}.` +
-        staleness +
-        (unscheduled.length ? ` ${unscheduled.length} account${unscheduled.length === 1 ? ' has' : 's have'} a status but no slot on the board.` : ''),
-        { calls, unscheduled: unscheduled.map(r => ({ account: r.id, status: r.status, note: r.note })) },
-      );
+      return result(headline, { calls });
     },
   },
   {
@@ -760,32 +844,34 @@ const WRITE_TOOLS = [
     },
   },
   {
-    name: 'set_call_status',
-    description: 'Set an account colour on the weekly client calls board, with an optional note.',
+    name: 'set_call_note',
+    description: "Leave or replace the shared note on an account's weekly call. Everyone on the board sees it live. The colour beside it is not settable — it is computed from that account's score, so it moves when the numbers do.",
     inputSchema: {
       type: 'object',
       properties: {
-        account: { type: 'string', description: 'The name as it appears on the board, e.g. Modernman.' },
-        status:  { type: 'string', enum: ['none', 'healthy', 'watch', 'at_risk', 'escalated'] },
-        note:    { type: 'string' },
+        account: { type: 'string', description: 'The name as it appears on the board, e.g. Fresno.' },
+        note:    { type: 'string', description: 'The note. Pass an empty string to clear it.' },
         by:      { type: 'string', description: 'Email of the person asking.' },
       },
-      required: ['account', 'status'],
+      required: ['account', 'note'],
     },
-    handler: async ({ account, status, note, by }) => {
+    handler: async ({ account, note, by }) => {
+      const sched = loadSchedule();
+      const onBoard = !sched.error && Object.values(sched.grid)
+        .flat().filter(Boolean).find(a => a.toLowerCase() === account.toLowerCase());
+      if (!sched.error && !onBoard) {
+        const all = Object.values(sched.grid).flat().filter(Boolean).sort();
+        return failure(`"${account}" is not on the calls board. It has: ${all.join(', ')}.`);
+      }
+      const name = onBoard || account;
       const actor = await resolveActor(by);
-      const existing = await must(
-        sb.from('call_statuses').select('id').ilike('id', account).limit(1), 'call_statuses');
-      const known = existing.length > 0;
-      const id = known ? existing[0].id : account;
       const { data, error } = await upsertRow('call_statuses', {
-        id, status, note: note ?? null,
+        id: name, note: note || null,
         updated_at: new Date().toISOString(), updated_by: actor?.id || null,
       });
-      if (error) return failure(`Could not set ${account}: ${error.message}`);
+      if (error) return failure(`Could not set the note on ${name}: ${error.message}`);
       return result(
-        `${id} is now ${status}${note ? ` — "${note}"` : ''}.` +
-        (known ? '' : ' That account was not on the board, so it has been added.'),
+        note ? `Note on ${name}: "${note}"` : `Cleared the note on ${name}.`,
         data);
     },
   },
