@@ -9,6 +9,9 @@
 mcp/
 scripts/*.py
 scripts/check-reporting.js
-supabase/
+supabase/*
+!supabase/functions
+supabase/functions/*
+!supabase/functions/_shared
 docs/
 *.md

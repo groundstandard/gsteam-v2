@@ -5,9 +5,13 @@
 // Run:  npm run check
 // Needs @babel/core + @babel/preset-react (devDependencies) because the app
 // ships untranspiled JSX that the browser compiles at load time.
-const babel = require('@babel/core');
-const fs = require('fs');
-const vm = require('vm');
+import babel from '@babel/core';
+import { createRequire } from 'node:module';
+
+// preset-react is resolved by path, and an ES module has no require to do it with.
+const require = createRequire(import.meta.url);
+import fs from 'fs';
+import vm from 'vm';
 
 const store = {};
 const sandbox = {

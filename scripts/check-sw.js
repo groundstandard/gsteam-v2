@@ -8,7 +8,7 @@
 //
 // Run:  node scripts/check-sw.js
 
-const fs = require('fs');
+import fs from 'fs';
 
 const html = fs.readFileSync('index.html', 'utf8');
 const sw = fs.readFileSync('service-worker.js', 'utf8');

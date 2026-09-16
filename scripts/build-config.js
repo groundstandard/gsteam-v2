@@ -9,12 +9,13 @@
 // Run locally:  node scripts/build-config.js
 // On Vercel:    runs automatically via vercel.json buildCommand.
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'node:url';
 
 // Load .env locally (Vercel injects env vars natively, no .env file needed)
 function loadDotEnv() {
-  const envPath = path.join(__dirname, '..', '.env');
+  const envPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '.env');
   if (!fs.existsSync(envPath)) return;
   const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
   for (const raw of lines) {
@@ -63,7 +64,7 @@ window.CABT_CONFIG = {
 };
 `;
 
-const outPath = path.join(__dirname, '..', 'config.js');
+const outPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'config.js');
 fs.writeFileSync(outPath, out, 'utf8');
 console.log('[build-config] ✓ wrote config.js (' + out.length + ' bytes)');
 console.log('[build-config]   SUPABASE_URL:      ' + (SUPABASE_URL ? '✓ set' : '✗ MISSING'));
@@ -81,8 +82,8 @@ console.log('[build-config]   SUPABASE_ANON_KEY: ' + (SUPABASE_ANON_KEY ? '✓ s
 const VERCEL_SHA = process.env.VERCEL_GIT_COMMIT_SHA || '';
 const stamp = VERCEL_SHA ? VERCEL_SHA.slice(0, 12) : String(Math.floor(Date.now() / 1000));
 
-const swPath  = path.join(__dirname, '..', 'service-worker.js');
-const idxPath = path.join(__dirname, '..', 'index.html');
+const swPath  = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'service-worker.js');
+const idxPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'index.html');
 
 try {
   let sw = fs.readFileSync(swPath, 'utf8');

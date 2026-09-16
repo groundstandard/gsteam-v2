@@ -6,5 +6,9 @@
   },
   "scripts": {
     "check": "node scripts/check-reporting.js && node scripts/check-sw.js"
-  }
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0"
+  },
+  "type": "module"
 }
