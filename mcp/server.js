@@ -95,7 +95,10 @@ const sb = SERVICE_MODE
 let ME = null;
 
 export async function signIn() {
-  if (SERVICE_MODE) return;
+  if (SERVICE_MODE) {
+    toolbox();          // fill the exported tool arrays for anything importing them
+    return;
+  }
   const { data, error } = await sb.auth.signInWithPassword({
     email: GSTEAM_EMAIL,
     password: GSTEAM_PASSWORD,
@@ -114,6 +117,7 @@ export async function signIn() {
       `Ask Bobby to add you in the app under More → Roster.`);
   }
   ME = profile;
+  toolbox();            // build the tools now that the session knows whose they are
 }
 
 export function whoAmI() { return ME; }
@@ -231,6 +235,21 @@ function loadScoring() {
 
 const sources = { schedule: loadSchedule, scoring: loadScoring };
 
+const DRY_RUN = process.env.GSTEAM_DRY_RUN === '1';
+
+// The tool list, filled once the session knows who it belongs to. These are real
+// arrays that get filled in place, not reassigned — an importer holds the same
+// object either way.
+//
+// They were Proxies over an empty array for one commit, which looked clever and
+// broke tools/list completely: Array.prototype.map asks whether index 0 exists
+// before reading it, the proxy had no `has` trap, and the empty target answered
+// no. Fifteen tools came back as fifteen nulls, and Claude Desktop refused the
+// whole server.
+export const TOOLS = [];
+export const READ_TOOLS = [];
+export const WRITE_TOOLS = [];
+
 let TOOLBOX = null;
 function toolbox() {
   if (!TOOLBOX) {
@@ -238,22 +257,14 @@ function toolbox() {
       sb, me: ME, allowWrites: ALLOW_WRITES, dryRun: DRY_RUN,
       serviceMode: SERVICE_MODE, supabaseUrl: SUPABASE_URL, sources,
     });
+    TOOLS.push(...TOOLBOX.TOOLS);
+    READ_TOOLS.push(...TOOLBOX.READ_TOOLS);
+    WRITE_TOOLS.push(...TOOLBOX.WRITE_TOOLS);
   }
   return TOOLBOX;
 }
 
-const DRY_RUN = process.env.GSTEAM_DRY_RUN === '1';
-
-export const TOOLS = new Proxy([], {
-  get(_, prop) { return Reflect.get(toolbox().TOOLS, prop); },
-});
 export function takeDryWrites() { return toolbox().takeDryWrites(); }
-export const READ_TOOLS = new Proxy([], {
-  get(_, prop) { return Reflect.get(toolbox().READ_TOOLS, prop); },
-});
-export const WRITE_TOOLS = new Proxy([], {
-  get(_, prop) { return Reflect.get(toolbox().WRITE_TOOLS, prop); },
-});
 
 // ── Wiring ────────────────────────────────────────────────────────────────
 
@@ -302,7 +313,9 @@ export function buildServer() {
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: TOOLS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })),
+    tools: toolbox().TOOLS.map(({ name, description, inputSchema }) => ({
+      name, description, inputSchema,
+    })),
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (req) =>
@@ -325,6 +338,6 @@ if (process.argv[1] && process.argv[1].endsWith('server.js')) {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error(
-    `gsteam-mcp ready — ${TOOLS.length} tools, writes ${ALLOW_WRITES ? 'on' : 'off'}, ` +
+    `gsteam-mcp ready — ${toolbox().TOOLS.length} tools, writes ${ALLOW_WRITES ? 'on' : 'off'}, ` +
     (ME ? `signed in as ${ME.email} (${ME.role})` : 'service role, no user'));
 }

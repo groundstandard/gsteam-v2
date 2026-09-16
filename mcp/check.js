@@ -43,6 +43,15 @@ const firstLine = (res) => res.content[0].text.split('\n')[0];
 
 console.log('reads (live):');
 
+// What tools/list actually puts on the wire. A refactor once turned fifteen
+// tools into fifteen nulls here and nothing else noticed — every tool still
+// worked when called directly, and Claude Desktop refused the whole server.
+const listed = TOOLS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }));
+const broken = listed.filter(t => !t || !t.name || !t.inputSchema);
+broken.length
+  ? bad('tools/list is serialisable', `${broken.length} of ${listed.length} entries are empty`)
+  : ok('tools/list is serialisable', `${listed.length} tools, each with a name and a schema`);
+
 const clients = await call('list_clients', { limit: 5 });
 clients.isError ? bad('list_clients', firstLine(clients)) : ok('list_clients', firstLine(clients));
 
