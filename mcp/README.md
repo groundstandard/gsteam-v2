@@ -48,6 +48,24 @@ So Kurt says what happened, in a sentence, and the agent writes it to the scoreb
 It will **not** create or cancel clients, touch pay or bonus figures, or delete anything. Those
 stay in the app, with a human and an approval behind them.
 
+## Two ways to connect
+
+**Remote — nothing to install.** One URL and one header, the same shape GoHighLevel's own MCP
+uses. Mint a token for the person with `scripts/mint_mcp_token.py`, and they paste:
+
+```json
+{ "mcpServers": { "gsteam": {
+    "url": "https://obfekzpumitnybxfgnol.supabase.co/functions/v1/mcp",
+    "headers": { "Authorization": "Bearer gst_..." } } } }
+```
+
+The token stands in for their session: every request exchanges it for a short-lived access
+token, so Postgres applies the same rules it applies in the app. Only its SHA-256 is stored, so
+a copy of the table lets nobody in, and revoking somebody is deleting one row.
+
+**Local — the rest of this file.** Runs on their machine over stdio. Worth keeping for
+maintenance, since it can run in service mode and read the app's files directly.
+
 ## Setup
 
 For Bobby, Kurt or Mike setting this up on their own machine, hand them
