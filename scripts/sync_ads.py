@@ -78,19 +78,57 @@ def request(url, key=None, method='GET', body=None, prefer=None):
                                      e.read()[:400].decode(errors='replace')))
 
 
+# Each connector names things its own way, and the combined endpoint carries
+# neither ad sets nor lead counts. So: one request per platform, and a translation
+# back to the fields the board stores.
+CONNECTORS = {
+    'facebook': {
+        'fields': ['date', 'account_id', 'account_name', 'campaign', 'campaign_id',
+                   'adset_name', 'adset_id', 'spend', 'impressions', 'clicks',
+                   'actions_lead'],
+        'leads': 'actions_lead',
+    },
+    'google_ads': {
+        'fields': ['date', 'account_id', 'account_name', 'campaign', 'campaign_id',
+                   'spend', 'impressions', 'clicks', 'conversions'],
+        'leads': 'conversions',
+    },
+}
+
+
+# Ad-set detail multiplies the rows, and a 90-day request for it times out on
+# Windsor's side. Ask in chunks; the totals are the same either way.
+CHUNK_DAYS = 21
+
+
 def windsor_rows(api_key, days):
-    """Every paid row Windsor has for the window, one request."""
-    fields = ['date', 'datasource', 'account_id', 'account_name', 'campaign',
-              'campaign_id', 'spend', 'impressions', 'clicks']
-    url = '%s?%s' % (WINDSOR, urllib.parse.urlencode({
-        'api_key': api_key,
-        'date_from': (date.today() - timedelta(days=days)).isoformat(),
-        'date_to': date.today().isoformat(),
-        'fields': ','.join(fields),
-    }))
-    body = request(url)
-    rows = body.get('data') if isinstance(body, dict) else body
-    return [r for r in rows if r.get('datasource') in PLATFORM]
+    """Every paid row Windsor has for the window, per platform, in chunks."""
+    out = []
+    for connector, spec in CONNECTORS.items():
+        got = 0
+        end = date.today()
+        start = end - timedelta(days=days)
+        cursor = start
+        while cursor <= end:
+            stop = min(cursor + timedelta(days=CHUNK_DAYS - 1), end)
+            url = '%s/%s?%s' % (WINDSOR.rsplit('/', 1)[0], connector, urllib.parse.urlencode({
+                'api_key': api_key,
+                'date_from': cursor.isoformat(),
+                'date_to': stop.isoformat(),
+                'fields': ','.join(spec['fields']),
+            }))
+            body = request(url)
+            rows = body.get('data') if isinstance(body, dict) else body
+            for r in rows or []:
+                r['datasource'] = connector
+                # A lead is a lead, whatever the platform calls it.
+                r['leads'] = r.get(spec['leads'])
+                out.append(r)
+            got += len(rows or [])
+            print('  %s %s..%s: %d rows' % (connector, cursor, stop, len(rows or [])))
+            cursor = stop + timedelta(days=1)
+        print('  %s: %d rows total' % (connector, got))
+    return out
 
 
 def number(value):
@@ -154,7 +192,7 @@ def main():
 
     # 2. One row per account per day. Campaign level comes next; the section
     #    reads account level first and this is what makes it stop being empty.
-    daily = defaultdict(lambda: {'spend': 0.0, 'impressions': 0, 'clicks': 0})
+    daily = defaultdict(lambda: {'spend': 0.0, 'impressions': 0, 'clicks': 0, 'leads': 0})
     for r in mine:
         p = owner[str(r['account_id'])]
         platform = PLATFORM[p['datasource']]
@@ -165,10 +203,12 @@ def main():
         d['spend'] += number(r.get('spend'))
         d['impressions'] += int(number(r.get('impressions')))
         d['clicks'] += int(number(r.get('clicks')))
+        d['leads'] += int(number(r.get('leads')))
 
     metrics = [{
         'day': day, 'level': 'account', 'ref_id': ref_id, 'client_id': client_id,
-        'spend': round(v['spend'], 2), 'impressions': v['impressions'], 'clicks': v['clicks'],
+        'spend': round(v['spend'], 2), 'impressions': v['impressions'],
+        'clicks': v['clicks'], 'leads': v['leads'],
     } for (day, ref_id, client_id), v in daily.items()]
 
     # 2b. The same again per campaign. This is the level the board and the tools
@@ -193,7 +233,7 @@ def main():
 
     camp_ref = {(c['ad_account_id'], c['platform_id']): c['id'] for c in saved_c}
 
-    per_campaign = defaultdict(lambda: {'spend': 0.0, 'impressions': 0, 'clicks': 0})
+    per_campaign = defaultdict(lambda: {'spend': 0.0, 'impressions': 0, 'clicks': 0, 'leads': 0})
     for r in mine:
         p = owner[str(r['account_id'])]
         account_ref = ref.get((PLATFORM[p['datasource']], str(r['account_id'])))
@@ -205,11 +245,60 @@ def main():
         d['spend'] += number(r.get('spend'))
         d['impressions'] += int(number(r.get('impressions')))
         d['clicks'] += int(number(r.get('clicks')))
+        d['leads'] += int(number(r.get('leads')))
 
     metrics += [{
         'day': day, 'level': 'campaign', 'ref_id': cid, 'client_id': client_id,
-        'spend': round(v['spend'], 2), 'impressions': v['impressions'], 'clicks': v['clicks'],
+        'spend': round(v['spend'], 2), 'impressions': v['impressions'],
+        'clicks': v['clicks'], 'leads': v['leads'],
     } for (day, cid, client_id), v in per_campaign.items()]
+
+    # 2c. Ad sets. Meta only — Google has no equivalent level, and Bobby asked for
+    #     "by campaign and ad set" for Meta specifically.
+    sets = {}
+    for r in mine:
+        if r.get('datasource') != 'facebook':
+            continue
+        p = owner[str(r['account_id'])]
+        account_ref = ref.get((PLATFORM[p['datasource']], str(r['account_id'])))
+        camp_id = str(r.get('campaign_id') or r.get('campaign') or '').strip()
+        cid = camp_ref.get((account_ref, camp_id))
+        set_id = str(r.get('adset_id') or r.get('adset_name') or '').strip()
+        if not cid or not set_id:
+            continue
+        sets[(cid, set_id)] = r.get('adset_name') or set_id
+
+    rows_s = [{'ad_campaign_id': c, 'platform_id': sid, 'name': name}
+              for (c, sid), name in sets.items()]
+    saved_s = []
+    for i in range(0, len(rows_s), 500):
+        saved_s += request(rest('ad_sets?on_conflict=ad_campaign_id,platform_id'), key, 'POST',
+                           rows_s[i:i + 500], 'resolution=merge-duplicates,return=representation')
+    print('ad_sets written: %d' % len(saved_s))
+
+    set_ref = {(x['ad_campaign_id'], x['platform_id']): x['id'] for x in saved_s}
+
+    per_set = defaultdict(lambda: {'spend': 0.0, 'impressions': 0, 'clicks': 0, 'leads': 0})
+    for r in mine:
+        if r.get('datasource') != 'facebook':
+            continue
+        p = owner[str(r['account_id'])]
+        account_ref = ref.get((PLATFORM[p['datasource']], str(r['account_id'])))
+        cid = camp_ref.get((account_ref, str(r.get('campaign_id') or r.get('campaign') or '').strip()))
+        sid = set_ref.get((cid, str(r.get('adset_id') or r.get('adset_name') or '').strip()))
+        if not sid or not r.get('date'):
+            continue
+        d = per_set[(r['date'][:10], sid, p['client_id'])]
+        d['spend'] += number(r.get('spend'))
+        d['impressions'] += int(number(r.get('impressions')))
+        d['clicks'] += int(number(r.get('clicks')))
+        d['leads'] += int(number(r.get('leads')))
+
+    metrics += [{
+        'day': day, 'level': 'adset', 'ref_id': sid, 'client_id': client_id,
+        'spend': round(v['spend'], 2), 'impressions': v['impressions'],
+        'clicks': v['clicks'], 'leads': v['leads'],
+    } for (day, sid, client_id), v in per_set.items()]
 
     print('daily rows to write: %d' % len(metrics))
     for i in range(0, len(metrics), 500):
