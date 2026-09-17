@@ -35,3 +35,6 @@ Thumbs.db
 .idea/
 .vercel
 .env*
+
+# Working files: pulled account lists, match output. Client data, not source.
+.temp/
