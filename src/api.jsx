@@ -490,19 +490,35 @@ const CABT_api = {
   async fetchAdMetrics({ from, to, clientId, level = 'campaign' } = {}) {
     if (CABT_getApiMode() !== 'supabase') return localAdMetrics({ from, to, clientId, level });
     const sb = await CABT_sb();
-    let q = sb.from('ad_metrics_daily_v').select('*').eq('level', level);
-    if (from)     q = q.gte('day', from);
-    if (to)       q = q.lte('day', to);
-    if (clientId) q = q.eq('client_id', clientId);
-    const [m, acc, camp, sets] = await Promise.all([
-      q,
+    // Supabase stops at 1000 rows and says nothing about it. One day per campaign
+    // passes that inside a month — 1,445 rows for the last 30 days as it stands —
+    // so a single request would quietly drop a third of the spend and the section
+    // would under-report with no sign that anything was missing. Page instead.
+    const PAGE = 1000;
+    const page = async (offset) => {
+      let q = sb.from('ad_metrics_daily_v').select('*').eq('level', level)
+        .order('day', { ascending: true }).range(offset, offset + PAGE - 1);
+      if (from)     q = q.gte('day', from);
+      if (to)       q = q.lte('day', to);
+      if (clientId) q = q.eq('client_id', clientId);
+      return q;
+    };
+
+    const metricRows = [];
+    for (let offset = 0; ; offset += PAGE) {
+      const r = await page(offset);
+      if (r.error) throw r.error;
+      metricRows.push(...(r.data || []));
+      if ((r.data || []).length < PAGE) break;
+    }
+
+    const [acc, camp, sets] = await Promise.all([
       sb.from('ad_accounts').select('*'),
       sb.from('ad_campaigns').select('*'),
       sb.from('ad_sets').select('*'),
     ]);
-    if (m.error) throw m.error;
     return {
-      rows:      toUI(m.data || []),
+      rows:      toUI(metricRows),
       accounts:  toUI(acc.data || []),
       campaigns: toUI(camp.data || []),
       adSets:    toUI(sets.data || []),
