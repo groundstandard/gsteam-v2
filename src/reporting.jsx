@@ -555,8 +555,259 @@ function AdsSection({ state, theme, navigate }) {
   );
 }
 
+
+// == Website ==============================================================
+// Analytics, Search Console and the Google listing read together.
+//
+//   "There should be something for Semrush or Google Analytics, or in that case
+//   maybe certain things are combined, so we don't have the same information
+//   twice." - Bobby [3:56:36]
+//
+// Combined is the point: a visit from Google is one visit whether Analytics or
+// Search Console counted it. What stays apart is what the visitor did - a tap on
+// "call" or "directions" from the listing is a person heading for the door, and
+// folding that into pageviews would bury it.
+
+function WebSection({ state, theme, navigate }) {
+  const [period, setPeriod]   = React.useState('30d');
+  const [clientId, setClient] = React.useState('');
+  const [data, setData]       = React.useState(null);
+  const [error, setError]     = React.useState(null);
+
+  const win = rptWindow(period);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setData(null); setError(null);
+    CABT_api.fetchWebMetrics({ from: win.from, to: win.to, clientId: clientId || undefined })
+      .then(function (d) { if (!cancelled) setData(d); })
+      .catch(function (e) { if (!cancelled) { setData({ rows: [], sources: [] }); setError(e.message || String(e)); } });
+    return function () { cancelled = true; };
+  }, [period, clientId]);
+
+  const clientOptions = [{ v: '', label: 'All clients' }].concat(
+    (state.clients || []).slice()
+      .sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); })
+      .map(function (c) { return { v: c.id, label: c.name || c.id }; })
+  );
+
+  const d = data || { rows: [], sources: [] };
+  const nameOf = function (id) {
+    const found = (state.clients || []).find(function (c) { return c.id === id; });
+    return (found && found.name) || id;
+  };
+
+  const total = d.rows.reduce(function (t, r) {
+    return {
+      sessions: t.sessions + (r.sessions || 0),
+      users: t.users + (r.users || 0),
+      searchClicks: t.searchClicks + (r.searchClicks || 0),
+      searchImpressions: t.searchImpressions + (r.searchImpressions || 0),
+      mapViews: t.mapViews + (r.mapViews || 0),
+      calls: t.calls + (r.listingCalls || 0),
+      directions: t.directions + (r.listingDirections || 0),
+    };
+  }, { sessions: 0, users: 0, searchClicks: 0, searchImpressions: 0, mapViews: 0, calls: 0, directions: 0 });
+
+  // Where everyone came from, not only the ones who filled a form in.
+  const bySource = {};
+  d.sources.forEach(function (r) {
+    const key = r.source + ' / ' + r.medium;
+    const at = bySource[key] || (bySource[key] = { _key: key, source: r.source, medium: r.medium, sessions: 0, conversions: 0 });
+    at.sessions += r.sessions || 0;
+    at.conversions += r.conversions || 0;
+  });
+  const sourceRows = Object.values(bySource).sort(function (a, b) { return b.sessions - a.sessions; });
+  const sourceTotal = sourceRows.reduce(function (t, r) { return t + r.sessions; }, 0);
+
+  const byClient = {};
+  d.rows.forEach(function (r) {
+    const at = byClient[r.clientId] || (byClient[r.clientId] = {
+      _key: r.clientId, clientId: r.clientId, sessions: 0, users: 0,
+      searchClicks: 0, mapViews: 0, calls: 0, directions: 0,
+    });
+    at.sessions += r.sessions || 0;
+    at.users += r.users || 0;
+    at.searchClicks += r.searchClicks || 0;
+    at.mapViews += r.mapViews || 0;
+    at.calls += r.listingCalls || 0;
+    at.directions += r.listingDirections || 0;
+  });
+  const clientRows = Object.values(byClient).sort(function (a, b) { return b.sessions - a.sessions; });
+
+  const share = function (n) { return sourceTotal ? Math.round((n / sourceTotal) * 100) + '%' : '-'; };
+
+  return (
+    <div>
+      <RptControls theme={theme}>
+        <RptSelect theme={theme} value={period} onChange={setPeriod} options={RPT_PERIODS} ariaLabel="Period" />
+        <RptSelect theme={theme} value={clientId} onChange={setClient} options={clientOptions} ariaLabel="Client" />
+        <span style={{ fontSize: 12, color: theme.inkMuted }}>{win.label}</span>
+      </RptControls>
+
+      {error ? <div style={{ fontSize: 12, color: '#C6483C', marginBottom: 10 }}>{error}</div> : null}
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+        <RptStat theme={theme} label="Sessions" value={total.sessions.toLocaleString()} />
+        <RptStat theme={theme} label="People" value={total.users.toLocaleString()} />
+        <RptStat theme={theme} label="From search" value={total.searchClicks.toLocaleString()}
+                 sub={total.searchImpressions ? total.searchImpressions.toLocaleString() + ' impressions' : null} />
+        <RptStat theme={theme} label="Map views" value={total.mapViews.toLocaleString()} />
+        <RptStat theme={theme} label="Calls" value={total.calls.toLocaleString()} sub="from the listing" />
+        <RptStat theme={theme} label="Directions" value={total.directions.toLocaleString()} sub="from the listing" />
+      </div>
+
+      <h3 style={{ fontSize: 13, fontWeight: 700, color: theme.ink, margin: '18px 0 8px' }}>
+        Where they came from
+      </h3>
+      <RptTable
+        theme={theme}
+        columns={[
+          { key: 'source', label: 'Source' },
+          { key: 'medium', label: 'Medium', muted: true },
+          { key: 'sessions', label: 'Sessions', align: 'right', render: function (r) { return r.sessions.toLocaleString(); } },
+          { key: 'share', label: 'Share', align: 'right', render: function (r) { return share(r.sessions); } },
+          { key: 'conversions', label: 'Conversions', align: 'right', render: function (r) { return (r.conversions || 0).toLocaleString(); } },
+        ]}
+        rows={sourceRows}
+        empty={data ? 'Nothing in this window.' : 'Loading...'}
+      />
+
+      <h3 style={{ fontSize: 13, fontWeight: 700, color: theme.ink, margin: '22px 0 8px' }}>
+        By client
+      </h3>
+      <RptTable
+        theme={theme}
+        columns={[
+          { key: 'client', label: 'Client', render: function (r) { return nameOf(r.clientId); } },
+          { key: 'sessions', label: 'Sessions', align: 'right', render: function (r) { return r.sessions.toLocaleString(); } },
+          { key: 'users', label: 'People', align: 'right', render: function (r) { return r.users.toLocaleString(); } },
+          { key: 'searchClicks', label: 'Search', align: 'right', render: function (r) { return r.searchClicks.toLocaleString(); } },
+          { key: 'mapViews', label: 'Map views', align: 'right', render: function (r) { return r.mapViews.toLocaleString(); } },
+          { key: 'calls', label: 'Calls', align: 'right', render: function (r) { return r.calls.toLocaleString(); } },
+          { key: 'directions', label: 'Directions', align: 'right', render: function (r) { return r.directions.toLocaleString(); } },
+        ]}
+        rows={clientRows}
+        empty={data ? 'Nothing in this window.' : 'Loading...'}
+      />
+
+      <p style={{ fontSize: 11, color: theme.inkMuted, marginTop: 12, lineHeight: 1.6 }}>
+        Sessions and search are the same visit counted by two tools, so they are read side by
+        side rather than added. Calls and directions come from the Google listing, where
+        someone acts without ever reaching the website.
+      </p>
+    </div>
+  );
+}
+
+// == Social ===============================================================
+// Per platform, because Bobby asked for "social media" beside the paid numbers
+// and a follower on Instagram is not a follower on Facebook.
+
+function SocialSection({ state, theme, navigate }) {
+  const [period, setPeriod]   = React.useState('30d');
+  const [clientId, setClient] = React.useState('');
+  const [data, setData]       = React.useState(null);
+  const [error, setError]     = React.useState(null);
+
+  const win = rptWindow(period);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setData(null); setError(null);
+    CABT_api.fetchSocialMetrics({ from: win.from, to: win.to, clientId: clientId || undefined })
+      .then(function (d) { if (!cancelled) setData(d); })
+      .catch(function (e) { if (!cancelled) { setData({ rows: [] }); setError(e.message || String(e)); } });
+    return function () { cancelled = true; };
+  }, [period, clientId]);
+
+  const clientOptions = [{ v: '', label: 'All clients' }].concat(
+    (state.clients || []).slice()
+      .sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); })
+      .map(function (c) { return { v: c.id, label: c.name || c.id }; })
+  );
+
+  const rows = (data || { rows: [] }).rows;
+  const nameOf = function (id) {
+    const found = (state.clients || []).find(function (c) { return c.id === id; });
+    return (found && found.name) || id;
+  };
+
+  // Followers is a level, not a total. The newest day in the window is the
+  // number and the oldest is what it grew from; summing daily follower counts
+  // would report a gym of two hundred as a gym of six thousand.
+  const byPair = {};
+  rows.forEach(function (r) {
+    const key = r.clientId + '::' + r.platform;
+    const at = byPair[key] || (byPair[key] = {
+      _key: key, clientId: r.clientId, platform: r.platform,
+      first: null, last: null, reach: 0, impressions: 0, engaged: 0,
+    });
+    at.reach += r.reach || 0;
+    at.impressions += r.impressions || 0;
+    at.engaged += r.engaged || 0;
+    if (!at.first || r.day < at.first.day) at.first = r;
+    if (!at.last || r.day > at.last.day) at.last = r;
+  });
+
+  const pairRows = Object.values(byPair).map(function (p) {
+    const now = p.last ? (p.last.followers || 0) : 0;
+    const then = p.first ? (p.first.followers || 0) : 0;
+    return Object.assign({}, p, { followers: now, growth: now - then });
+  }).sort(function (a, b) { return b.followers - a.followers; });
+
+  const platforms = {};
+  pairRows.forEach(function (r) {
+    const at = platforms[r.platform] || (platforms[r.platform] = { followers: 0, reach: 0, engaged: 0, impressions: 0 });
+    at.followers += r.followers;
+    at.reach += r.reach;
+    at.engaged += r.engaged;
+    at.impressions += r.impressions;
+  });
+  const fb = platforms.facebook || { followers: 0, impressions: 0 };
+  const ig = platforms.instagram || { followers: 0, reach: 0 };
+
+  return (
+    <div>
+      <RptControls theme={theme}>
+        <RptSelect theme={theme} value={period} onChange={setPeriod} options={RPT_PERIODS} ariaLabel="Period" />
+        <RptSelect theme={theme} value={clientId} onChange={setClient} options={clientOptions} ariaLabel="Client" />
+        <span style={{ fontSize: 12, color: theme.inkMuted }}>{win.label}</span>
+      </RptControls>
+
+      {error ? <div style={{ fontSize: 12, color: '#C6483C', marginBottom: 10 }}>{error}</div> : null}
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+        <RptStat theme={theme} label="Facebook followers" value={fb.followers.toLocaleString()} />
+        <RptStat theme={theme} label="Facebook reached" value={fb.impressions.toLocaleString()} />
+        <RptStat theme={theme} label="Instagram followers" value={ig.followers.toLocaleString()} />
+        <RptStat theme={theme} label="Instagram reach" value={ig.reach.toLocaleString()} />
+      </div>
+
+      <RptTable
+        theme={theme}
+        columns={[
+          { key: 'client', label: 'Client', render: function (r) { return nameOf(r.clientId); } },
+          { key: 'platform', label: 'Platform', render: function (r) { return r.platform === 'facebook' ? 'Facebook' : 'Instagram'; } },
+          { key: 'followers', label: 'Followers', align: 'right', render: function (r) { return r.followers.toLocaleString(); } },
+          { key: 'growth', label: 'Change', align: 'right', render: function (r) { return r.growth > 0 ? '+' + r.growth : String(r.growth); } },
+          { key: 'reached', label: 'Reached', align: 'right', render: function (r) { return (r.platform === 'facebook' ? r.impressions : r.reach).toLocaleString(); } },
+          { key: 'engaged', label: 'Engaged', align: 'right', render: function (r) { return r.engaged.toLocaleString(); } },
+        ]}
+        rows={pairRows}
+        empty={data ? 'Nothing in this window.' : 'Loading...'}
+      />
+
+      <p style={{ fontSize: 11, color: theme.inkMuted, marginTop: 12, lineHeight: 1.6 }}>
+        Followers is the count on the last day of the window, and Change is the difference from
+        the first - a follower count is a level, not something to add up day by day.
+      </p>
+    </div>
+  );
+}
+
 Object.assign(window, {
-  LeadsSection, AdsSection,
+  LeadsSection, AdsSection, WebSection, SocialSection,
   RPT_PERIODS, rptWindow, LEAD_SOURCES, AD_PLATFORMS,
   RptStat, RptTable, RptNotConnected, RptSyncNote, RptSelect,
 });

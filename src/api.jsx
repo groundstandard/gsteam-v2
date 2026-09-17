@@ -487,6 +487,63 @@ const CABT_api = {
   // is a sum rather than a stored total. ref_id points at an account, a campaign
   // or an ad set depending on the level, which no single foreign key can express
   // — the names are fetched alongside and matched here.
+  // The website's day: Analytics, Search Console and the Google listing in one
+  // row per client, because Bobby asked not to see the same visit counted twice.
+  // Paged for the same reason the ad metrics are — a month of daily rows across
+  // fifty clients passes Supabase's silent 1000-row ceiling.
+  async fetchWebMetrics({ from, to, clientId } = {}) {
+    if (CABT_getApiMode() !== 'supabase') return { rows: [], sources: [] };
+    const sb = await CABT_sb();
+    const PAGE = 1000;
+
+    const pageOf = (table, offset) => {
+      let q = sb.from(table).select('*').order('day', { ascending: true })
+        .range(offset, offset + PAGE - 1);
+      if (from)     q = q.gte('day', from);
+      if (to)       q = q.lte('day', to);
+      if (clientId) q = q.eq('client_id', clientId);
+      return q;
+    };
+
+    const all = async (table) => {
+      const out = [];
+      for (let offset = 0; ; offset += PAGE) {
+        const r = await pageOf(table, offset);
+        if (r.error) throw r.error;
+        out.push(...(r.data || []));
+        if ((r.data || []).length < PAGE) break;
+      }
+      return out;
+    };
+
+    const [rows, sources] = await Promise.all([
+      all('web_performance_v'),
+      all('web_sources_daily'),
+    ]);
+    return { rows: toUI(rows), sources: toUI(sources) };
+  },
+
+  // Social stays per platform: a follower on Instagram and a follower on
+  // Facebook are different things and adding them would say nothing.
+  async fetchSocialMetrics({ from, to, clientId } = {}) {
+    if (CABT_getApiMode() !== 'supabase') return { rows: [] };
+    const sb = await CABT_sb();
+    const PAGE = 1000;
+    const out = [];
+    for (let offset = 0; ; offset += PAGE) {
+      let q = sb.from('social_metrics_daily').select('*')
+        .order('day', { ascending: true }).range(offset, offset + PAGE - 1);
+      if (from)     q = q.gte('day', from);
+      if (to)       q = q.lte('day', to);
+      if (clientId) q = q.eq('client_id', clientId);
+      const r = await q;
+      if (r.error) throw r.error;
+      out.push(...(r.data || []));
+      if ((r.data || []).length < PAGE) break;
+    }
+    return { rows: toUI(out) };
+  },
+
   async fetchAdMetrics({ from, to, clientId, level = 'campaign' } = {}) {
     if (CABT_getApiMode() !== 'supabase') return localAdMetrics({ from, to, clientId, level });
     const sb = await CABT_sb();

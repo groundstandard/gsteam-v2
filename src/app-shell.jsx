@@ -701,6 +701,8 @@ function App() {
       'dashboard': 'CA Rollup',
       'leads': 'Leads',
       'ads': 'Ad Management',
+      'web': 'Website',
+      'social': 'Social',
       'approvals': 'Approvals',
       'edits': 'Edit Requests',
       'reviews': 'Reviews Inbox',
@@ -756,6 +758,8 @@ function App() {
       // purpose: the CA Rollup is left exactly as it was.
       case 'leads':       return <LeadsSection state={state} theme={theme} navigate={navigate}/>;
       case 'ads':         return <AdsSection state={state} theme={theme} navigate={navigate}/>;
+      case 'web':         return <WebSection state={state} theme={theme} navigate={navigate}/>;
+      case 'social':      return <SocialSection state={state} theme={theme} navigate={navigate}/>;
       case 'approvals':   return <AdminApprovals state={state} theme={theme} navigate={navigate} onApprove={approveAdj} onReject={rejectAdj} onAssignCA={assignCA} onEditDecided={applyEditDecision}/>;
       case 'edits':       return <AdminEditApprovals state={state} theme={theme} onEditDecided={applyEditDecision}/>;
       case 'reviews':     return <AdminReviewsInbox state={state} theme={theme}/>;
@@ -820,6 +824,8 @@ function App() {
         { name: 'home',      icon: 'chart',        label: 'CA Rollup' },
         { name: 'leads',     icon: 'nav-today',    label: 'Leads' },
         { name: 'ads',       icon: 'nav-score',    label: 'Ads' },
+        { name: 'web',       icon: 'nav-today',    label: 'Website' },
+        { name: 'social',    icon: 'nav-score',    label: 'Social' },
         { name: 'clients',   icon: 'nav-accounts', label: 'Clients' },
         { name: 'approvals', icon: 'shield',       label: 'Approvals' },
         { name: 'more',      icon: 'cog',          label: 'More' },
