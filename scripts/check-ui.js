@@ -95,6 +95,55 @@ if (/function RptTable[\s\S]{0,900}?narrow/.test(reporting)) {
   fail('reporting tables read on a phone', 'RptTable has no narrow-screen path');
 }
 
+// 6 ── the tab strip is reachable and readable by keyboard
+const ui = sources.find((s) => s.path.endsWith('ui.jsx'))?.text || '';
+const tabs = ui.match(/function Tabs\([\s\S]*?\n\}/);
+if (!tabs) {
+  fail('tabs answer the keyboard', 'no Tabs component found');
+} else if (/role="tablist"/.test(tabs[0]) && /ArrowRight/.test(tabs[0]) && /aria-selected/.test(tabs[0])) {
+  ok('tabs answer the keyboard', 'tablist role, arrow keys, roving tabindex');
+} else {
+  fail('tabs answer the keyboard', 'Tabs is still a plain row of buttons');
+}
+
+// 7 ── a dialog traps focus, closes on Escape, and hands focus back
+if (!/function useDialog\(/.test(ui)) {
+  fail('dialogs behave', 'useDialog is missing from ui.jsx');
+} else {
+  const orphans = [];
+  for (const { path, text } of sources) {
+    // Every component that renders role="dialog" should be using the hook.
+    for (const m of text.matchAll(/function (\w*(?:Modal|Dialog|Sheet))\s*\([\s\S]{0,8000}?\n\}/g)) {
+      if (/role="dialog"/.test(m[0]) && !/useDialog\(/.test(m[0])) orphans.push(`${path}: ${m[1]}`);
+    }
+  }
+  if (orphans.length) fail('dialogs behave', `not using useDialog: ${orphans.join(', ')}`);
+  else ok('dialogs behave', 'every role="dialog" component calls useDialog');
+}
+
+// 8 ── the sign-in fields say what they are to a screen reader
+const auth = sources.find((s) => s.path.endsWith('auth-gate.jsx'))?.text || '';
+const form = auth.match(/<form[\s\S]*?<\/form>/);
+if (!form) {
+  fail('sign-in fields are labelled', 'no form found in auth-gate.jsx');
+} else {
+  const inputs = [...form[0].matchAll(/<input[\s\S]*?\/>/g)];
+  const unlabelled = inputs.filter((i) => !/aria-label|aria-labelledby|id=/.test(i[0]));
+  if (unlabelled.length) fail('sign-in fields are labelled', `${unlabelled.length} input(s) carry only a placeholder`);
+  else ok('sign-in fields are labelled', `${inputs.length} inputs, all named`);
+}
+if (/role="alert"/.test(auth)) ok('a failed sign-in is announced', 'the error carries role="alert"');
+else fail('a failed sign-in is announced', 'the error is drawn but not announced');
+
+// 9 ── no component can switch the focus ring off
+const shell = sources.find((s) => s.path.endsWith('app-shell.jsx'))?.text || '';
+if (/:focus-visible[\s\S]{0,400}?outline:[^;]*!important/.test(shell)) {
+  ok('the focus ring cannot be suppressed', 'the rule outranks inline outline:none');
+} else {
+  fail('the focus ring cannot be suppressed',
+    `${(all.match(/outline: 'none'/g) || []).length} inline outline:none would win against it`);
+}
+
 let failed = 0;
 for (const r of results) {
   if (!r.pass) failed += 1;

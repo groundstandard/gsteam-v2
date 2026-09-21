@@ -1312,7 +1312,10 @@ function App() {
         a:focus-visible, button:focus-visible, [role="button"]:focus-visible,
         [tabindex]:focus-visible, input:focus-visible, select:focus-visible,
         textarea:focus-visible, summary:focus-visible {
-          outline: 2px solid var(--cabt-focus, currentColor);
+          /* !important because fifteen inline styles across seven files set
+             outline: none, and an inline declaration beats a plain rule. A
+             focus indicator is not something a component gets to switch off. */
+          outline: 2px solid var(--cabt-focus, currentColor) !important;
           outline-offset: 2px;
           border-radius: 4px;
         }

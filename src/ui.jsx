@@ -645,17 +645,61 @@ function Banner({ tone = 'warning', icon = 'alert', title, children, action, onA
 }
 
 // ── Tabs ────────────────────────────────────────────────────────────────────
-function Tabs({ tabs, value, onChange, theme }) {
+// The strip scrolls sideways when the labels do not fit, which used to mean the
+// selected tab could sit off-screen with nothing to say so. It also announced
+// itself as a row of ordinary buttons, and arrow keys did nothing — a keyboard
+// user had to Tab through every tab to reach the last one.
+function Tabs({ tabs, value, onChange, theme, label = 'Sections' }) {
+  const strip = React.useRef(null);
+  const selected = React.useRef(null);
+
+  React.useEffect(() => {
+    // Keep the chosen tab in view after it changes, however it changed.
+    const node = selected.current;
+    if (node && node.scrollIntoView) {
+      node.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }, [value]);
+
+  function onKeyDown(e) {
+    const order = tabs.map(t => t.value);
+    const at = order.indexOf(value);
+    let next = null;
+    if (e.key === 'ArrowRight') next = order[(at + 1) % order.length];
+    else if (e.key === 'ArrowLeft') next = order[(at - 1 + order.length) % order.length];
+    else if (e.key === 'Home') next = order[0];
+    else if (e.key === 'End') next = order[order.length - 1];
+    if (next == null) return;
+    e.preventDefault();
+    onChange(next);
+    // Move focus with the selection, so the next arrow press continues from here.
+    const el = strip.current && strip.current.querySelector(`[data-tab="${next}"]`);
+    if (el) el.focus();
+  }
+
   return (
-    <div style={{
-      display: 'flex', gap: 0, borderBottom: `1px solid ${theme.rule}`,
-      overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
-    }}>
+    <div
+      ref={strip}
+      role="tablist"
+      aria-label={label}
+      onKeyDown={onKeyDown}
+      style={{
+        display: 'flex', gap: 0, borderBottom: `1px solid ${theme.rule}`,
+        overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
+      }}
+    >
       {tabs.map(t => {
         const active = t.value === value;
         return (
           <button
             key={t.value}
+            ref={active ? selected : null}
+            data-tab={t.value}
+            role="tab"
+            type="button"
+            aria-selected={active}
+            // Roving tabindex: one stop for the whole strip, arrows do the rest.
+            tabIndex={active ? 0 : -1}
             onClick={() => onChange(t.value)}
             style={{
               padding: '12px 14px', border: 'none', background: 'transparent',
@@ -672,16 +716,63 @@ function Tabs({ tabs, value, onChange, theme }) {
   );
 }
 
+// ── Dialog behaviour ────────────────────────────────────────────────────────
+// Every modal in the app opened, and then left the keyboard behind: Escape did
+// nothing, Tab walked out of the dialog into the page underneath, the page
+// scrolled behind the scrim, and on close focus landed back at the top of the
+// document instead of on whatever opened it. One hook, so a modal only has to
+// remember to call it.
+function useDialog(open, onClose, boxRef) {
+  React.useEffect(() => {
+    if (!open) return undefined;
+
+    const opener = document.activeElement;
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+
+    const focusable = () => {
+      const box = boxRef && boxRef.current;
+      if (!box) return [];
+      return [...box.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]),'
+        + ' textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )].filter(el => el.offsetParent !== null);
+    };
+
+    // Give the dialog the focus, unless something in it already asked for it.
+    const first = focusable()[0];
+    const box = boxRef && boxRef.current;
+    if (box && !box.contains(document.activeElement) && first) first.focus();
+
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose && onClose(); return; }
+      if (e.key !== 'Tab') return;
+      const items = focusable();
+      if (!items.length) return;
+      const edge = e.shiftKey ? items[0] : items[items.length - 1];
+      if (document.activeElement === edge) {
+        e.preventDefault();
+        (e.shiftKey ? items[items.length - 1] : items[0]).focus();
+      }
+    };
+
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = overflow;
+      if (opener && opener.focus) opener.focus();
+    };
+  }, [open, onClose, boxRef]);
+}
+
 // ── Branded confirm dialog (replaces native window.confirm) ──────────────
 // Renders centered on viewport via portal, sized for both mobile + desktop.
 // Backdrop click + Escape both cancel.
 function ConfirmDialog({ open, theme, title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger = false, onConfirm, onCancel }) {
-  React.useEffect(() => {
-    if (!open) return;
-    const onKey = (e) => { if (e.key === 'Escape') onCancel && onCancel(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onCancel]);
+  const box = React.useRef(null);
+  // Escape, the focus trap, the scroll lock and returning focus to whatever
+  // opened this all live in one place now.
+  useDialog(open, onCancel, box);
 
   if (!open) return null;
 
@@ -707,6 +798,7 @@ function ConfirmDialog({ open, theme, title, message, confirmLabel = 'Confirm', 
       }}
     >
       <div
+        ref={box}
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 400,
@@ -771,5 +863,5 @@ function ConfirmDialog({ open, theme, title, message, confirmLabel = 'Confirm', 
 Object.assign(window, {
   THEMES, STATUS, Icon, StatusPill, ScoreRing, Card, Button,
   Field, Input, Textarea, Select, Toggle, StarRating, Banner, Tabs,
-  ConfirmDialog,
+  ConfirmDialog, useDialog,
 });

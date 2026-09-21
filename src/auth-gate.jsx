@@ -199,6 +199,7 @@ function AuthGate({ theme, onAuthed }) {
             type="email"
             inputMode="email"
             autoComplete="username"
+            aria-label="Email address"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -213,6 +214,7 @@ function AuthGate({ theme, onAuthed }) {
           <input
             type="password"
             autoComplete="current-password"
+            aria-label="Password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -248,7 +250,9 @@ function AuthGate({ theme, onAuthed }) {
         </form>
 
         {error && (
-          <div style={{
+          // role="alert" so the reason is announced, not just drawn. Without it
+          // a screen-reader user submits the form and hears nothing back.
+          <div role="alert" style={{
             marginTop: 16, padding: '10px 14px', borderRadius: 8,
             background: '#FFE5E5', color: '#9B1B1B', fontSize: 12, textAlign: 'left',
           }}>

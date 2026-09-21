@@ -3385,6 +3385,11 @@ function AdminDashboard({ state, theme, navigate, scopeCa }) {
 // category (Identity / Ownership / Revenue / Funnel / etc.) for scanability.
 // Persistence is owned by the caller (writes to localStorage on change).
 function ColumnChooserModal({ theme, columns, groups, visible, onChange, onClose, defaults }) {
+  // Escape, focus trap, scroll lock and giving focus back to whatever
+  // opened this — see useDialog in ui.jsx.
+  const dialogBox = React.useRef(null);
+  useDialog(true, onClose, dialogBox);
+
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
   const toggle = (id) => {
     const next = new Set(visible);
@@ -3402,7 +3407,13 @@ function ColumnChooserModal({ theme, columns, groups, visible, onChange, onClose
       backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
       padding: isDesktop ? 32 : 0,
     }}>
-      <div onClick={(e) => e.stopPropagation()} style={{
+      <div
+        ref={dialogBox}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Choose columns"
+        style={{
         background: theme.bg, color: theme.ink,
         width: '100%', maxWidth: isDesktop ? 640 : 560,
         maxHeight: isDesktop ? '88vh' : '88vh',

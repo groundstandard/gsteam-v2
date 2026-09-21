@@ -403,6 +403,11 @@ function CABT_nextSeqId(prefix, existingIds) {
 }
 
 function InviteTeammateModal({ theme, state, onClose, onSuccess }) {
+  // Escape, focus trap, scroll lock and giving focus back to whatever
+  // opened this — see useDialog in ui.jsx.
+  const dialogBox = React.useRef(null);
+  useDialog(true, onClose, dialogBox);
+
   // formRole is the UI selection; we map AM/RDR back to role='sales' at submit.
   const [formRole, setFormRole] = React.useState('ca');
   const [email, setEmail] = React.useState('');
@@ -483,6 +488,7 @@ function InviteTeammateModal({ theme, state, onClose, onSuccess }) {
       }}
     >
       <div
+        ref={dialogBox}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -627,6 +633,11 @@ const EDIT_ERROR_COPY = {
 };
 
 function EmployeeDetailModal({ theme, kind, row, callerRole, callerId, onClose, onSuccess }) {
+  // Escape, focus trap, scroll lock and giving focus back to whatever
+  // opened this — see useDialog in ui.jsx.
+  const dialogBox = React.useRef(null);
+  useDialog(true, onClose, dialogBox);
+
   // `kind` is 'ca' or 'sales'. `row` is the camelCased state.cas[i] or state.sales[i] entry.
   // We need profileId (the auth.users id) to address the EF. If the row was
   // seeded without profile_id, fall back to looking up by email.
@@ -872,6 +883,7 @@ function EmployeeDetailModal({ theme, kind, row, callerRole, callerId, onClose, 
       }}
     >
       <div
+        ref={dialogBox}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
