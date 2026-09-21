@@ -174,7 +174,7 @@ function AuthGate({ theme, onAuthed }) {
     color: theme.inkMuted, marginBottom: 6,
   };
   const fieldInput = {
-    width: '100%', padding: '13px 15px', borderRadius: 10,
+    width: '100%', padding: '14px 16px', borderRadius: 12,
     background: theme.bgElev || theme.surface, color: theme.ink,
     border: `1px solid ${theme.rule}`, fontFamily: 'inherit',
     fontSize: 15, boxSizing: 'border-box',
@@ -198,16 +198,20 @@ function AuthGate({ theme, onAuthed }) {
         boxShadow: '0 24px 60px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.12)',
       }}>
         <style>{`
-          /* Chrome paints its own pale blue over an autofilled field, which on a
-             dark form looks like two broken boxes. There is no property for it —
-             an inset shadow the size of the field is the only way to cover it. */
+          /* Chrome paints its own colour AND its own border over an autofilled
+             field. The inset shadow covers the fill; the border has to be set
+             back explicitly or both boxes come out ringed in white. */
           .gst-signin input:-webkit-autofill,
           .gst-signin input:-webkit-autofill:hover,
-          .gst-signin input:-webkit-autofill:focus {
+          .gst-signin input:-webkit-autofill:active {
             -webkit-box-shadow: 0 0 0 1000px ${theme.bgElev || theme.surface} inset !important;
             -webkit-text-fill-color: ${theme.ink} !important;
+            border: 1px solid ${theme.rule} !important;
             caret-color: ${theme.ink};
             transition: background-color 9999s ease-out;
+          }
+          .gst-signin input:-webkit-autofill:focus {
+            border-color: ${theme.accent} !important;
           }
           .gst-signin input::placeholder { color: ${theme.inkMuted}; }
           .gst-signin input:focus { border-color: ${theme.accent} !important; }
