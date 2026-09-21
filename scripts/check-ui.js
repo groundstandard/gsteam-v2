@@ -144,6 +144,31 @@ if (/:focus-visible[\s\S]{0,400}?outline:[^;]*!important/.test(shell)) {
     `${(all.match(/outline: 'none'/g) || []).length} inline outline:none would win against it`);
 }
 
+// 10 ── a stat tile's own number uses proportional figures
+const reportingText = sources.find((s) => s.path.endsWith('reporting.jsx'))?.text || '';
+const statTileRaw = reportingText.match(/function RptStat\([\s\S]*?\n\}/);
+// Comments out first, or the note explaining why tabular-nums is wrong here
+// reads as the defect — the same trap the reduced-motion check fell into.
+const statTile = statTileRaw && [statTileRaw[0].replace(/\/\/[^\n]*/g, '')];
+if (!statTile) {
+  fail('stat values use proportional figures', 'RptStat not found');
+} else if (/tabular-nums/.test(statTile[0])) {
+  fail('stat values use proportional figures',
+    'tabular-nums gives every digit the width of a zero, which looks loose at tile size');
+} else {
+  ok('stat values use proportional figures', 'tabular is left to table columns');
+}
+
+// 11 ── the sparkline is decoration; the number beside it is the value
+const spark = reportingText.match(/function RptSpark\([\s\S]*?\n\}/);
+if (!spark) {
+  fail('the sparkline is not read aloud', 'RptSpark not found');
+} else if (/aria-hidden="true"/.test(spark[0])) {
+  ok('the sparkline is not read aloud', 'aria-hidden, with the value in text beside it');
+} else {
+  fail('the sparkline is not read aloud', 'a screen reader will try to announce the svg');
+}
+
 let failed = 0;
 for (const r of results) {
   if (!r.pass) failed += 1;

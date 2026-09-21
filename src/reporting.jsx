@@ -85,7 +85,81 @@ function RptSelect({ theme, value, onChange, options, ariaLabel }) {
 }
 
 // A stat that knows the difference between "none" and "not measured yet".
-function RptStat({ theme, label, value, sub, muted }) {
+// Twelve buckets across whatever window is selected, so the sparkline has the
+// same shape whether the period is a week or a quarter. Items carry a date and
+// optionally a value to sum; without one they are counted.
+function rptSeries(items, dateOf, win, valueOf, buckets = 12) {
+  if (!items || !items.length || !win || !win.from || !win.to) return null;
+  const start = Date.parse(`${win.from}T00:00:00Z`);
+  const end = Date.parse(`${win.to}T23:59:59Z`);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+
+  const out = new Array(buckets).fill(0);
+  const width = (end - start) / buckets;
+  let seen = 0;
+  for (const item of items) {
+    const raw = dateOf(item);
+    if (!raw) continue;
+    const at = Date.parse(raw.length <= 10 ? `${raw}T12:00:00Z` : raw);
+    if (!Number.isFinite(at) || at < start || at > end) continue;
+    const slot = Math.min(buckets - 1, Math.floor((at - start) / width));
+    out[slot] += valueOf ? (valueOf(item) || 0) : 1;
+    seen += 1;
+  }
+  // A flat line of zeros says nothing; leave the tile as a plain number.
+  return seen ? out : null;
+}
+
+// A twelve-point sparkline: the shape of the window behind the number, with the
+// latest point marked. One hue — this is one series, so it needs no legend and
+// no palette. Decorative on its own; it earns its place by turning a number
+// into "and it is going up".
+function RptSpark({ theme, points, width = 108, height = 26 }) {
+  const values = (points || []).filter(v => Number.isFinite(v));
+  if (values.length < 3) return null;
+
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const span = high - low || 1;
+  const step = values.length > 1 ? width / (values.length - 1) : width;
+  // Inset by the stroke so the line is not clipped at the top and bottom.
+  const pad = 2;
+  const y = v => pad + (height - pad * 2) * (1 - (v - low) / span);
+  const d = values.map((v, i) => `${i ? 'L' : 'M'}${(i * step).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+  const lastX = (values.length - 1) * step;
+  const lastY = y(values[values.length - 1]);
+
+  return (
+    <svg
+      width={width} height={height} viewBox={`0 0 ${width} ${height}`}
+      // The number beside it is the accessible value; this is the shape of it.
+      aria-hidden="true" focusable="false"
+      style={{ display: 'block', marginTop: 8, overflow: 'visible' }}
+    >
+      <path d={d} fill="none" stroke={theme.inkMuted} strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round" opacity="0.65" />
+      <circle cx={lastX} cy={lastY} r="3" fill={theme.accent}
+              stroke={theme.surface} strokeWidth="2" />
+    </svg>
+  );
+}
+
+// 1,284 · 12.9K · 1.2M — a stat tile reads at a glance or it is just a table cell.
+function rptCompact(n) {
+  if (!Number.isFinite(n)) return n;
+  const size = Math.abs(n);
+  if (size >= 1e6) return `${(n / 1e6).toFixed(size >= 1e7 ? 0 : 1)}M`;
+  if (size >= 10000) return `${(n / 1000).toFixed(size >= 1e5 ? 0 : 1)}K`;
+  return n.toLocaleString();
+}
+
+function RptStat({ theme, label, value, sub, muted, trend, delta, deltaLabel, upIsGood = true }) {
+  const shown = typeof value === 'number' ? rptCompact(value) : value;
+  const moved = Number.isFinite(delta) && delta !== 0;
+  // Direction crossed with whether up is the good direction — a rising cost per
+  // lead is not good news, and the colour should not say it is.
+  const good = moved ? (delta > 0) === upIsGood : null;
+
   return (
     <div style={{
       flex: '1 1 130px', minWidth: 130,
@@ -96,10 +170,23 @@ function RptStat({ theme, label, value, sub, muted }) {
         {label}
       </div>
       <div style={{
+        // Proportional figures: tabular-nums gives every digit the width of a
+        // zero, which makes a number like 121 look loose at this size. Tabular
+        // belongs in table columns, where digits must line up.
         fontSize: 22, fontWeight: 700, marginTop: 4,
-        color: muted ? theme.inkMuted : theme.ink, fontVariantNumeric: 'tabular-nums',
-      }}>{value}</div>
+        color: muted ? theme.inkMuted : theme.ink,
+      }}>{shown}</div>
+      {moved ? (
+        <div style={{
+          fontSize: 11, marginTop: 3, fontWeight: 600,
+          color: good ? (STATUS && STATUS.green) || '#43A047' : '#C6483C',
+        }}>
+          {delta > 0 ? '▲' : '▼'} {rptCompact(Math.abs(delta))}
+          {deltaLabel ? <span style={{ color: theme.inkMuted, fontWeight: 400 }}> {deltaLabel}</span> : null}
+        </div>
+      ) : null}
       {sub ? <div style={{ fontSize: 11, color: theme.inkMuted, marginTop: 2 }}>{sub}</div> : null}
+      {trend ? <RptSpark theme={theme} points={trend} /> : null}
     </div>
   );
 }
@@ -354,10 +441,14 @@ function LeadsSection({ state, theme, navigate }) {
       ) : null}
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-        <RptStat theme={theme} label="Leads"  value={rows === null ? '—' : leads.length} muted={!leads.length} />
-        <RptStat theme={theme} label="Booked" value={rows === null ? '—' : booked} sub={pct(booked)} muted={!booked} />
-        <RptStat theme={theme} label="Showed" value={rows === null ? '—' : showed} sub={pct(showed)} muted={!showed} />
-        <RptStat theme={theme} label="Signed" value={rows === null ? '—' : signed} sub={pct(signed)} muted={!signed} />
+        <RptStat theme={theme} label="Leads"  value={rows === null ? '—' : leads.length} muted={!leads.length}
+                 trend={rptSeries(leads, l => l.createdAt, win)} />
+        <RptStat theme={theme} label="Booked" value={rows === null ? '—' : booked} sub={pct(booked)} muted={!booked}
+                 trend={rptSeries(leads.filter(l => l.bookedAt), l => l.bookedAt, win)} />
+        <RptStat theme={theme} label="Showed" value={rows === null ? '—' : showed} sub={pct(showed)} muted={!showed}
+                 trend={rptSeries(leads.filter(l => l.showedAt), l => l.showedAt, win)} />
+        <RptStat theme={theme} label="Signed" value={rows === null ? '—' : signed} sub={pct(signed)} muted={!signed}
+                 trend={rptSeries(leads.filter(l => l.signedAt), l => l.signedAt, win)} />
       </div>
 
       {rows !== null && !leads.length ? (
@@ -566,8 +657,10 @@ function AdsSection({ state, theme, navigate }) {
       ) : null}
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-        <RptStat theme={theme} label="Spend" value={data === null ? '—' : CABT_fmtMoney(total.spend)} muted={!total.spend} />
-        <RptStat theme={theme} label="Leads" value={data === null ? '—' : num(total.leads)} muted={!total.leads} />
+        <RptStat theme={theme} label="Spend" value={data === null ? '—' : CABT_fmtMoney(total.spend)} muted={!total.spend}
+                 trend={rptSeries(d.rows.filter(r => belongs(r.refId)), r => r.day, win, r => Number(r.spend || 0))} />
+        <RptStat theme={theme} label="Leads" value={data === null ? '—' : num(total.leads)} muted={!total.leads}
+                 trend={rptSeries(d.rows.filter(r => belongs(r.refId)), r => r.day, win, r => Number(r.leads || 0))} />
         <RptStat theme={theme} label="Cost / lead" value={totalCpl == null ? '—' : CABT_fmtMoney(totalCpl)} muted={totalCpl == null} />
         <RptStat theme={theme} label="CTR" value={totalCtr == null ? '—' : `${totalCtr.toFixed(2)}%`} sub={totalCtr == null ? null : `${num(total.clicks)} clicks`} muted={totalCtr == null} />
       </div>
@@ -717,11 +810,14 @@ function WebSection({ state, theme, navigate }) {
       {error ? <div style={{ fontSize: 12, color: '#C6483C', marginBottom: 10 }}>{error}</div> : null}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-        <RptStat theme={theme} label="Sessions" value={total.sessions.toLocaleString()} />
-        <RptStat theme={theme} label="People" value={total.users.toLocaleString()} />
+        <RptStat theme={theme} label="Sessions" value={total.sessions.toLocaleString()}
+                 trend={rptSeries(d.rows, r => r.day, win, r => Number(r.sessions || 0))} />
+        <RptStat theme={theme} label="People" value={total.users.toLocaleString()}
+                 trend={rptSeries(d.rows, r => r.day, win, r => Number(r.users || 0))} />
         <RptStat theme={theme} label="From search" value={total.searchClicks.toLocaleString()}
                  sub={total.searchImpressions ? total.searchImpressions.toLocaleString() + ' impressions' : null} />
-        <RptStat theme={theme} label="Map views" value={total.mapViews.toLocaleString()} />
+        <RptStat theme={theme} label="Map views" value={total.mapViews.toLocaleString()}
+                 trend={rptSeries(d.rows, r => r.day, win, r => Number(r.mapViews || 0))} />
         <RptStat theme={theme} label="Calls" value={total.calls.toLocaleString()} sub="from the listing" />
         <RptStat theme={theme} label="Directions" value={total.directions.toLocaleString()} sub="from the listing" />
       </div>
@@ -827,7 +923,8 @@ function SocialSection({ state, theme, navigate }) {
 
   const platforms = {};
   pairRows.forEach(function (r) {
-    const at = platforms[r.platform] || (platforms[r.platform] = { followers: 0, reach: 0, engaged: 0, impressions: 0 });
+    const at = platforms[r.platform] || (platforms[r.platform] = { followers: 0, reach: 0, engaged: 0, impressions: 0, growth: 0 });
+    at.growth += r.growth;
     at.followers += r.followers;
     at.reach += r.reach;
     at.engaged += r.engaged;
@@ -847,10 +944,16 @@ function SocialSection({ state, theme, navigate }) {
       {error ? <div style={{ fontSize: 12, color: '#C6483C', marginBottom: 10 }}>{error}</div> : null}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-        <RptStat theme={theme} label="Facebook followers" value={fb.followers.toLocaleString()} />
-        <RptStat theme={theme} label="Facebook reached" value={fb.impressions.toLocaleString()} />
-        <RptStat theme={theme} label="Instagram followers" value={ig.followers.toLocaleString()} />
-        <RptStat theme={theme} label="Instagram reach" value={ig.reach.toLocaleString()} />
+        <RptStat theme={theme} label="Facebook followers" value={fb.followers.toLocaleString()}
+                 delta={fb.growth} deltaLabel={`over ${win.label.toLowerCase()}`}
+                 trend={rptSeries(rows.filter(r => r.platform === 'facebook'), r => r.day, win, r => Number(r.followers || 0))} />
+        <RptStat theme={theme} label="Facebook reached" value={fb.impressions.toLocaleString()}
+                 trend={rptSeries(rows.filter(r => r.platform === 'facebook'), r => r.day, win, r => Number(r.impressions || 0))} />
+        <RptStat theme={theme} label="Instagram followers" value={ig.followers.toLocaleString()}
+                 delta={ig.growth} deltaLabel={`over ${win.label.toLowerCase()}`}
+                 trend={rptSeries(rows.filter(r => r.platform === 'instagram'), r => r.day, win, r => Number(r.followers || 0))} />
+        <RptStat theme={theme} label="Instagram reach" value={ig.reach.toLocaleString()}
+                 trend={rptSeries(rows.filter(r => r.platform === 'instagram'), r => r.day, win, r => Number(r.reach || 0))} />
       </div>
 
       <RptTable
