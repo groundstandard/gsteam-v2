@@ -6,12 +6,19 @@
 // that call; notes save to Supabase and sync to every viewer in real time.
 // Kurt 2026-07-28: "auto-color by score" + "just a note" field for the calls.
 
-// Score status → colour. Anything without a matched account / score is neutral
-// (theme-aware, resolved at render).
+// Score status → colour and a mark. Anything without a matched account / score
+// is neutral (theme-aware, resolved at render).
+//
+// The mark is not decoration. This board is almost entirely red and green, the
+// pair most often confused, so on colour alone a reader with the common form of
+// colour blindness cannot tell an account on track from one at risk.
+//
+// The green is darker than it was: white on #2f9e5f measured 3.40:1, under the
+// 4.5 a label this size needs, which made "on track" the hardest cell to read.
 const CALLS_SCORE_COLORS = {
-  green:  { bg: '#2f9e5f', fg: '#ffffff', label: 'On track' },
-  yellow: { bg: '#d9a520', fg: '#241a00', label: 'Watch' },
-  red:    { bg: '#d0392c', fg: '#ffffff', label: 'At risk' },
+  green:  { bg: '#25804c', fg: '#ffffff', label: 'On track', mark: '●' },
+  yellow: { bg: '#d9a520', fg: '#241a00', label: 'Watch',    mark: '▲' },
+  red:    { bg: '#c22f22', fg: '#ffffff', label: 'At risk',  mark: '■' },
 };
 
 // Fixed dark header — legible in both themes (matches the original navy graphic).
@@ -162,7 +169,14 @@ function CallsBoard({ state, theme, navigate, isAdmin, onSetNote }) {
             const c = CALLS_SCORE_COLORS[k];
             return (
               <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: theme.ink }}>
-                <span style={{ width: 13, height: 13, borderRadius: 4, background: c.bg, border: `1px solid ${theme.rule}` }}/>
+                {/* The swatch carries the same mark the cells do, or the shape
+                    on the board means nothing. */}
+                <span style={{
+                  width: 15, height: 15, borderRadius: 4, background: c.bg,
+                  border: `1px solid ${theme.rule}`, color: c.fg,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 8, lineHeight: 1,
+                }}>{c.mark}</span>
                 {c.label}
               </span>
             );
@@ -221,6 +235,12 @@ function CallsBoard({ state, theme, navigate, isAdmin, onSetNote }) {
                             textAlign: 'center', lineHeight: 1.25, transition: 'background .15s',
                           }}
                         >
+                          {c.mark ? (
+                            <span aria-hidden="true" style={{
+                              display: 'inline-block', marginRight: 6,
+                              fontSize: 9, opacity: 0.85, verticalAlign: 'middle',
+                            }}>{c.mark}</span>
+                          ) : null}
                           {label}
                           {hasNote && (
                             <span style={{

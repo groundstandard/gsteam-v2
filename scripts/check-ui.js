@@ -169,6 +169,36 @@ if (!spark) {
   fail('the sparkline is not read aloud', 'a screen reader will try to announce the svg');
 }
 
+// 12 - status is never colour alone, and its text carries on its fill
+const calls = sources.find((s) => s.path.endsWith('calls-board.jsx'))?.text || '';
+const statuses = [...calls.matchAll(/(green|yellow|red):\s*\{ bg: '(#[0-9a-f]{6})', fg: '(#[0-9a-f]{6})'[^}]*\}/g)];
+if (!statuses.length) {
+  fail('status is not colour alone', 'could not read CALLS_SCORE_COLORS');
+} else {
+  const noMark = statuses.filter((m) => !/mark:/.test(m[0])).map((m) => m[1]);
+  if (noMark.length) fail('status is not colour alone', `no mark on: ${noMark.join(', ')}`);
+  else ok('status is not colour alone', 'each state ships a shape beside its colour');
+
+  const channel = (v) => (v / 255 <= 0.03928 ? v / 255 / 12.92 : (((v / 255) + 0.055) / 1.055) ** 2.4);
+  const lum = (hex) => {
+    const n = parseInt(hex.slice(1), 16);
+    return 0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255);
+  };
+  const contrast = (a, b) => {
+    const x = lum(a); const y = lum(b);
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+  };
+  const thin = statuses
+    .map((m) => ({ name: m[1], r: contrast(m[3], m[2]) }))
+    .filter((s) => s.r < 4.5);
+  if (thin.length) {
+    fail('status labels carry on their fill',
+      thin.map((s) => `${s.name} ${s.r.toFixed(2)}:1`).join(', '));
+  } else {
+    ok('status labels carry on their fill', statuses.map((m) => `${m[1]} ${contrast(m[3], m[2]).toFixed(2)}`).join(', '));
+  }
+}
+
 let failed = 0;
 for (const r of results) {
   if (!r.pass) failed += 1;
