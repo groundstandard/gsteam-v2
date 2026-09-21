@@ -167,6 +167,20 @@ function AuthGate({ theme, onAuthed }) {
     );
   }
 
+  // One definition for both fields — they were identical blocks of inline style.
+  const fieldLabel = {
+    display: 'block', textAlign: 'left', fontSize: 11, fontWeight: 700,
+    letterSpacing: '0.08em', textTransform: 'uppercase',
+    color: theme.inkMuted, marginBottom: 6,
+  };
+  const fieldInput = {
+    width: '100%', padding: '13px 15px', borderRadius: 10,
+    background: theme.bgElev || theme.surface, color: theme.ink,
+    border: `1px solid ${theme.rule}`, fontFamily: 'inherit',
+    fontSize: 15, boxSizing: 'border-box',
+    transition: 'border-color 0.15s ease',
+  };
+
   return (
     <div style={{
       minHeight: '100vh', background: theme.bg, color: theme.ink,
@@ -174,63 +188,90 @@ function AuthGate({ theme, onAuthed }) {
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       gap: 24,
     }}>
-      <div style={{ maxWidth: 360, width: '100%', textAlign: 'center' }}>
+      <div style={{
+        maxWidth: 380, width: '100%', textAlign: 'center',
+        // The form sat directly on the page background with nothing holding it.
+        // A surface gives it an edge and lets the fields sit inside something.
+        background: theme.surface, border: `1px solid ${theme.rule}`,
+        borderRadius: (theme.radius || 12) + 6,
+        padding: '36px 28px 30px',
+        boxShadow: '0 24px 60px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.12)',
+      }}>
+        <style>{`
+          /* Chrome paints its own pale blue over an autofilled field, which on a
+             dark form looks like two broken boxes. There is no property for it —
+             an inset shadow the size of the field is the only way to cover it. */
+          .gst-signin input:-webkit-autofill,
+          .gst-signin input:-webkit-autofill:hover,
+          .gst-signin input:-webkit-autofill:focus {
+            -webkit-box-shadow: 0 0 0 1000px ${theme.bgElev || theme.surface} inset !important;
+            -webkit-text-fill-color: ${theme.ink} !important;
+            caret-color: ${theme.ink};
+            transition: background-color 9999s ease-out;
+          }
+          .gst-signin input::placeholder { color: ${theme.inkMuted}; }
+          .gst-signin input:focus { border-color: ${theme.accent} !important; }
+          .gst-signin .gst-submit:hover:not(:disabled) { filter: brightness(1.06); }
+          .gst-signin .gst-submit:active:not(:disabled) { transform: translateY(1px); }
+        `}</style>
         <img
           src="/icons/icon-192.png"
           alt="gsTeam"
           style={{
-            width: 56, height: 56, borderRadius: 14, objectFit: 'cover',
-            margin: '0 auto 18px', display: 'block',
+            width: 52, height: 52, borderRadius: 14, objectFit: 'cover',
+            margin: '0 auto 20px', display: 'block',
           }}
         />
         <div style={{
-          fontFamily: theme.serif, fontSize: 32, fontWeight: 600, letterSpacing: -0.5,
-          lineHeight: 1.1, marginBottom: 10,
+          fontFamily: theme.serif, fontSize: 30, fontWeight: 600,
+          // Large type at default tracking reads loose; the scale pairs display
+          // sizes with negative letter spacing and a line height near 1.1.
+          letterSpacing: '-0.02em', lineHeight: 1.1, marginBottom: 8,
         }}>gsTeam Scoreboard</div>
         <div style={{
-          fontSize: 13, color: theme.inkSoft, lineHeight: 1.55,
-          fontFamily: theme.serif, fontStyle: 'italic', marginBottom: 24,
+          fontSize: 13, color: theme.inkMuted, lineHeight: 1.55, marginBottom: 26,
         }}>
           Sign in with your email and password.
         </div>
 
-        <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <input
-            type="email"
-            inputMode="email"
-            autoComplete="username"
-            aria-label="Email address"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={busy}
-            style={{
-              width: '100%', padding: '14px 16px', borderRadius: 12,
-              background: theme.bgElev || theme.surface, color: theme.ink,
-              border: `1px solid ${theme.rule}`, fontFamily: 'inherit',
-              fontSize: 15, outline: 'none', boxSizing: 'border-box',
-            }}
-          />
-          <input
-            type="password"
-            autoComplete="current-password"
-            aria-label="Password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={busy}
-            style={{
-              width: '100%', padding: '14px 16px', borderRadius: 12,
-              background: theme.bgElev || theme.surface, color: theme.ink,
-              border: `1px solid ${theme.rule}`, fontFamily: 'inherit',
-              fontSize: 15, outline: 'none', boxSizing: 'border-box',
-            }}
-          />
-          <button type="submit" disabled={busy} style={{
-            width: '100%', padding: '14px 18px', borderRadius: 12,
+        <form className="gst-signin" onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label htmlFor="signin-email" style={fieldLabel}>Email</label>
+            <input
+              id="signin-email"
+              type="email"
+              inputMode="email"
+              autoComplete="username"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={busy}
+              style={fieldInput}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="signin-password" style={fieldLabel}>Password</label>
+            <input
+              id="signin-password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={busy}
+              style={fieldInput}
+            />
+          </div>
+
+          <button type="submit" disabled={busy} className="gst-submit" style={{
+            width: '100%', padding: '14px 18px', borderRadius: 10, marginTop: 4,
             background: theme.accent, color: theme.accentInk, border: 'none',
-            fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: busy ? 'wait' : 'pointer',
+            fontFamily: 'inherit', fontSize: 15, fontWeight: 700,
+            letterSpacing: '0.01em',
+            cursor: busy ? 'wait' : 'pointer',
             opacity: busy ? 0.6 : 1,
+            transition: 'filter 0.15s ease, transform 0.08s ease',
           }}>
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
@@ -253,8 +294,10 @@ function AuthGate({ theme, onAuthed }) {
           // role="alert" so the reason is announced, not just drawn. Without it
           // a screen-reader user submits the form and hears nothing back.
           <div role="alert" style={{
-            marginTop: 16, padding: '10px 14px', borderRadius: 8,
-            background: '#FFE5E5', color: '#9B1B1B', fontSize: 12, textAlign: 'left',
+            marginTop: 16, padding: '11px 14px', borderRadius: 10,
+            background: 'rgba(198,72,60,0.12)', color: '#E98C82',
+            border: '1px solid rgba(198,72,60,0.35)',
+            fontSize: 12, lineHeight: 1.5, textAlign: 'left',
           }}>
             <strong>Couldn't sign in.</strong> {error}
           </div>
