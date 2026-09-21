@@ -120,7 +120,7 @@ function RingsViz({ score, theme }) {
   return (
     <Card theme={theme}>
       <SectionLabel theme={theme}>Buckets</SectionLabel>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
         {buckets.map(b => {
           const s = CABT_scoreToStatus(b.value);
           return (

@@ -510,7 +510,7 @@ function ClientDetail({ state, ca, theme, clientId, navigate, isAdmin, onCancelA
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: theme.inkMuted, fontVariantNumeric: 'tabular-nums' }}>{dateLabel}</span>
               </div>
               {isMetric && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, fontSize: 11 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6, fontSize: 11 }}>
                   <Stat theme={theme} k="MRR"      v={CABT_fmtMoney(p.clientMRR)} />
                   <Stat theme={theme} k="Ad spend" v={CABT_fmtMoney(p.adSpend)} />
                   <Stat theme={theme} k="Leads"    v={p.leadsGenerated || 0} />
@@ -686,7 +686,7 @@ function ClientDetail({ state, ca, theme, clientId, navigate, isAdmin, onCancelA
                     <Icon name="edit" size={14} color={theme.inkMuted} />
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6, fontSize: 11 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)', gap: 6, fontSize: 11 }}>
                   <Stat theme={theme} k="Leads" v={m.leadsGenerated} />
                   <Stat theme={theme} k="Booked" v={m.apptsBooked} />
                   <Stat theme={theme} k="Showed" v={m.leadsShowed} />

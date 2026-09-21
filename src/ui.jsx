@@ -14,7 +14,9 @@ const THEMES = {
     accent: '#0E1A35',     // navy
     accentInk: '#FBF7EE',
     gold: '#B5894A',
-    serif: '"Source Serif Pro", "Source Serif 4", Georgia, serif',
+    // Source Serif 4 is the current name; "Pro" was the old release and is not
+    // on Google Fonts, so asking for it first meant always falling to Georgia.
+    serif: '"Source Serif 4", Georgia, serif',
     sans: '"Inter Tight", "Manrope", -apple-system, system-ui, sans-serif',
     mono: '"JetBrains Mono", "SF Mono", monospace',
     radius: 14,

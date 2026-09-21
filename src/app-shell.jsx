@@ -1305,10 +1305,27 @@ function App() {
         .cabt-btn-press { transition: transform 0.08s ease, opacity 0.15s ease; }
         .cabt-btn-press:active { transform: scale(0.97); }
         .cabt-btn-press:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+        /* Keyboard users get the same signal the mouse gets. Every hover state
+           in the app was missing its twin, so tabbing through left you with no
+           idea where you were. */
+        a:focus-visible, button:focus-visible, [role="button"]:focus-visible,
+        [tabindex]:focus-visible, input:focus-visible, select:focus-visible,
+        textarea:focus-visible, summary:focus-visible {
+          outline: 2px solid var(--cabt-focus, currentColor);
+          outline-offset: 2px;
+          border-radius: 4px;
+        }
+        /* A mouse click should not leave a ring behind it. */
+        :focus:not(:focus-visible) { outline: none; }
+
         @media (prefers-reduced-motion: reduce) {
+          /* Off, not merely fast. A 0.001ms animation still runs and still
+             moves the screen for someone who asked it not to. */
           *, *::before, *::after {
-            animation-duration: 0.001ms !important;
-            transition-duration: 0.001ms !important;
+            animation: none !important;
+            transition: none !important;
+            scroll-behavior: auto !important;
           }
         }
       `}</style>

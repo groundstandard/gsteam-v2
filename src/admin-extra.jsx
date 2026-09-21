@@ -202,7 +202,7 @@ function AdminAnnualBonus({ state, theme }) {
       {isDesktop ? (
         // ── Desktop: table layout (Bobby's preference) ───────────────────
         <Card theme={theme} padding={0}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr repeat(4, 1fr) 1.1fr', alignItems: 'center', padding: '12px 16px', borderBottom: `1px solid ${theme.rule}`, fontSize: 10, fontWeight: 700, color: theme.inkMuted, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) repeat(4, minmax(0, 1fr)) minmax(0, 1.1fr)', alignItems: 'center', padding: '12px 16px', borderBottom: `1px solid ${theme.rule}`, fontSize: 10, fontWeight: 700, color: theme.inkMuted, letterSpacing: 0.5, textTransform: 'uppercase' }}>
             <div>CA</div>
             {qs.map(q => (
               <div key={q.key} style={{ textAlign: 'center', color: q.status === 'current' ? theme.ink : theme.inkMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
@@ -216,7 +216,7 @@ function AdminAnnualBonus({ state, theme }) {
           </div>
           {rows.map((r, i) => (
             <div key={r.ca.id} style={{
-              display: 'grid', gridTemplateColumns: '1.5fr repeat(4, 1fr) 1.1fr',
+              display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) repeat(4, minmax(0, 1fr)) minmax(0, 1.1fr)',
               alignItems: 'center', padding: '14px 16px',
               borderBottom: i === rows.length - 1 ? 'none' : `1px solid ${theme.rule}`,
               fontSize: 13, minHeight: 60,
@@ -270,7 +270,7 @@ function AdminAnnualBonus({ state, theme }) {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }}>
                 {r.qScores.map((q, qi) => {
                   const qLabel = qs[qi].label.split(' ')[0];
                   if (q.status === 'future') {
@@ -364,7 +364,7 @@ function AdminRevenueLedger({ state, theme }) {
 
   return (
     <div style={{ padding: '8px 16px 100px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
         <KPI theme={theme} label={`Booked · last ${visible.length}mo`} value={CABT_fmtMoney(grand)} />
         <KPI theme={theme} label="Add-on revenue" value={CABT_fmtMoney(membershipRev)} />
       </div>
@@ -388,7 +388,7 @@ function AdminRevenueLedger({ state, theme }) {
       </div>
 
       <Card theme={theme} padding={0}>
-        <div style={{ display: 'grid', gridTemplateColumns: `1.6fr repeat(${visible.length}, 1fr)`, padding: '10px 12px', borderBottom: `1px solid ${theme.rule}`, fontSize: 10, fontWeight: 700, color: theme.inkMuted, letterSpacing: 0.4, textTransform: 'uppercase' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `minmax(0, 1.6fr) repeat(${visible.length}, minmax(0, 1fr))`, padding: '10px 12px', borderBottom: `1px solid ${theme.rule}`, fontSize: 10, fontWeight: 700, color: theme.inkMuted, letterSpacing: 0.4, textTransform: 'uppercase' }}>
           <div>Client</div>
           {visible.map(m => (
             <div key={m} style={{ textAlign: 'right' }}>
@@ -398,7 +398,7 @@ function AdminRevenueLedger({ state, theme }) {
         </div>
         {clients.map((c, i) => (
           <div key={c.id} style={{
-            display: 'grid', gridTemplateColumns: `1.6fr repeat(${visible.length}, 1fr)`,
+            display: 'grid', gridTemplateColumns: `minmax(0, 1.6fr) repeat(${visible.length}, minmax(0, 1fr))`,
             padding: '10px 12px',
             borderBottom: i === clients.length - 1 ? 'none' : `1px solid ${theme.rule}`,
             fontSize: 13, alignItems: 'center',
@@ -420,7 +420,7 @@ function AdminRevenueLedger({ state, theme }) {
             })}
           </div>
         ))}
-        <div style={{ display: 'grid', gridTemplateColumns: `1.6fr repeat(${visible.length}, 1fr)`, padding: '12px', background: theme.bgElev, borderTop: `1px solid ${theme.rule}`, fontSize: 13, fontWeight: 700, color: theme.ink }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `minmax(0, 1.6fr) repeat(${visible.length}, minmax(0, 1fr))`, padding: '12px', background: theme.bgElev, borderTop: `1px solid ${theme.rule}`, fontSize: 13, fontWeight: 700, color: theme.ink }}>
           <div>Total</div>
           {totals.map((t, i) => (
             <div key={i} style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
@@ -469,7 +469,7 @@ function AdminClientRollup({ state, theme, navigate }) {
 
   return (
     <div style={{ padding: '8px 16px 100px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)', gap: 6 }}>
         {[
           ['green',  buckets.green,  'On track'],
           ['yellow', buckets.yellow, 'Watch'],
@@ -1466,7 +1466,7 @@ function AdminAddClient({ state, theme, navigate, onSubmit, presetFromStripe }) 
         <>
           <Card theme={theme} padding={14}>
             <SectionLabel theme={theme}>Commission split</SectionLabel>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
               <Field label="Upfront" theme={theme}>
                 <Input type="number" inputmode="decimal" suffix="×" value={form.upfrontPct}
                   onChange={(v) => setForm({ ...form, upfrontPct: v })} theme={theme}/>
@@ -1666,7 +1666,7 @@ function AdminAuditLog({ state, theme }) {
 
       {/* Filter chips */}
       <Card theme={theme} padding={12}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
           <Select theme={theme} value={filters.actorId}
             onChange={(v) => updateFilter('actorId', v)}
             placeholder="All actors"

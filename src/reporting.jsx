@@ -145,9 +145,78 @@ function RptSyncNote({ theme, runs, source, label }) {
   );
 }
 
+// Every reporting screen draws through RptTable, so a phone reading only has to
+// exist once. Scrolling a nine-column table sideways on a phone is not reading
+// it — the row label is off-screen by the time you reach the number.
+function useNarrow(breakpoint = 720) {
+  const [vw, setVw] = React.useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  React.useEffect(() => {
+    const onResize = () => setVw(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return vw < breakpoint;
+}
+
+function RptCardRow({ theme, columns, title, get, strong }) {
+  return (
+    <div style={{
+      border: `1px solid ${theme.rule}`, borderRadius: theme.radius || 10,
+      background: strong ? (theme.bgElev || theme.surface) : theme.surface, padding: '12px 14px',
+    }}>
+      <div style={{ fontSize: 14, fontWeight: 700, color: theme.ink, marginBottom: 8 }}>{title}</div>
+      <div style={{ display: 'grid', gap: 5 }}>
+        {columns.map(c => {
+          const value = get(c);
+          if (value == null || value === '') return null;
+          return (
+            <div key={c.key} style={{
+              display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12,
+            }}>
+              <span style={{
+                fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase',
+                color: theme.inkMuted,
+              }}>{c.label}</span>
+              <span style={{
+                fontSize: 13, textAlign: 'right', fontWeight: strong ? 700 : 400,
+                fontVariantNumeric: c.align === 'right' ? 'tabular-nums' : 'normal',
+                color: !strong && c.muted ? theme.inkMuted : theme.ink,
+              }}>{value}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function RptTable({ theme, columns, rows, footer, empty }) {
+  const narrow = useNarrow();
   if (!rows.length) {
     return <div style={{ fontSize: 13, color: theme.inkMuted, padding: '16px 4px' }}>{empty}</div>;
+  }
+  if (narrow) {
+    // The first column is what the row is about — client, campaign, source — so
+    // it becomes the card's heading and the rest become label/value pairs.
+    const [head, ...rest] = columns;
+    return (
+      <div style={{ display: 'grid', gap: 8 }}>
+        {rows.map((r, i) => (
+          <RptCardRow
+            key={r._key || i} theme={theme} columns={rest}
+            title={head.render ? head.render(r) : r[head.key]}
+            get={c => (c.render ? c.render(r) : r[c.key])}
+          />
+        ))}
+        {footer ? (
+          <RptCardRow
+            theme={theme} columns={rest} strong
+            title={footer[head.key] != null ? footer[head.key] : 'Total'}
+            get={c => footer[c.key]}
+          />
+        ) : null}
+      </div>
+    );
   }
   const cell = { padding: '8px 10px', borderBottom: `1px solid ${theme.rule}`, whiteSpace: 'nowrap' };
   return (

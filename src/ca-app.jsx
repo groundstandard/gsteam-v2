@@ -242,7 +242,7 @@ function CAHome({ state, ca, theme, density, navigate }) {
           surface as "No data — needs logging" so the math is transparent. */}
       <div>
         <SectionLabel theme={theme}>Book health · {myClients.length} clients</SectionLabel>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
           {[
             { key: 'green',  count: buckets.green,  label: 'On track' },
             { key: 'yellow', count: buckets.yellow, label: 'Watch' },
@@ -792,7 +792,7 @@ function CAProfile({ state, ca, theme, navigate, profile, onSignOut }) {
       {/* Stats grid — only meaningful when CA has a book */}
       {ca && (
         <Card theme={theme} padding={0}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)' }}>
             {[
               { label: 'Active clients', value: myClients.length },
               { label: 'Monthly retainer', value: totalRetainer ? '$' + totalRetainer.toLocaleString() : '—' },

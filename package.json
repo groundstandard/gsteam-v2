@@ -5,7 +5,7 @@
     "@babel/preset-react": "^7.27.1"
   },
   "scripts": {
-    "check": "node scripts/check-reporting.js && node scripts/check-sw.js"
+    "check": "node scripts/check-reporting.js && node scripts/check-sw.js && node scripts/check-ui.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0"

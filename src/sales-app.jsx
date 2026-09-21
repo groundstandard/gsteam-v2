@@ -96,7 +96,7 @@ function SalesHome({ state, rep, theme, navigate, profile, onSignOut }) {
         </div>
         <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>YTD earned · <span style={{ color: theme.gold, fontWeight: 600 }}>{CABT_fmtMoney(r.pending)}</span> pending</div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
         <Card theme={theme}>
           <div style={{ fontSize: 11, color: theme.inkMuted, letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: 600 }}>Active contracts</div>
           <div style={{ fontSize: 28, fontWeight: 700, color: theme.ink, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>{r.activeContracts}</div>
@@ -308,7 +308,7 @@ function SalesCommissions({ state, rep, theme }) {
   const maxMonth = Math.max(1, ...monthTotals.map(m => m.total));
   return (
     <div style={{ padding: '8px 16px 100px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
         <KPI theme={theme} label="Paid YTD"        value={CABT_fmtMoney(r.paidYtd)} />
         <KPI theme={theme} label="Pending"         value={CABT_fmtMoney(r.pending)} />
         <KPI theme={theme} label={isAM ? 'RDR team YTD' : 'AM team YTD'} value={CABT_fmtMoney(isAM ? rdrYtd : amYtd)} />
