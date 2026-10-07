@@ -42,10 +42,10 @@ const CALLS_GRID = {
   '1:00 PM':  ['Fresno', 'JJ Hub', null, null, 'Edgar'],
   '1:30 PM':  [null, null, null, 'Scottsdale', null],
   '2:00 PM':  ['Miami', 'Jiu Jitsu Modern', 'Hammer', null, 'San Jose'],
-  '2:30 PM':  ['Longos', 'OM BJJ', 'Orlando 10P', null, 'Miguel'],
+  '2:30 PM':  ['Longos', null, 'Orlando 10P', null, 'Miguel'],
   '3:00 PM':  ['Mythic', 'Sugoi', 'Universal', 'Artistry', 'Champion Chiro'],
   '3:30 PM':  ['Range', 'WNK', 'Grit', null, null],
-  '4:00 PM':  ['Academy Eden Prarier', null, 'Verde Valley', 'Centerline', 'Robby'],
+  '4:00 PM':  ['Academy Eden Prarier', null, null, 'Centerline', 'Robby'],
 };
 
 // Board labels are short / abbreviated; map each to a distinctive fragment of the
@@ -79,7 +79,6 @@ const CALLS_CLIENT_MATCH = {
   'Miami':               'miami',
   'Hammer':              'hammer sports',
   'Longos':              'longo',
-  'OM BJJ':              'om bjj',
   'Orlando 10P':         'orlando',
   'Sugoi':               'sugoi',
   'Universal':           'universal mma',
@@ -89,7 +88,6 @@ const CALLS_CLIENT_MATCH = {
   'Grit':                'grit bjj',
   'Mythic':              'mythic',
   'Academy Eden Prarier':'eden prairie',
-  'Verde Valley':        'verde valley',
   'Centerline':          'centerline',
   'Robby':               'roberts family',
 };
