@@ -195,7 +195,9 @@ tr.gone td{color:var(--muted)}
 .field>span{color:var(--muted);font-weight:500}
 .field input,.field select,.field textarea{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:8px 10px}
 .field textarea{min-height:70px;resize:vertical}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.field input,.field select,.field textarea{min-width:0;width:100%}
+.d-body{overflow-x:hidden}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg label{flex:1;text-align:center;padding:8px 4px;cursor:pointer;font-weight:600;font-size:14px}
 .seg input{position:absolute;opacity:0;pointer-events:none}
@@ -265,7 +267,11 @@ tr.gone td{color:var(--muted)}
              cancelledOn, cancelReason, cancelNote, health:'green'|'yellow'|'red'|'',
              lastCall, lastContact, price, manager, location, notes,
              logo (image URL), logoAssetId (storage path), referredBy (client id),
-             referredByOther, addons:string[], updatedAt}
+             referredByOther, addons:string[], updatedAt,
+             churn (cancelled clients): noticeOn, cancelCategory, cancelReason (specific), cancelNote (their words),
+             rootCategory, rootReason, controllable:'yes'|'partial'|'no', contractTiming:'onboarding'|'midterm'|'renewal'|'monthly',
+             warned:'yes'|'no'|'unsure', firstWarningOn, competitor, winBack:'yes'|'maybe'|'no', winBackOn,
+             saves: [{date, offer, outcome:'saved'|'downgraded'|'lost', note}] (also on active clients)}
      Log    {id, clientId, kind:'note'|'call'|'contact'|'win'|'issue', text, at (ISO), authorId, authorName}
 
    Interface:
@@ -309,17 +315,25 @@ function supabaseBackend(cfg){
     health: c.health || '', last_call: nz(c.lastCall), last_contact: nz(c.lastContact), price: c.price ? +c.price : null,
     manager: nz(c.manager), location: nz(c.location), notes: nz(c.notes), logo_url: nz(c.logo), logo_path: nz(c.logoAssetId),
     referred_by: nz(c.referredBy), referred_by_other: nz(c.referredByOther), addons: c.addons || [],
+    notice_on: nz(c.noticeOn), cancel_category: nz(c.cancelCategory), root_category: nz(c.rootCategory), root_reason: nz(c.rootReason),
+    controllable: nz(c.controllable), contract_timing: nz(c.contractTiming), warned: nz(c.warned), first_warning_on: nz(c.firstWarningOn),
+    competitor: nz(c.competitor), win_back: nz(c.winBack), win_back_on: nz(c.winBackOn), saves: c.saves || [],
     updated_at: new Date().toISOString()
   });
   const FIELD = {name:'name', serviceId:'service_id', status:'status', since:'since', cancelledOn:'cancelled_on', cancelReason:'cancel_reason',
     cancelNote:'cancel_note', health:'health', lastCall:'last_call', lastContact:'last_contact', price:'price', manager:'manager', location:'location',
-    notes:'notes', logo:'logo_url', logoAssetId:'logo_path', referredBy:'referred_by', referredByOther:'referred_by_other', addons:'addons'};
+    notes:'notes', logo:'logo_url', logoAssetId:'logo_path', referredBy:'referred_by', referredByOther:'referred_by_other', addons:'addons',
+    noticeOn:'notice_on', cancelCategory:'cancel_category', rootCategory:'root_category', rootReason:'root_reason', controllable:'controllable',
+    contractTiming:'contract_timing', warned:'warned', firstWarningOn:'first_warning_on', competitor:'competitor', winBack:'win_back', winBackOn:'win_back_on', saves:'saves'};
   const fromClientRow = r => ({
     id: r.id, name: r.name, serviceId: r.service_id || '', status: r.status, since: r.since || '', cancelledOn: r.cancelled_on || '',
     cancelReason: r.cancel_reason || '', cancelNote: r.cancel_note || '', health: r.health || '', lastCall: r.last_call || '',
     lastContact: r.last_contact || '', price: r.price ? +r.price : 0, manager: r.manager || '', location: r.location || '', notes: r.notes || '',
     logo: r.logo_url || '', logoAssetId: r.logo_path || '', referredBy: r.referred_by || '', referredByOther: r.referred_by_other || '',
-    addons: r.addons || [], updatedAt: r.updated_at
+    addons: r.addons || [], noticeOn: r.notice_on || '', cancelCategory: r.cancel_category || '', rootCategory: r.root_category || '',
+    rootReason: r.root_reason || '', controllable: r.controllable || '', contractTiming: r.contract_timing || '', warned: r.warned || '',
+    firstWarningOn: r.first_warning_on || '', competitor: r.competitor || '', winBack: r.win_back || '', winBackOn: r.win_back_on || '',
+    saves: r.saves || [], updatedAt: r.updated_at
   });
   const fromPlanRow = r => ({id:r.id, name:r.name, color:r.color, term:r.term||0, cadence:r.cadence||0, standard:!!r.standard, blurb:r.blurb||''});
   const fromLogRow = r => ({id:r.id, clientId:r.client_id, kind:r.kind, text:r.text||'', at:r.at, authorId:r.author_id||'', authorName:r.author_name||''});
@@ -360,7 +374,7 @@ function supabaseBackend(cfg){
     async saveClient(c){ const { error } = await sb.from(T.clients).upsert(toClientRow(c)); fail(error); },
     async updateClient(id, fields){
       const row = {updated_at: new Date().toISOString()};
-      Object.entries(fields).forEach(([k,v]) => { if(FIELD[k]) row[FIELD[k]] = (k === 'addons') ? (v||[]) : (k === 'health' ? (v||'') : nz(v)); });
+      Object.entries(fields).forEach(([k,v]) => { if(FIELD[k]) row[FIELD[k]] = (k === 'addons' || k === 'saves') ? (v||[]) : (k === 'health' ? (v||'') : nz(v)); });
       const { error } = await sb.from(T.clients).update(row).eq('id', id); fail(error);
     },
     async deleteClient(id){ const { error } = await sb.from(T.clients).delete().eq('id', id); fail(error); }, // log rows cascade
@@ -434,7 +448,51 @@ const ADDONS = [
   {id:'content', name:'Content (social management)', ok:()=>true},
   {id:'membership', name:'Membership management', ok:s=>!!s.standard, why:'Standard and up only'}
 ];
-const CANCEL_REASONS = ['Price or budget','Not seeing results','Closed or sold the gym','Switched to another provider','Took it in-house','Paused or seasonal','Agency ended agreement','Conflict of interest','Absentee owner','Other'];
+/* Churn taxonomy: category -> specific reasons. ctrl = default controllability. */
+const CHURN = [
+  {id:'results', name:'Results', ctrl:'partial', reasons:['Not enough leads','Leads were poor quality','Leads did not book or show','No return on the cost','Results dropped after a strong start']},
+  {id:'price', name:'Price and value', ctrl:'partial', reasons:['Cash flow or could not afford it','Overpriced for what they got','Cut their ad budget','Found a cheaper option']},
+  {id:'service', name:'Service and relationship', ctrl:'yes', reasons:['Slow or unclear communication','Account manager fit or turnover','Concierge handled leads poorly','Creative did not match their brand','Onboarding slow or never fully launched']},
+  {id:'fit', name:'Fit and adoption', ctrl:'partial', reasons:['Did not use the system or work their leads','Technical or integration problems','Needed something GS does not offer','Wrong plan for their stage','Absentee owner','Conflict of interest','Agency ended agreement']},
+  {id:'competitor', name:'Competitor', ctrl:'partial', reasons:['Switched to another agency','Took it in-house or hired staff','Joined a franchise or association program']},
+  {id:'business', name:'Business change', ctrl:'no', reasons:['Closed the gym','Sold the gym','Owner health or life event','Paused or seasonal','Gym is at capacity','Merged or rebranded']},
+  {id:'payment', name:'Payment (involuntary)', ctrl:'no', reasons:['Failed payment','Non-payment']},
+  {id:'other', name:'Other', ctrl:'', reasons:['Other (explain in their words)']}
+];
+const CANCEL_REASONS = CHURN.map(x => x.name);
+const LEGACY_REASONS = {'Price or budget':['price',''],'Not seeing results':['results',''],'Closed or sold the gym':['business',''],'Switched to another provider':['competitor','Switched to another agency'],'Took it in-house':['competitor','Took it in-house or hired staff'],'Paused or seasonal':['business','Paused or seasonal'],'Other':['other','']};
+const CTRL = {yes:'Controllable', partial:'Partly controllable', no:'Uncontrollable'};
+const SAVE_OFFERS = ['Pause','Downgrade','Strategy reset','Discount','Extra support or training','Other'];
+const SAVE_OUTCOMES = {saved:'Saved', downgraded:'Saved with a downgrade', lost:'Lost'};
+const TIMING = {onboarding:'During onboarding (first 60 days)', midterm:'Mid-term (left before the term ended)', renewal:'At renewal', monthly:'No fixed term (month-to-month)'};
+const WINBACK = {yes:'Yes', maybe:'Maybe', no:'No'};
+const catById = id => CHURN.find(x => x.id === id);
+const catName = id => (catById(id) || {}).name || 'Not recorded';
+/* normalize stated + root cause, including records saved with the old flat reason list */
+function churnOf(c){
+  let cat = c.cancelCategory || '', reason = c.cancelReason || '';
+  if(!cat && reason){ const L = LEGACY_REASONS[reason]; if(L){ cat = L[0]; reason = L[1]; } else if(CANCEL_REASONS.includes(reason)) { cat = (CHURN.find(x=>x.name===reason)||{}).id || ''; reason = ''; } }
+  const root = c.rootCategory || cat, rootReason = c.rootCategory ? (c.rootReason || '') : reason;
+  return {cat, reason, root, rootReason, ctrl: c.controllable || (catById(root) || {}).ctrl || ''};
+}
+const churnLabel = (cat, reason) => cat ? catName(cat) + (reason ? ': ' + reason : '') : 'Not recorded';
+/* suggested contract timing from start date, plan term and cancel date */
+function suggestTiming(c, when){
+  if(!c.since || !when) return '';
+  const d = days(c.since, when); if(d <= 60) return 'onboarding';
+  const s = svcById(c.serviceId), term = s && +s.term; if(!term) return 'monthly';
+  // terms renew in blocks from the start date: within 30 days of a boundary = at renewal, otherwise an early exit mid-term
+  for(let i = 1; i < 120; i++){ const r = addMonths(c.since, term*i); if(Math.abs(days(r, when)) <= 30) return 'renewal'; if(r > when) break; }
+  return 'midterm';
+}
+function churnMissing(c){
+  if(!isGone(c)) return [];
+  const ch = churnOf(c), m = [];
+  if(!ch.cat) m.push('reason'); else if(!ch.reason) m.push('specific reason');
+  if(!c.rootCategory) m.push('root cause'); if(!c.controllable) m.push('controllable');
+  if(!c.contractTiming) m.push('timing'); if(!c.winBack) m.push('win-back');
+  return m;
+}
 const HEALTH = {
   green:{label:'Healthy', color:'#3FB950'},
   yellow:{label:'Watch', color:'#E3B341'},
@@ -969,7 +1027,16 @@ function showClientPanel(c){
       ${clientAddons(c).length?`<dt>Add-ons</dt><dd>${clientAddons(c).map(a=>esc(a.name)).join('<br>')}</dd>`:''}
       ${c.since?`<dt>Client since</dt><dd>${esc(fmtDate(c.since))}</dd>`:''}
       ${gone&&c.cancelledOn?`<dt>Cancelled on</dt><dd>${esc(fmtDate(c.cancelledOn))}</dd>`:''}
-      ${gone?`<dt>Reason</dt><dd>${esc(c.cancelReason||'Not recorded')}${c.cancelNote?`<br><small style="color:var(--muted)">${esc(c.cancelNote)}</small>`:''}</dd>`:''}
+      ${gone?(()=>{ const ch = churnOf(c); return `
+        ${c.noticeOn?`<dt>Notice given</dt><dd>${esc(fmtDate(c.noticeOn))}</dd>`:''}
+        <dt>They said</dt><dd>${esc(churnLabel(ch.cat, ch.reason))}${c.competitor?`<br><small style="color:var(--muted)">Went to ${esc(c.competitor)}</small>`:''}</dd>
+        ${c.cancelNote?`<dt>In their words</dt><dd><i>"${esc(c.cancelNote)}"</i></dd>`:''}
+        <dt>Root cause</dt><dd>${c.rootCategory?esc(churnLabel(ch.root, ch.rootReason)):'<span style="color:var(--muted)">Not assessed yet</span>'}</dd>
+        ${ch.ctrl?`<dt>Controllable</dt><dd>${esc(CTRL[ch.ctrl]||'')}</dd>`:''}
+        ${c.contractTiming?`<dt>Timing</dt><dd>${esc(TIMING[c.contractTiming]||'')}</dd>`:''}
+        ${c.warned?`<dt>Saw it coming</dt><dd>${esc({yes:'Yes',no:'No',unsure:'Unsure'}[c.warned])}${c.firstWarningOn?`, first signs ${esc(fmtDate(c.firstWarningOn))}`:''}</dd>`:''}
+        ${c.winBack?`<dt>Win-back</dt><dd>${esc(WINBACK[c.winBack])}${c.winBackOn&&c.winBack!=='no'?`, check in ${esc(fmtDate(c.winBackOn))}`:''}</dd>`:''}`; })():''}
+      ${(c.saves||[]).length?`<dt>Save attempts</dt><dd>${c.saves.map(sv=>`${esc(fmtDate(sv.date))}: ${esc(sv.offer)} (${esc(SAVE_OUTCOMES[sv.outcome]||sv.outcome)})`).join('<br>')}</dd>`:''}
       ${c.since?`<dt>${gone?'Was with us':'With us'}</dt><dd>${esc(tenureText(c.since, gone?c.cancelledOn:null))}</dd>`:''}
       ${r?`<dt>Referred by</dt><dd><button class="linkbtn" data-go="${esc(r.id)}">${esc(r.name)}</button></dd>`:(c.referredByOther?`<dt>Referred by</dt><dd>${esc(c.referredByOther)}</dd>`:'')}
       ${rs.length?`<dt>Referred</dt><dd>${rs.map(x=>`<button class="linkbtn" data-go="${esc(x.id)}">${esc(x.name)}</button>`).join('<br>')}</dd>`:''}
@@ -977,12 +1044,22 @@ function showClientPanel(c){
       ${c.location?`<dt>Location</dt><dd>${esc(c.location)}</dd>`:''}
     </dl>
     ${c.notes?`<div class="p-notes">${esc(c.notes)}</div>`:''}
-    ${canWrite?'<button class="btn" id="pEdit">Edit client</button>':''}
+    ${gone && churnMissing(c).length ? `<div class="flags"><div class="flag amber">Churn details missing: ${esc(churnMissing(c).join(', '))}</div></div>` : ''}
+    ${canWrite?`<div class="quick"><button class="btn" id="pEdit">${gone && churnMissing(c).length ? 'Complete churn details' : 'Edit client'}</button>${!gone?'<button class="btn" id="pSave">Record a save attempt</button>':''}</div>
+      <div id="saveForm" hidden class="fieldset" style="padding:12px"><div class="two"><label class="field"><span>Offer made</span><select id="svOffer">${SAVE_OFFERS.map(o=>`<option>${esc(o)}</option>`).join('')}</select></label>
+        <label class="field"><span>Outcome</span><select id="svOutcome"><option value="saved">Saved</option><option value="downgraded">Saved with a downgrade</option></select></label></div>
+        <label class="field"><span>What was the risk?</span><input id="svNote" placeholder="e.g. threatened to cancel over lead quality"></label>
+        <button class="btn small primary" id="svGo">Save attempt</button> <small style="color:var(--muted)">If they cancel anyway, record it in the cancellation form.</small></div>`:''}
     <div class="log"><h3>Activity</h3>
       ${canWrite?`<div class="log-form"><textarea id="logText" placeholder="What happened? Calls, wins, issues, next steps"></textarea>
         <div class="row2"><select id="logKind" aria-label="Entry type">${Object.entries(LOG_KINDS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><button class="btn small primary" id="logAdd">Add entry</button></div></div>`:''}
       <div id="logList"><p class="empty">${B?'Loading activity…':'Activity is unavailable.'}</p></div></div>`);
   if($('pEdit')) $('pEdit').addEventListener('click', () => openDrawer('clients', c.id));
+  if($('pSave')) $('pSave').addEventListener('click', () => { $('saveForm').hidden = !$('saveForm').hidden; });
+  if($('svGo')) $('svGo').addEventListener('click', async () => {
+    const entry = {date:TODAY, offer:$('svOffer').value, outcome:$('svOutcome').value, note:$('svNote').value.trim()};
+    if(await patchClient(c.id, {saves:(c.saves||[]).concat([entry])})){ addLog(c.id, 'win', `Save: ${entry.offer}, ${SAVE_OUTCOMES[entry.outcome].toLowerCase()}${entry.note?` (${entry.note})`:''}`); toast('Save attempt recorded'); }
+  });
   if($('qCall')) $('qCall').addEventListener('click', async () => { if(await patchClient(c.id, {lastCall:TODAY, lastContact:TODAY})){ await addLog(c.id,'call',''); toast('Strategy call logged for today'); } });
   if($('qContact')) $('qContact').addEventListener('click', async () => { if(await patchClient(c.id, {lastContact:TODAY})){ await addLog(c.id,'contact',''); toast('Contact logged for today'); } });
   if($('qHealth')) $('qHealth').addEventListener('change', async e => { const v = e.target.value; if(await patchClient(c.id, {health:v})) addLog(c.id, 'note', `Health set to ${HEALTH[v].label}`); });
@@ -1040,6 +1117,8 @@ const COLS = [
   {k:'price', t:'Price', v:c=>+c.price||0},
   {k:'manager', t:'Manager', v:c=>(c.manager||'').toLowerCase()},
   {k:'location', t:'Location', v:c=>(c.location||'').toLowerCase()},
+  {k:'churn', t:'Churn reason', v:c=>isGone(c)?churnLabel(churnOf(c).cat, churnOf(c).reason):''},
+  {k:'ctrl', t:'Controllable', v:c=>isGone(c)?(churnOf(c).ctrl||'z'):''},
   {k:'ref', t:'Referred by', v:c=>(byId(c.referredBy)?.name||c.referredByOther||'').toLowerCase()},
   {k:'refs', t:'Referrals', v:c=>referralsOf(c.id).length}
 ];
@@ -1069,6 +1148,8 @@ function renderTable(){
       case 'manager': return `<td>${esc(c.manager||'')}</td>`;
       case 'location': return `<td>${esc(c.location||'')}</td>`;
       case 'ref': { const r = byId(c.referredBy); return `<td>${r?`<button class="linkbtn" data-go="${esc(r.id)}">${esc(r.name)}</button>`:esc(c.referredByOther||'')}</td>`; }
+      case 'churn': { if(!isGone(c)) return '<td></td>'; const ch = churnOf(c); return `<td>${ch.cat?esc(churnLabel(ch.cat, ch.reason)):'<span class="soon">Not recorded</span>'}</td>`; }
+      case 'ctrl': return `<td>${isGone(c)?esc(CTRL[churnOf(c).ctrl]||''):''}</td>`;
       case 'refs': { const n = referralsOf(c.id).length; return `<td>${n||''}</td>`; }
     }
   };
@@ -1081,7 +1162,7 @@ function renderTable(){
       <select id="bHealth" aria-label="Set health"><option value="-">Set health…</option>${['green','yellow','red',''].map(k=>`<option value="${k}">${HEALTH[k].label}</option>`).join('')}</select>
       <input id="bMgr" list="bMgrs" placeholder="Set manager" aria-label="Set account manager" style="width:130px"><datalist id="bMgrs">${managers.map(m=>`<option value="${esc(m)}">`).join('')}</datalist><button class="btn small" id="bMgrGo">Apply</button>
       <button class="btn small" id="bCall">Log call today</button>
-      <select id="bCancel" aria-label="Cancel with reason"><option value="">Cancel with reason…</option>${CANCEL_REASONS.map(r=>`<option>${esc(r)}</option>`).join('')}</select>
+      <select id="bCancel" aria-label="Cancel with reason"><option value="">Cancel with reason…</option>${CHURN.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select>
       <button class="btn small" id="bActive">Reactivate</button>
       <button class="btn small" id="bClear">Clear selection</button></div>` : ''}
     <div class="tablewrap"><table><thead><tr>
@@ -1106,15 +1187,16 @@ function renderTable(){
   $('bHealth').addEventListener('change', e => { if(e.target.value !== '-') bulk({health:e.target.value}, 'Health updated'); });
   $('bMgrGo').addEventListener('click', () => bulk({manager:$('bMgr').value.trim()}, 'Manager updated'));
   $('bCall').addEventListener('click', () => bulk({lastCall:TODAY, lastContact:TODAY}, 'Call logged', 'call'));
-  $('bCancel').addEventListener('change', e => { const r = e.target.value; if(!r) return; if(!confirm(`Mark ${ids.length} ${ids.length===1?'client':'clients'} as cancelled today (${r})?`)){ e.target.value=''; return; } bulk({status:'cancelled', cancelledOn:TODAY, cancelReason:r}, 'Marked cancelled'); });
-  $('bActive').addEventListener('click', () => bulk({status:'active', cancelledOn:'', cancelReason:'', cancelNote:''}, 'Reactivated'));
+  $('bCancel').addEventListener('change', e => { const r = e.target.value; if(!r) return; if(!confirm(`Mark ${ids.length} ${ids.length===1?'client':'clients'} as cancelled today (${catName(r)})? You can add the specific reason and root cause afterwards.`)){ e.target.value=''; return; } bulk(c => ({status:'cancelled', cancelledOn:TODAY, cancelCategory:r, cancelReason:'', contractTiming:suggestTiming(c, TODAY)}), 'Marked cancelled'); });
+  $('bActive').addEventListener('click', () => bulk({status:'active', cancelledOn:'', noticeOn:'', cancelCategory:'', cancelReason:'', cancelNote:'', rootCategory:'', rootReason:'', controllable:'', contractTiming:'', warned:'', firstWarningOn:'', competitor:'', winBack:'', winBackOn:''}, 'Reactivated'));
   $('bClear').addEventListener('click', () => { tableSel.clear(); renderTable(); });
 }
 async function exportCSV(rows){
-  const head = ['Client','Plan','Status','Health','Needs attention','Next renewal','Last strategy call','Last contact','Client since','Cancelled on','Cancel reason','Tenure (months)','Monthly price','Account manager','Location','Referred by','Referrals made','Add-ons','Notes'];
+  const head = ['Client','Plan','Status','Health','Needs attention','Next renewal','Last strategy call','Last contact','Client since','Cancelled on','Notice given','Stated category','Stated reason','In their words','Root cause category','Root cause reason','Controllable','Contract timing','Saw it coming','First warning signs','Competitor','Win-back','Win-back check-in','Save attempts','Tenure (months)','Monthly price','Account manager','Location','Referred by','Referrals made','Add-ons','Notes'].filter(h => h !== 'Cancel reason');
   const q = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
   const lines = [head.join(',')].concat(rows.map(c => [c.name, svcById(c.serviceId)?.name||'', isGone(c)?'Cancelled':'Active', isGone(c)?'':HEALTH[c.health||''].label,
-    flagsFor(c).filter(f=>f.level!=='info').map(f=>f.text).join('; '), nextRenewal(c)||'', c.lastCall||'', c.lastContact||'', c.since||'', c.cancelledOn||'', c.cancelReason||'',
+    flagsFor(c).filter(f=>f.level!=='info').map(f=>f.text).join('; '), nextRenewal(c)||'', c.lastCall||'', c.lastContact||'', c.since||'', c.cancelledOn||'', c.noticeOn||'', ...(()=>{ const ch = churnOf(c), g = isGone(c); return g ? [catName(ch.cat), ch.reason, c.cancelNote||'', c.rootCategory?catName(ch.root):'', c.rootCategory?ch.rootReason:'', CTRL[ch.ctrl]||'', TIMING[c.contractTiming]||'', ({yes:'Yes',no:'No',unsure:'Unsure'})[c.warned]||'', c.firstWarningOn||'', c.competitor||'', WINBACK[c.winBack]||'', c.winBackOn||''] : ['','','','','','','','','','','','']; })(),
+    (c.saves||[]).map(s=>`${s.date} ${s.offer} (${SAVE_OUTCOMES[s.outcome]||s.outcome})`).join('; '),
     c.since?monthsBetween(c.since, isGone(c)&&c.cancelledOn?c.cancelledOn:TODAY):'', c.price||'', c.manager||'', c.location||'', byId(c.referredBy)?.name||c.referredByOther||'',
     referralsOf(c.id).length||'', clientAddons(c).map(a=>a.name).join('; '), c.notes||''].map(q).join(',')));
   const data = lines.join('\n');
@@ -1134,9 +1216,7 @@ function renderInsights(){
 
   const tenures = gone.filter(c => c.since && c.cancelledOn).map(c => monthsBetween(c.since, c.cancelledOn));
   const avgT = tenures.length ? (tenures.reduce((a,b)=>a+b,0)/tenures.length) : 0;
-  const reasons = {}; gone.forEach(c => { const r = c.cancelReason || 'No reason recorded'; reasons[r] = (reasons[r]||0) + 1; });
-  const reasonRows = Object.entries(reasons).sort((a,b) => b[1]-a[1]);
-  const maxR = Math.max(1, ...reasonRows.map(r => r[1]));
+  const churnHTML = churnInsights(all, active, gone);
   const refd = all.filter(referred), notRefd = all.filter(c => !referred(c));
   const pct = arr => arr.length ? Math.round(100 * arr.filter(c=>!isGone(c)).length / arr.length) : 0;
   const lastYear = addMonths(TODAY, -12);
@@ -1178,10 +1258,7 @@ function renderInsights(){
       <div class="stats">${['green','yellow','red',''].map(k=>`<div class="stat"><b style="color:${HEALTH[k].color}">${hc[k]||0}</b><span>${HEALTH[k].label}</span></div>`).join('')}</div>
       ${hc['']===active.length && active.length ? '<p class="empty">No health set yet. Set it from a client\'s panel or in bulk from the Table view.</p>' : ''}</section>
     <section class="card wide"><h2>Growth</h2><p class="sub">New clients (gold) and cancellations (grey) per month, last 12 months.</p>${chart}</section>
-    <section class="card"><h2>Churn</h2><p class="sub">Why clients leave and how long they stay first.</p>
-      <div class="stats"><div class="stat"><b>${gone.length}</b><span>Cancelled total</span></div><div class="stat"><b>${goneYear}</b><span>In the last 12 months</span></div><div class="stat"><b>${tenures.length ? avgT.toFixed(1) : '–'}</b><span>Avg months before cancelling</span></div></div>
-      ${reasonRows.length ? `<div class="bars">${reasonRows.map(([r,n]) => `<div class="bar"><span>${esc(r)}</span><div class="track"><div class="fill" style="width:${n/maxR*100}%;${r==='No reason recorded'?'background:#8e9aaa':''}"></div></div><b>${n}</b></div>`).join('')}</div>` : '<p class="empty">No cancellations yet.</p>'}
-      ${reasons['No reason recorded'] ? `<p class="empty" style="margin-top:10px">Add reasons to past cancellations in Manage clients so these patterns are complete.</p>` : ''}</section>
+    ${churnHTML}
     <section class="card"><h2>Referrals</h2><p class="sub">Who sends you clients, and whether referred clients stay.</p>
       <div class="stats"><div class="stat"><b>${refd.length}</b><span>Came by referral</span></div><div class="stat"><b>${pct(refd)}%</b><span>Referred still active</span></div><div class="stat"><b>${pct(notRefd)}%</b><span>Non-referred still active</span></div></div>
       ${leaders.length ? `<h3 style="font:700 16px var(--display);margin:10px 0 4px">Top referrers</h3><ul class="ilist">${leaders.map(x => li(x.c, `${x.n} referred, ${x.live} active`)).join('')}</ul>` : '<p class="empty">No referrals between clients recorded yet.</p>'}</section>
@@ -1193,6 +1270,111 @@ function renderInsights(){
       <p class="empty">${priced.length} of ${active.length} active clients have a price entered.</p></section>
   </div>`;
   $('insightsView').querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => selectClient(b.dataset.go, true)));
+  $('insightsView').querySelectorAll('[name=chSide]').forEach(r => r.addEventListener('change', () => { churnSide = r.value; const y = $('insightsView').scrollTop; renderInsights(); $('insightsView').scrollTop = y; }));
+}
+
+/* ================= churn insights ================= */
+let churnSide = 'stated';
+function churnInsights(all, active, gone){
+  const li = (c, why, dot) => `<li><button data-go="${esc(c.id)}">${mini(c)}<span class="nm2">${esc(c.name)}</span><span class="why">${why}</span>${dot?`<span class="dot" style="background:${dot}"></span>`:''}</button></li>`;
+  const bars = (rows, color) => { const mx = Math.max(1, ...rows.map(r => r[1])); return `<div class="bars">${rows.map(([k,n]) => `<div class="bar"><span title="${esc(k)}">${esc(k)}</span><div class="track"><div class="fill" style="width:${n/mx*100}%;${k==='Not recorded'?'background:#8e9aaa':(color?`background:${color}`:'')}"></div></div><b>${n}</b></div>`).join('')}</div>`; };
+  const count = (arr, fn) => { const m = {}; arr.forEach(x => { const k = fn(x); if(k) m[k] = (m[k]||0) + 1; }); return Object.entries(m).sort((a,b) => b[1]-a[1]); };
+  const pctTxt = (a, b) => b ? Math.round(100*a/b) + '%' : '–';
+  const yearAgo = addMonths(TODAY, -12);
+  const recent = gone.filter(c => c.cancelledOn && c.cancelledOn >= yearAgo && c.cancelledOn <= TODAY);
+
+  // monthly churn rate over the last 12 full months
+  const rates = [];
+  for(let i = 12; i >= 1; i--){
+    const start = addMonths(TODAY.slice(0,8) + '01', -i), end = addMonths(start, 1);
+    const base = all.filter(c => c.since && c.since < start && !(isGone(c) && c.cancelledOn && c.cancelledOn < start)).length;
+    const lost = gone.filter(c => c.cancelledOn && c.cancelledOn >= start && c.cancelledOn < end).length;
+    if(base) rates.push(lost / base);
+  }
+  const avgRate = rates.length ? rates.reduce((a,b)=>a+b,0) / rates.length : 0;
+  const lostRev = recent.filter(c => +c.price > 0).reduce((t,c) => t + +c.price, 0);
+  const tenures = gone.filter(c => c.since && c.cancelledOn).map(c => monthsBetween(c.since, c.cancelledOn));
+  const avgT = tenures.length ? tenures.reduce((a,b)=>a+b,0) / tenures.length : 0;
+  const withCtrl = gone.filter(c => churnOf(c).ctrl);
+  const ctrlN = withCtrl.filter(c => churnOf(c).ctrl === 'yes').length, partN = withCtrl.filter(c => churnOf(c).ctrl === 'partial').length;
+  const invol = gone.filter(c => churnOf(c).cat === 'payment').length;
+  const missing = gone.filter(c => churnMissing(c).length);
+
+  // why they leave
+  const side = churnSide === 'root' ? 'root' : 'stated';
+  const pool = side === 'root' ? gone.filter(c => c.rootCategory) : gone;
+  const catRows = count(pool, c => { const ch = churnOf(c); return side === 'root' ? catName(ch.root) : (ch.cat ? catName(ch.cat) : 'Not recorded'); });
+  const specRows = count(pool, c => { const ch = churnOf(c); return side === 'root' ? ch.rootReason : ch.reason; }).slice(0, 8);
+  const mism = gone.filter(c => c.rootCategory && churnOf(c).cat && c.rootCategory !== churnOf(c).cat);
+
+  // saves
+  const saves = []; all.forEach(c => (c.saves||[]).forEach(s => saves.push(Object.assign({client:c}, s))));
+  const saved = saves.filter(s => s.outcome === 'saved' || s.outcome === 'downgraded');
+  const byOffer = {}; saves.forEach(s => { const o = byOffer[s.offer] = byOffer[s.offer] || {n:0, ok:0}; o.n++; if(s.outcome !== 'lost') o.ok++; });
+  const noAttempt = recent.filter(c => !(c.saves||[]).some(s => s.outcome === 'lost')).length;
+
+  // early warning + timing
+  const warnedPool = gone.filter(c => c.warned);
+  const warnedYes = warnedPool.filter(c => c.warned === 'yes');
+  const lead = warnedYes.filter(c => c.firstWarningOn && c.cancelledOn).map(c => days(c.firstWarningOn, c.noticeOn || c.cancelledOn));
+  const timingRows = count(gone, c => TIMING[c.contractTiming] || '');
+
+  // segments
+  const seg = (fn) => { const m = {}; all.forEach(c => { const k = fn(c) || 'Not set'; m[k] = m[k] || {n:0, lost:0}; m[k].n++; if(isGone(c)) m[k].lost++; }); return Object.entries(m).sort((a,b) => b[1].lost - a[1].lost || b[1].n - a[1].n); };
+  const segTable = (title, rows) => `<h3 style="font:700 16px var(--display);margin:12px 0 4px">${title}</h3><table><thead><tr><th>Segment</th><th>Clients</th><th>Cancelled</th><th>Churned</th></tr></thead><tbody>${rows.map(([k,v]) => `<tr><td>${esc(k)}</td><td>${v.n}</td><td>${v.lost}</td><td>${pctTxt(v.lost, v.n)}</td></tr>`).join('')}</tbody></table>`;
+
+  // cohorts by start quarter
+  const q = d => d.slice(0,4) + ' Q' + (Math.floor((+d.slice(5,7)-1)/3)+1);
+  const coh = {}; all.filter(c => c.since).forEach(c => { const k = q(c.since); coh[k] = coh[k] || {n:0, live:0, lostT:[]}; coh[k].n++; if(isGone(c)){ if(c.cancelledOn) coh[k].lostT.push(monthsBetween(c.since, c.cancelledOn)); } else coh[k].live++; });
+  const cohRows = Object.entries(coh).sort((a,b) => b[0].localeCompare(a[0]));
+
+  // win-back
+  const wb = gone.filter(c => c.winBack === 'yes' || c.winBack === 'maybe').sort((a,b) => (a.winBackOn||'9999').localeCompare(b.winBackOn||'9999'));
+
+  return `
+  <section class="card wide"><h2>Churn overview</h2><p class="sub">Last 12 months unless noted. Monthly churn rate = clients lost in a month divided by active clients at the start of that month, averaged.</p>
+    <div class="stats">
+      <div class="stat"><b>${rates.length ? (avgRate*100).toFixed(1) + '%' : '–'}</b><span>Avg monthly churn rate</span></div>
+      <div class="stat"><b>${recent.length}</b><span>Cancelled in 12 months</span></div>
+      <div class="stat"><b>${money(lostRev)}</b><span>Monthly revenue lost (priced clients)</span></div>
+      <div class="stat"><b>${tenures.length ? avgT.toFixed(1) : '–'}</b><span>Avg months before cancelling</span></div>
+      <div class="stat"><b>${withCtrl.length ? pctTxt(ctrlN, withCtrl.length) : '–'}</b><span>Controllable${partN?` (+${pctTxt(partN, withCtrl.length)} partly)`:''}</span></div>
+      <div class="stat"><b>${invol}</b><span>Involuntary (payment)</span></div>
+    </div>
+    ${missing.length ? `<p class="empty"><span class="soon">${missing.length} of ${gone.length} cancellations are missing details.</span> Complete them so these reports are accurate:</p><ul class="ilist">${missing.slice(0,10).map(c => li(c, esc(churnMissing(c).join(', ')), '#E3B341')).join('')}</ul>${missing.length > 10 ? `<p class="empty">and ${missing.length - 10} more.</p>` : ''}` : (gone.length ? '<p class="empty">Every cancellation has complete churn details.</p>' : '')}
+  </section>
+  <section class="card"><h2>Why they leave</h2><p class="sub">${side === 'root' ? 'Root cause, as assessed by the account manager.' : 'What the client said.'}</p>
+    <div class="seg" style="margin-bottom:12px;max-width:280px"><label><input type="radio" name="chSide" value="stated" ${side==='stated'?'checked':''}>What they said</label><label><input type="radio" name="chSide" value="root" ${side==='root'?'checked':''}>Root cause</label></div>
+    ${catRows.length ? bars(catRows) : '<p class="empty">No data yet.</p>'}
+    ${specRows.length ? `<h3 style="font:700 16px var(--display);margin:14px 0 6px">Top specific reasons</h3>${bars(specRows, '#5BC0EB')}` : ''}
+  </section>
+  <section class="card"><h2>Said vs. root cause</h2><p class="sub">Cancellations where the real reason differed from what the client told you.</p>
+    <div class="stats"><div class="stat"><b>${mism.length}</b><span>Mismatched</span></div><div class="stat"><b>${gone.filter(c=>c.rootCategory).length}</b><span>Assessed so far</span></div></div>
+    ${mism.length ? `<ul class="ilist">${mism.map(c => { const ch = churnOf(c); return li(c, `said ${esc(catName(ch.cat))}, really ${esc(catName(ch.root))}`); }).join('')}</ul>` : '<p class="empty">No mismatches recorded.</p>'}
+  </section>
+  <section class="card"><h2>Save attempts</h2><p class="sub">Offers made to clients at risk of cancelling, and what worked.</p>
+    <div class="stats"><div class="stat"><b>${saves.length}</b><span>Attempts</span></div><div class="stat"><b>${pctTxt(saved.length, saves.length)}</b><span>Save rate</span></div><div class="stat"><b>${noAttempt}</b><span>Lost with no save attempt (12 mo)</span></div></div>
+    ${Object.keys(byOffer).length ? `<table><thead><tr><th>Offer</th><th>Tried</th><th>Saved</th><th>Rate</th></tr></thead><tbody>${Object.entries(byOffer).sort((a,b)=>b[1].n-a[1].n).map(([o,v]) => `<tr><td>${esc(o)}</td><td>${v.n}</td><td>${v.ok}</td><td>${pctTxt(v.ok, v.n)}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">No save attempts recorded yet. Use "Record a save attempt" on an at-risk client.</p>'}
+  </section>
+  <section class="card"><h2>Early warning and timing</h2><p class="sub">Did the team see it coming, and when in the contract do clients leave?</p>
+    <div class="stats"><div class="stat"><b>${pctTxt(warnedYes.length, warnedPool.length)}</b><span>Saw it coming</span></div><div class="stat"><b>${lead.length ? Math.round(lead.reduce((a,b)=>a+b,0)/lead.length) : '–'}</b><span>Avg days of warning</span></div></div>
+    ${timingRows.length ? bars(timingRows, '#7C5CBF') : '<p class="empty">No contract timing recorded yet.</p>'}
+  </section>
+  <section class="card"><h2>Win-back list</h2><p class="sub">Former clients open to returning, by check-in date.</p>
+    ${wb.length ? `<ul class="ilist">${wb.map(c => { const due = c.winBackOn && c.winBackOn <= addMonths(TODAY, 0) ; return li(c, `${WINBACK[c.winBack]}${c.winBackOn?`, ${esc(fmtDate(c.winBackOn))}`:''}`, due ? '#F85149' : (c.winBack==='yes'?'#3FB950':'#E3B341')); }).join('')}</ul>` : '<p class="empty">No one marked for win-back yet.</p>'}
+  </section>
+  <section class="card wide"><h2>Churn by segment</h2><p class="sub">All clients ever on the roster.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px">
+      <div>${segTable('Account manager', seg(c => c.manager))}</div>
+      <div>${segTable('Referral source', seg(c => referred(c) ? 'Referred' : 'Not referred'))}</div>
+      <div>${segTable('Plan', seg(c => svcById(c.serviceId)?.name))}</div>
+    </div>
+  </section>
+  <section class="card wide"><h2>Retention by start quarter</h2><p class="sub">Of the clients who started in each quarter, how many are still active.</p>
+    <div style="overflow-x:auto"><table><thead><tr><th>Started</th><th>Clients</th><th>Still active</th><th>Retained</th><th>Avg months before cancelling</th></tr></thead><tbody>
+      ${cohRows.map(([k,v]) => `<tr><td>${k}</td><td>${v.n}</td><td>${v.live}</td><td>${pctTxt(v.live, v.n)}</td><td>${v.lostT.length ? (v.lostT.reduce((a,b)=>a+b,0)/v.lostT.length).toFixed(1) : ''}</td></tr>`).join('')}
+    </tbody></table></div>
+  </section>`;
 }
 
 /* ================= drawer ================= */
@@ -1213,10 +1395,10 @@ function renderDrawer(){
 function renderClientList(){
   const q = dQuery.toLowerCase();
   const list = S.clients.filter(c => !q || c.name.toLowerCase().includes(q)).sort((a,b) => isGone(a) - isGone(b) || a.name.localeCompare(b.name));
-  const noReason = S.clients.filter(c => isGone(c) && !c.cancelReason).length;
+  const noReason = S.clients.filter(c => churnMissing(c).length).length;
   $('dInner').innerHTML = `<div style="display:flex;gap:8px;margin-bottom:8px"><input class="search" id="dq" placeholder="Search clients" value="${esc(dQuery)}"><button class="btn primary" id="addC" style="white-space:nowrap">Add client</button></div>
-    ${noReason ? `<p class="d-warn">${noReason} cancelled ${noReason===1?'client is':'clients are'} missing a cancellation reason.</p>` : ''}
-    ${list.map(c => { const s = svcById(c.serviceId); return `<div class="row">${mini(c)}<div class="grow"><b>${esc(c.name)}</b><small>${esc(s?s.name:'No plan')}${isGone(c)?`, cancelled${c.cancelReason?'':' (no reason)'}`:''}</small></div><button class="btn small" data-e="${esc(c.id)}">Edit</button></div>`; }).join('')
+    ${noReason ? `<p class="d-warn">${noReason} cancelled ${noReason===1?'client is':'clients are'} missing churn details. Look for "details needed" below.</p>` : ''}
+    ${list.map(c => { const s = svcById(c.serviceId); return `<div class="row">${mini(c)}<div class="grow"><b>${esc(c.name)}</b><small>${esc(s?s.name:'No plan')}${isGone(c)?`, cancelled${churnMissing(c).length?' (details needed)':''}`:''}</small></div><button class="btn small" data-e="${esc(c.id)}">Edit</button></div>`; }).join('')
       || `<p class="empty">${S.clients.length ? 'No clients match that search.' : 'No clients yet. Add your first one.'}</p>`}`;
   const qi = $('dq'); qi.addEventListener('input', () => { dQuery = qi.value; const p = qi.selectionStart; renderClientList(); const n = $('dq'); n.focus(); n.setSelectionRange(p,p); });
   $('addC').addEventListener('click', () => { if(!S.services.length){ toast('Add a plan first.'); dTab = 'plans'; return renderDrawer(); } editing = 'new'; renderDrawer(); });
@@ -1229,6 +1411,7 @@ function renderClientForm(){
   if(!src){ editing = null; return renderClientList(); }
   const c = clean(src);
   let logo = c.logo || '', logoAssetId = c.logoAssetId || '';
+  const ch0 = churnOf(c), lostSave0 = (c.saves||[]).find(s => s.outcome === 'lost');
   const managers = [...new Set(S.clients.map(x => x.manager).filter(Boolean))];
   const inner = $('dInner');
   inner.innerHTML = `<button class="btn small" id="back" style="margin-bottom:14px">Back to all clients</button>
@@ -1242,9 +1425,27 @@ function renderClientForm(){
       <label><input type="radio" name="st" value="active" ${!isGone(c)?'checked':''}>Active</label>
       <label><input type="radio" name="st" value="cancelled" ${isGone(c)?'checked':''}>Cancelled</label></div></div>
     <fieldset class="fieldset" id="cxBox"><legend>Cancellation</legend>
-      <div class="two"><label class="field"><span>Cancelled on</span><input type="date" id="fCx" value="${esc(c.cancelledOn||'')}"></label>
-        <label class="field"><span>Reason</span><select id="fReason"><option value="">Choose a reason</option>${CANCEL_REASONS.map(r=>`<option ${c.cancelReason===r?'selected':''}>${esc(r)}</option>`).join('')}</select></label></div>
-      <label class="field"><span>Details</span><input id="fCxNote" value="${esc(c.cancelNote||'')}" placeholder="What did they say?"></label></fieldset>
+      <div class="two"><label class="field"><span>Notice given on</span><input type="date" id="fNotice" value="${esc(c.noticeOn||'')}"></label>
+        <label class="field"><span>Effective cancellation date</span><input type="date" id="fCx" value="${esc(c.cancelledOn||'')}"></label></div>
+      <p class="d-warn" style="margin:2px 0 8px"><b>What they said</b></p>
+      <div class="two"><label class="field"><span>Category</span><select id="fCat"><option value="">Choose…</option>${CHURN.map(x=>`<option value="${x.id}" ${ch0.cat===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>
+        <label class="field"><span>Specific reason</span><select id="fReason"></select></label></div>
+      <label class="field" id="compWrap"><span>Which competitor or program?</span><input id="fComp" value="${esc(c.competitor||'')}" placeholder="Agency or program name"></label>
+      <label class="field"><span>In their words</span><textarea id="fCxNote" placeholder="Capture what they actually said on the exit call">${esc(c.cancelNote||'')}</textarea></label>
+      <p class="d-warn" style="margin:2px 0 8px"><b>Root cause</b> (your assessment)</p>
+      <label class="toggle" style="margin-bottom:8px"><input type="checkbox" id="fSame" ${!c.rootCategory || (c.rootCategory===ch0.cat && (c.rootReason||'')===ch0.reason) ? 'checked' : ''}> Same as what they said</label>
+      <div class="two" id="rootWrap"><label class="field"><span>Category</span><select id="fRootCat"><option value="">Choose…</option>${CHURN.map(x=>`<option value="${x.id}" ${c.rootCategory===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>
+        <label class="field"><span>Specific reason</span><select id="fRootReason"></select></label></div>
+      <div class="field"><span>Was it controllable?</span><div class="seg">${[['yes','Yes'],['partial','Partly'],['no','No']].map(([k,v])=>`<label><input type="radio" name="ctrl" value="${k}" ${c.controllable===k?'checked':''}>${v}</label>`).join('')}</div></div>
+      <div class="two"><label class="field"><span>Contract timing</span><select id="fTiming"><option value="">Choose…</option>${Object.entries(TIMING).map(([k,v])=>`<option value="${k}" ${c.contractTiming===k?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+        <label class="field"><span>Did we see it coming?</span><select id="fWarned"><option value="">Choose…</option>${[['yes','Yes'],['no','No'],['unsure','Unsure']].map(([k,v])=>`<option value="${k}" ${c.warned===k?'selected':''}>${v}</option>`).join('')}</select></label></div>
+      <label class="field" id="warnWrap"><span>When did the first warning signs appear?</span><input type="date" id="fWarnOn" value="${esc(c.firstWarningOn||'')}"></label>
+      <div class="field"><span>Save attempt before they left?</span><div class="seg"><label><input type="radio" name="svA" value="yes" ${lostSave0?'checked':''}>Yes</label><label><input type="radio" name="svA" value="no" ${!lostSave0?'checked':''}>No</label></div></div>
+      <div class="two" id="svWrap"><label class="field"><span>Offer made</span><select id="fSvOffer">${SAVE_OFFERS.map(o=>`<option ${lostSave0&&lostSave0.offer===o?'selected':''}>${esc(o)}</option>`).join('')}</select></label>
+        <label class="field"><span>Notes on the offer</span><input id="fSvNote" value="${esc(lostSave0?lostSave0.note||'':'')}"></label></div>
+      <div class="two"><label class="field"><span>Would they come back?</span><select id="fWin"><option value="">Choose…</option>${Object.entries(WINBACK).map(([k,v])=>`<option value="${k}" ${c.winBack===k?'selected':''}>${v}</option>`).join('')}</select></label>
+        <label class="field" id="winWrap"><span>Check in on</span><input type="date" id="fWinOn" value="${esc(c.winBackOn||'')}"></label></div>
+    </fieldset>
     <fieldset class="fieldset" id="hBox"><legend>Health and contact</legend>
       <div class="field"><span>Health</span><div class="seg">${['green','yellow','red',''].map(k=>`<label><input type="radio" name="hl" value="${k}" ${(c.health||'')===k?'checked':''}>${HEALTH[k].label}</label>`).join('')}</div></div>
       <div class="two"><label class="field"><span>Last strategy call</span><input type="date" id="fCall" value="${esc(c.lastCall||'')}"></label>
@@ -1259,12 +1460,29 @@ function renderClientForm(){
     <div class="formbar"><button class="btn primary" id="save">${isNew?'Add client':'Save changes'}</button>${isNew?'':'<button class="btn danger" id="del">Delete client</button>'}</div>`;
   const stVal = () => inner.querySelector('[name=st]:checked').value;
   const drawLogo = () => { $('lp').innerHTML = logoHTML(Object.assign({}, c, {logo, name:$('fName').value||c.name, status:stVal()})); $('lr').hidden = !logo; };
-  const syncSt = () => { const gone = stVal() === 'cancelled'; $('cxBox').hidden = !gone; $('hBox').hidden = gone; if(gone && !$('fCx').value) $('fCx').value = TODAY; drawLogo(); };
+  const syncSt = () => { const gone = stVal() === 'cancelled'; $('cxBox').hidden = !gone; $('hBox').hidden = gone; if(gone && !$('fCx').value){ $('fCx').value = TODAY; if(!$('fNotice').value) $('fNotice').value = TODAY; } if(gone && !$('fTiming').value) $('fTiming').value = suggestTiming(Object.assign({}, c, {serviceId:$('fSvc').value, since:$('fSince').value}), $('fCx').value); drawLogo(); };
   let addons = new Set(c.addons || []);
   const drawAdd = () => { const sv = svcById($('fSvc').value);
     $('fAdd').innerHTML = ADDONS.map(a => { const ok = sv && a.ok(sv); return `<label style="display:flex;gap:8px;align-items:center;padding:3px 0;${ok?'':'opacity:.45'}"><input type="checkbox" value="${a.id}" ${addons.has(a.id)&&ok?'checked':''} ${ok?'':'disabled'} style="accent-color:var(--gold)">${esc(a.name)}${ok?'':` <small style="color:var(--muted)">${esc(a.why||'')}</small>`}</label>`; }).join('');
     $('fAdd').querySelectorAll('input').forEach(i => i.addEventListener('change', () => { i.checked ? addons.add(i.value) : addons.delete(i.value); })); };
   const syncRef = () => { $('refOtherWrap').hidden = $('fRef').value !== '__other'; };
+  const fillReasons = (catSel, rSel, val) => { const cat = catById($(catSel).value); $(rSel).innerHTML = cat ? `<option value="">Choose…</option>` + cat.reasons.map(r => `<option ${r===val?'selected':''}>${esc(r)}</option>`).join('') : '<option value="">Pick a category first</option>'; };
+  const syncChurn = () => {
+    $('compWrap').hidden = $('fCat').value !== 'competitor';
+    $('rootWrap').hidden = $('fSame').checked;
+    $('warnWrap').hidden = $('fWarned').value !== 'yes';
+    $('svWrap').hidden = inner.querySelector('[name=svA]:checked').value !== 'yes';
+    $('winWrap').hidden = !$('fWin').value || $('fWin').value === 'no';
+  };
+  fillReasons('fCat', 'fReason', ch0.reason); fillReasons('fRootCat', 'fRootReason', c.rootReason || '');
+  $('fCat').addEventListener('change', () => { fillReasons('fCat', 'fReason', ''); const cat = catById($('fCat').value); if(cat && cat.ctrl && !inner.querySelector('[name=ctrl]:checked')){ const r = inner.querySelector(`[name=ctrl][value=${cat.ctrl}]`); if(r) r.checked = true; } syncChurn(); });
+  $('fRootCat').addEventListener('change', () => { fillReasons('fRootCat', 'fRootReason', ''); const cat = catById($('fRootCat').value); if(cat && cat.ctrl){ const r = inner.querySelector(`[name=ctrl][value=${cat.ctrl}]`); if(r) r.checked = true; } });
+  $('fSame').addEventListener('change', () => { if(!$('fSame').checked && !$('fRootCat').value){ $('fRootCat').value = $('fCat').value; fillReasons('fRootCat', 'fRootReason', $('fReason').value); } syncChurn(); });
+  ['fWarned','fWin'].forEach(id => $(id).addEventListener('change', () => { if(id === 'fWin' && $('fWin').value && $('fWin').value !== 'no' && !$('fWinOn').value) $('fWinOn').value = addMonths($('fCx').value || TODAY, 3); syncChurn(); }));
+  inner.querySelectorAll('[name=svA]').forEach(r => r.addEventListener('change', syncChurn));
+  $('fCx').addEventListener('change', () => { if(!$('fTiming').value) $('fTiming').value = suggestTiming(Object.assign({}, c, {serviceId:$('fSvc').value, since:$('fSince').value}), $('fCx').value); });
+  if(isGone(c) && !$('fTiming').value) $('fTiming').value = suggestTiming(c, c.cancelledOn);
+  syncChurn();
   drawAdd(); syncSt(); syncRef();
   $('fSvc').addEventListener('change', drawAdd); $('fRef').addEventListener('change', syncRef);
   inner.querySelectorAll('[name=st]').forEach(r => r.addEventListener('change', syncSt));
@@ -1279,11 +1497,26 @@ function renderClientForm(){
   $('save').addEventListener('click', async () => {
     const name = $('fName').value.trim(); if(!name){ $('fName').focus(); return toast('Add a client name.'); }
     const status = stVal();
-    if(status === 'cancelled' && !$('fReason').value){ $('fReason').focus(); return toast('Choose a cancellation reason.'); }
+    if(status === 'cancelled'){
+      if(!$('fCat').value){ $('fCat').focus(); return toast('Choose what they said: the cancellation category.'); }
+      if(!$('fReason').value){ $('fReason').focus(); return toast('Choose the specific reason.'); }
+      if($('fCat').value === 'other' && !$('fCxNote').value.trim()){ $('fCxNote').focus(); return toast('For "Other", write down what they said.'); }
+      if(!$('fSame').checked && !$('fRootCat').value){ $('fRootCat').focus(); return toast('Choose the root cause, or tick "Same as what they said".'); }
+    }
+    const goneNow = status === 'cancelled', same = $('fSame').checked;
+    let saves = (c.saves || []).filter(s => s.outcome !== 'lost');
+    if(goneNow && inner.querySelector('[name=svA]:checked').value === 'yes') saves.push({date: $('fNotice').value || $('fCx').value || TODAY, offer: $('fSvOffer').value, outcome: 'lost', note: $('fSvNote').value.trim()});
+    const churnFields = goneNow ? {
+      noticeOn: $('fNotice').value, cancelCategory: $('fCat').value, cancelReason: $('fReason').value, competitor: $('fCat').value === 'competitor' ? $('fComp').value.trim() : '',
+      rootCategory: same ? $('fCat').value : $('fRootCat').value, rootReason: same ? $('fReason').value : $('fRootReason').value,
+      controllable: inner.querySelector('[name=ctrl]:checked')?.value || '', contractTiming: $('fTiming').value,
+      warned: $('fWarned').value, firstWarningOn: $('fWarned').value === 'yes' ? $('fWarnOn').value : '',
+      winBack: $('fWin').value, winBackOn: ($('fWin').value && $('fWin').value !== 'no') ? $('fWinOn').value : ''
+    } : {noticeOn:'', cancelCategory:'', cancelReason:'', competitor:'', rootCategory:'', rootReason:'', controllable:'', contractTiming:'', warned:'', firstWarningOn:'', winBack:'', winBackOn:''};
     const sv = svcById($('fSvc').value), refv = $('fRef').value;
     const rec = Object.assign(c, {
       name, serviceId:$('fSvc').value, status, price: +$('fPrice').value || 0,
-      cancelledOn: status==='cancelled' ? $('fCx').value : '', cancelReason: status==='cancelled' ? $('fReason').value : '', cancelNote: status==='cancelled' ? $('fCxNote').value.trim() : '',
+      cancelledOn: status==='cancelled' ? $('fCx').value : '', cancelNote: status==='cancelled' ? $('fCxNote').value.trim() : '', saves, ...churnFields,
       health: inner.querySelector('[name=hl]:checked')?.value || '', lastCall:$('fCall').value, lastContact:$('fContact').value,
       since:$('fSince').value, manager:$('fMgr').value.trim(), location:$('fLoc').value.trim(), notes:$('fNotes').value.trim(), logo, logoAssetId,
       referredBy: (refv && refv !== '__other') ? refv : '', referredByOther: refv === '__other' ? $('fRefOther').value.trim() : '',
@@ -1293,7 +1526,7 @@ function renderClientForm(){
     $('save').disabled = true;
     if(await saveClient(rec)){
       if(isNew) addLog(rec.id, 'note', 'Added to the Grand Cast');
-      else if(wasGone) addLog(rec.id, status === 'cancelled' ? 'issue' : 'win', status === 'cancelled' ? `Cancelled: ${rec.cancelReason}${rec.cancelNote ? ` (${rec.cancelNote})` : ''}` : 'Reactivated');
+      else if(wasGone) addLog(rec.id, status === 'cancelled' ? 'issue' : 'win', status === 'cancelled' ? `Cancelled: ${churnLabel(rec.cancelCategory, rec.cancelReason)}${rec.cancelNote ? ` ("${rec.cancelNote}")` : ''}` : 'Reactivated');
       if(src.logoAssetId && src.logoAssetId !== logoAssetId){ B.deleteLogo(src.logoAssetId).catch(()=>{}); }
       toast(isNew ? 'Client added' : 'Changes saved'); editing = null; selected = rec.id; renderDrawer();
     } else $('save').disabled = false;

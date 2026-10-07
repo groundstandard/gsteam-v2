@@ -175,4 +175,7 @@ scoreboard at **/grand-cast/**, on the scoreboard's own Supabase project and sig
   since 2026-10-08 with the same migration, seed and page (v1 commit `0b246c3`, deployed with the Vercel CLI from a
   clean archive, not pushed to GitHub yet). Kurt uses v1.
 - Updating the page: Kurt edits his Claude chat and sends a new export; rerun `adapt_for_scoreboard.py` on both repos.
+- Churn tracking (Kurt's second handoff, Oct 8, unzipped to `Desktop\grand-cast-handoff\handoff-2\`): 12 more
+  columns on `gc_clients` (`supabase/migrations/20261008_002_grand_cast_churn.sql`, run on v1 and v2 before the page
+  goes live, since the page writes them on every save). The adapter adds his 3 extra reasons under Fit and adoption.
   Client data is edited on the live page; the chat's copy of the data is separate.
