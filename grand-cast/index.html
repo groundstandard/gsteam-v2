@@ -1,0 +1,1371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>The Grand Cast | Ground Standard</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef1f5;--surface:#ffffff;--surface-2:#f6f8fb;--ink:#0d1b2a;--muted:#5b6b7c;--line:#d6dde6;
+  --gold:#f5a623;--gold-ink:#8a5600;--board:#0d1b2a;--board-2:#132a42;
+  --red:#d93a42;--amber:#c98a0c;--green:#2f9e57;--blue:#3a7bd5;--ref:#7FD1FF;
+  --display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+  --body:'Barlow','Segoe UI',Arial,sans-serif;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#07111d;--surface:#0f2133;--surface-2:#0b1a2a;--ink:#e8eef5;--muted:#9fb0c2;--line:#22374d;--gold-ink:#f5c26b;--red:#ff6b72;--amber:#f2c94c;--green:#4cc77a}}
+:root[data-theme="dark"]{--bg:#07111d;--surface:#0f2133;--surface-2:#0b1a2a;--ink:#e8eef5;--muted:#9fb0c2;--line:#22374d;--gold-ink:#f5c26b;--red:#ff6b72;--amber:#f2c94c;--green:#4cc77a}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);display:flex;flex-direction:column}
+#root{flex:1;min-height:0;display:flex;flex-direction:column}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none !important}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px 10px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}
+.badge{width:46px;height:46px;border-radius:50%;background:var(--gold);color:#0d1b2a;display:grid;place-items:center;font:800 20px var(--display);flex:none}
+.brand h1{margin:0;font:800 30px/1 var(--display);letter-spacing:.01em}
+.brand p{margin:3px 0 0;color:var(--muted);font-size:14px}
+.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.views{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:3px}
+.views button{border:0;background:none;padding:6px 14px;border-radius:7px;font-weight:600;color:var(--muted)}
+.views button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.views .count{display:inline-block;min-width:20px;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--red);color:#fff;font:700 12px/18px var(--display)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:600}
+.btn:hover{border-color:var(--gold)}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:#0d1b2a}
+.btn.danger{color:var(--red)}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* toolbar */
+.toolbar{display:flex;gap:10px;align-items:center;padding:0 24px 10px;flex-wrap:wrap}
+.toolbar .search{flex:1 1 220px;max-width:340px}
+.search{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 10px;width:100%}
+.sel{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
+.sel select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px;color:var(--ink)}
+.toggle{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted);cursor:pointer}
+.toggle input{accent-color:var(--gold);width:16px;height:16px}
+.notice{margin:0 24px 10px;padding:10px 14px;border-radius:8px;background:color-mix(in srgb,var(--gold) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);font-size:14px}
+
+/* map view */
+.stage{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);padding:0 24px 18px;gap:16px}
+.stage.has-panel{grid-template-columns:minmax(0,1fr) 360px}
+.mapcol{display:flex;flex-direction:column;min-height:0;gap:8px}
+.board{position:relative;flex:1;min-height:440px;border-radius:14px;overflow:hidden;background:radial-gradient(circle at 50% 50%,var(--board-2) 0,var(--board) 70%)}
+.board::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-radial-gradient(circle at 50% 50%,transparent 0 119px,rgba(245,166,35,.05) 119px 120px)}
+#map{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;user-select:none}
+#map.dragging{cursor:grabbing}
+.zoom{position:absolute;right:12px;bottom:12px;display:flex;gap:6px}
+.zoom button{background:rgba(255,255,255,.1);color:#e8eef5;border:1px solid rgba(255,255,255,.18);border-radius:8px;min-width:36px;height:36px;font-weight:600}
+.zoom button:hover{background:rgba(255,255,255,.18)}
+.legend{position:absolute;left:12px;bottom:12px;right:150px;display:flex;gap:12px;color:#b5c3d2;font-size:12px;flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;border:3px solid}
+.asof{position:absolute;left:12px;top:12px;background:rgba(245,166,35,.95);color:#0d1b2a;border-radius:8px;padding:4px 10px;font:700 14px var(--display)}
+.timeline{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.timeline input[type=range]{flex:1;accent-color:var(--gold)}
+.timeline .when{font:700 15px var(--display);min-width:170px}
+.timeline .when small{font:500 13px var(--body);color:var(--muted);margin-left:6px}
+
+/* svg */
+.svgtxt{font-family:var(--display)}
+.edge{stroke-width:2;fill:none}
+.edge.cx{stroke:#6b7787;stroke-dasharray:4 5;opacity:.55}
+.node{cursor:pointer;outline:none}
+.node:focus-visible .focusring{stroke:var(--gold);stroke-width:3}
+.client .nm{fill:#e8eef5;font:600 13px var(--display);text-anchor:middle;paint-order:stroke;stroke:#0d1b2a;stroke-width:3px}
+.client .gone{fill:#8e9aaa;font:600 11px var(--display);text-anchor:middle;letter-spacing:.04em}
+.client.cancelled .art{filter:url(#gray);opacity:.45}
+.client.cancelled .nm{fill:#8e9aaa}
+.client .ini{font:700 18px var(--display);text-anchor:middle;dominant-baseline:central;fill:#0d1b2a}
+.client .ab{fill:#0d1b2a;font:800 11px var(--display);text-anchor:middle;dominant-baseline:central}
+svg.quiet .client .nm,svg.quiet .client .gone{display:none}
+svg.quiet .client:hover .nm,svg.quiet .client.sel .nm,svg.quiet .client.match .nm,svg.quiet .client:focus .nm{display:block}
+.hub .hn{fill:#fff;font:700 15px var(--display);text-anchor:middle}
+.hub .hc{fill:#9fb0c2;font:600 12px var(--display);text-anchor:middle}
+.dim{opacity:.16}
+.ref{fill:none;stroke:var(--ref);stroke-width:2.5;opacity:.75;stroke-linecap:round}
+.ref.hot{stroke-width:3.5;opacity:1}
+.ref.faint{opacity:.1}
+.center .c1{font:800 34px var(--display);text-anchor:middle;fill:#0d1b2a}
+.center .c2{font:700 9.5px var(--display);text-anchor:middle;fill:#0d1b2a;letter-spacing:.06em}
+@media (prefers-reduced-motion:no-preference){.node{transition:opacity .2s}}
+
+/* panel */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;overflow:auto;max-height:100%;position:relative}
+.panel .x{position:absolute;top:10px;right:10px;border:0;background:none;font-size:22px;line-height:1;color:var(--muted);padding:6px}
+.p-logo{width:88px;height:88px;border-radius:50%;background:#fff;border:3px solid var(--gold);display:grid;place-items:center;overflow:hidden;margin-bottom:10px;flex:none}
+.p-logo img{width:76%;height:76%;object-fit:contain}
+.p-logo .ini{font:800 30px var(--display);color:#0d1b2a}
+.p-logo.gone{filter:grayscale(1);opacity:.6;border-style:dashed;border-color:#8e9aaa}
+.panel h2{margin:0 0 6px;font:800 25px/1.1 var(--display)}
+.status{display:inline-block;font-size:13px;font-weight:600;border-radius:999px;padding:2px 10px}
+.status.on{background:#e3f4e5;color:#21612a}
+.status.off{background:#eceff3;color:#56606c}
+.flags{display:flex;flex-direction:column;gap:6px;margin:12px 0}
+.flag{display:flex;gap:8px;align-items:flex-start;font-size:14px;padding:7px 10px;border-radius:8px;background:var(--surface-2);border-left:4px solid var(--muted)}
+.flag.red{border-left-color:var(--red)}.flag.amber{border-left-color:var(--amber)}.flag.info{border-left-color:var(--blue)}.flag.good{border-left-color:var(--green)}
+.quick{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 14px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0 0 16px;font-size:14px}
+dt{color:var(--muted)}dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.p-notes{font-size:14px;white-space:pre-wrap;border-top:1px solid var(--line);padding-top:12px;margin-bottom:12px}
+.p-list{list-style:none;padding:0;margin:8px 0 0}
+.p-list li button{width:100%;text-align:left;display:flex;align-items:center;gap:10px;background:none;border:0;border-bottom:1px solid var(--line);padding:8px 2px}
+.p-list li button:hover{color:var(--gold-ink)}
+.mini{width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid var(--c,#ccc);display:grid;place-items:center;overflow:hidden;flex:none;font:700 12px var(--display);color:#0d1b2a}
+.mini img{width:76%;height:76%;object-fit:contain}
+.mini.gone{filter:grayscale(1);opacity:.55}
+.svcpill{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600}
+.svcpill .dot,.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.linkbtn{background:none;border:0;padding:0;color:inherit;text-decoration:underline;text-decoration-color:var(--ref);text-underline-offset:3px;text-align:left}
+.linkbtn:hover{color:var(--gold-ink)}
+.log h3,.panel h3{font:700 17px var(--display);margin:16px 0 8px}
+.log-form{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.log-form textarea{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:8px;min-height:60px;resize:vertical}
+.log-form .row2{display:flex;gap:8px}
+.log-form select{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:6px}
+.entry{border-top:1px solid var(--line);padding:8px 0;font-size:14px}
+.entry .meta{color:var(--muted);font-size:12px;display:flex;gap:8px;align-items:center}
+.kind{font:700 11px var(--display);letter-spacing:.04em;border-radius:4px;padding:1px 6px;background:var(--surface-2);border:1px solid var(--line)}
+.kind.call{color:var(--blue)}.kind.win{color:var(--green)}.kind.issue{color:var(--red)}
+.entry p{margin:3px 0 0;white-space:pre-wrap}
+
+/* table view */
+.tablewrap{flex:1;min-height:0;margin:0 24px 18px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{position:sticky;top:0;background:var(--surface);z-index:1;font-weight:600;color:var(--muted)}
+th button{border:0;background:none;padding:0;font:inherit;color:inherit}
+th button[aria-sort]{color:var(--ink)}
+tbody tr:hover{background:var(--surface-2)}
+td.name{max-width:280px;overflow:hidden;text-overflow:ellipsis}
+td.name button{display:flex;align-items:center;gap:8px;background:none;border:0;padding:0;font-weight:600;max-width:100%}
+td.name button span{overflow:hidden;text-overflow:ellipsis}
+tr.gone td{color:var(--muted)}
+.hdot{display:inline-flex;align-items:center;gap:6px}
+.bulk{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 24px 10px;padding:8px 12px;border-radius:10px;background:var(--ink);color:var(--surface)}
+.bulk select,.bulk input{border:1px solid rgba(255,255,255,.3);background:transparent;color:inherit;border-radius:6px;padding:5px 8px}
+.bulk select option{color:#0d1b2a}
+.bulk .btn{background:transparent;color:inherit;border-color:rgba(255,255,255,.35)}
+.warn{color:var(--red);font-weight:600}.soon{color:var(--amber);font-weight:600}
+
+/* insights */
+.insights{flex:1;min-height:0;overflow:auto;padding:0 24px 24px}
+.ins-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.card.wide{grid-column:1/-1}
+.card h2{margin:0 0 2px;font:800 21px var(--display)}
+.card .sub{margin:0 0 12px;color:var(--muted);font-size:13px}
+.stats{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:10px}
+.stat b{display:block;font:800 28px/1.1 var(--display)}
+.stat span{font-size:13px;color:var(--muted)}
+.ilist{list-style:none;margin:0;padding:0}
+.ilist li{border-top:1px solid var(--line)}
+.ilist button{display:flex;gap:10px;align-items:center;width:100%;background:none;border:0;padding:8px 0;text-align:left}
+.ilist button:hover .nm2{color:var(--gold-ink)}
+.ilist .nm2{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ilist .why{font-size:13px;color:var(--muted);text-align:right;white-space:nowrap}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bar{display:grid;grid-template-columns:150px 1fr 30px;gap:8px;align-items:center;font-size:13px}
+.bar .track{height:10px;background:var(--surface-2);border-radius:5px;overflow:hidden}
+.bar .fill{height:100%;border-radius:5px;background:var(--gold)}
+.empty{color:var(--muted);font-size:14px;margin:6px 0}
+.chart{width:100%;height:auto;display:block}
+.chart text{font:600 11px var(--display);fill:var(--muted)}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(5,12,20,.45);z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);z-index:21;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);border-left:1px solid var(--line)}
+.d-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 0}
+.d-head h2{margin:0;font:800 24px var(--display)}
+.tabs{display:flex;gap:4px;padding:12px 20px 0;border-bottom:1px solid var(--line)}
+.tabs button{border:0;background:none;padding:8px 12px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--gold)}
+.d-body{flex:1;overflow:auto;padding:16px 20px 24px}
+.d-warn{font-size:13px;color:var(--muted);margin:0 0 12px}
+.row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.row .grow{flex:1;min-width:0}
+.row .grow b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .grow small{color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;font-size:14px}
+.field>span{color:var(--muted);font-weight:500}
+.field input,.field select,.field textarea{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:8px 10px}
+.field textarea{min-height:70px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg label{flex:1;text-align:center;padding:8px 4px;cursor:pointer;font-weight:600;font-size:14px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--ink);color:var(--surface)}
+.seg label:has(input:focus-visible){outline:3px solid var(--gold);outline-offset:-3px}
+.logo-edit{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.logo-edit .p-logo{width:64px;height:64px;margin:0;border-width:2px}
+.formbar{display:flex;gap:8px;justify-content:space-between;margin-top:6px;flex-wrap:wrap}
+.svc-row input{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:6px 8px;min-width:0}
+.svc-row input[type=color]{width:36px;height:32px;padding:2px}
+.fieldset{border:1px solid var(--line);border-radius:10px;padding:12px 12px 2px;margin-bottom:14px}
+.fieldset legend{padding:0 6px;font:700 15px var(--display)}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:8px;font-size:14px;z-index:30;opacity:0;pointer-events:none;max-width:90vw}
+.toast.show{opacity:1}
+
+@media (max-width:860px){
+  .top{padding:12px 14px 8px}.toolbar{padding:0 14px 8px}.notice{margin:0 14px 8px}
+  .stage,.stage.has-panel{grid-template-columns:minmax(0,1fr);padding:0 10px 10px}
+  .panel{position:fixed;left:0;right:0;bottom:0;max-height:66vh;border-radius:16px 16px 0 0;z-index:15;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+  .brand h1{font-size:26px}
+  .legend{display:none}
+  .tablewrap{margin:0 10px 10px}.insights{padding:0 10px 14px}.bulk{margin:0 10px 8px}
+  .timeline .when{min-width:0}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<!-- =====================================================================
+     CONFIG: the only thing to edit for a basic deploy.
+     backend: 'supabase' for the real shared database, 'demo' to try it
+     locally from grand-cast-data.json (edits stay in your browser).
+     The anon key is safe in the browser; row-level security in
+     schema.sql controls access. Never put the service_role key here.
+     ===================================================================== -->
+<script src="/config.js"></script>
+<script>
+/* GS Team Scoreboard: the Grand Cast uses the scoreboard's own Supabase project and sign-in, read from
+   its /config.js, so the same file works on v1 and v2. Its data lives in its own tables (gc_*). Without
+   a config.js (opened on its own) it falls back to demo mode. */
+(function () {
+  var c = window.CABT_CONFIG || {};
+  window.GRAND_CAST_CONFIG = {
+    backend: c.SUPABASE_URL ? 'supabase' : 'demo',
+    supabaseUrl: c.SUPABASE_URL || '',
+    supabaseAnonKey: c.SUPABASE_ANON_KEY || '',
+    tables: { plans: 'gc_plans', clients: 'gc_clients', log: 'gc_log' },
+    logoBucket: 'grand-cast-logos',
+    seedUrl: 'grand-cast-data.json'
+  };
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<!-- ===================== BACKEND ADAPTER (swap point) ===================== -->
+<script>
+/* =====================================================================
+   GRAND CAST BACKEND ADAPTER
+   ---------------------------------------------------------------------
+   Every read and write the app makes goes through the object returned
+   by createBackend(). To connect the Grand Cast to a different stack,
+   implement these methods and nothing else in the app has to change.
+
+   Data shapes the app expects (camelCase, dates as 'YYYY-MM-DD' or ''):
+     Plan   {id, name, color, term, cadence, standard, blurb}
+     Client {id, name, serviceId, status:'active'|'cancelled', since,
+             cancelledOn, cancelReason, cancelNote, health:'green'|'yellow'|'red'|'',
+             lastCall, lastContact, price, manager, location, notes,
+             logo (image URL), logoAssetId (storage path), referredBy (client id),
+             referredByOther, addons:string[], updatedAt}
+     Log    {id, clientId, kind:'note'|'call'|'contact'|'win'|'issue', text, at (ISO), authorId, authorName}
+
+   Interface:
+     init()                         -> Promise<{canWrite:boolean, userId:string|null, needsSignIn?:boolean}>
+     watchPlans(cb)                 -> unsubscribe fn; cb(Plan[]) now and on every change
+     watchClients(cb)               -> unsubscribe fn; cb(Client[]) now and on every change
+     watchLog(clientId, cb, onErr)  -> unsubscribe fn; cb(Log[]) now and on every change
+     saveClient(client)             -> Promise   (full upsert)
+     updateClient(id, fields)       -> Promise   (partial update)
+     deleteClient(id)               -> Promise   (also deletes its log entries)
+     savePlans(plans)               -> Promise   (replace the full list)
+     addLog(entry)                  -> Promise
+     uploadLogo(blob)               -> Promise<{url, id}>   (id = storage path, used to delete later)
+     deleteLogo(id)                 -> Promise
+     userNames(ids)                 -> Promise<{[id]: name}>
+     signIn(email)                  -> Promise   (optional; magic-link fallback)
+   Errors: throw {code, message}. Codes the UI understands:
+     'forbidden' (no write access), 'quota', 'rate_limited', anything else = generic failure.
+   ===================================================================== */
+
+function createBackend(cfg){
+  if(cfg.backend === 'supabase') return supabaseBackend(cfg);
+  return demoBackend(cfg);
+}
+
+/* ---------------------------------------------------------------------
+   SUPABASE  (schema.sql creates the tables, policies, realtime and the
+   'logos' storage bucket this adapter uses)
+   --------------------------------------------------------------------- */
+function supabaseBackend(cfg){
+  if(!window.supabase || !window.supabase.createClient) throw new Error('supabase-js did not load');
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  const T = Object.assign({plans:'plans', clients:'clients', log:'log'}, cfg.tables || {});
+  const BUCKET = cfg.logoBucket || 'logos';
+  let session = null;
+
+  const nz = v => (v === '' || v === undefined) ? null : v;
+  const toClientRow = c => ({
+    id: c.id, name: c.name, service_id: nz(c.serviceId), status: c.status || 'active',
+    since: nz(c.since), cancelled_on: nz(c.cancelledOn), cancel_reason: nz(c.cancelReason), cancel_note: nz(c.cancelNote),
+    health: c.health || '', last_call: nz(c.lastCall), last_contact: nz(c.lastContact), price: c.price ? +c.price : null,
+    manager: nz(c.manager), location: nz(c.location), notes: nz(c.notes), logo_url: nz(c.logo), logo_path: nz(c.logoAssetId),
+    referred_by: nz(c.referredBy), referred_by_other: nz(c.referredByOther), addons: c.addons || [],
+    updated_at: new Date().toISOString()
+  });
+  const FIELD = {name:'name', serviceId:'service_id', status:'status', since:'since', cancelledOn:'cancelled_on', cancelReason:'cancel_reason',
+    cancelNote:'cancel_note', health:'health', lastCall:'last_call', lastContact:'last_contact', price:'price', manager:'manager', location:'location',
+    notes:'notes', logo:'logo_url', logoAssetId:'logo_path', referredBy:'referred_by', referredByOther:'referred_by_other', addons:'addons'};
+  const fromClientRow = r => ({
+    id: r.id, name: r.name, serviceId: r.service_id || '', status: r.status, since: r.since || '', cancelledOn: r.cancelled_on || '',
+    cancelReason: r.cancel_reason || '', cancelNote: r.cancel_note || '', health: r.health || '', lastCall: r.last_call || '',
+    lastContact: r.last_contact || '', price: r.price ? +r.price : 0, manager: r.manager || '', location: r.location || '', notes: r.notes || '',
+    logo: r.logo_url || '', logoAssetId: r.logo_path || '', referredBy: r.referred_by || '', referredByOther: r.referred_by_other || '',
+    addons: r.addons || [], updatedAt: r.updated_at
+  });
+  const fromPlanRow = r => ({id:r.id, name:r.name, color:r.color, term:r.term||0, cadence:r.cadence||0, standard:!!r.standard, blurb:r.blurb||''});
+  const fromLogRow = r => ({id:r.id, clientId:r.client_id, kind:r.kind, text:r.text||'', at:r.at, authorId:r.author_id||'', authorName:r.author_name||''});
+
+  const fail = e => {
+    if(!e) return;
+    const code = (e.code === '42501' || /row-level security|permission/i.test(e.message||'')) ? 'forbidden'
+      : (e.status === 429 ? 'rate_limited' : (e.code || 'error'));
+    throw {code, message: e.message};
+  };
+  // Re-run a query whenever the table changes (simple and reliable for a few hundred rows).
+  function watchTable(table, load, cb, filter){
+    let alive = true, t = null;
+    const run = async () => { try { const v = await load(); if(alive) cb(v); } catch(e){ console.error(e); } };
+    run();
+    const ch = sb.channel('gc-' + table + '-' + Math.random().toString(36).slice(2))
+      .on('postgres_changes', Object.assign({event:'*', schema:'public', table}, filter ? {filter} : {}), () => { clearTimeout(t); t = setTimeout(run, 150); })
+      .subscribe();
+    return () => { alive = false; clearTimeout(t); sb.removeChannel(ch); };
+  }
+
+  return {
+    async init(){
+      const { data } = await sb.auth.getSession();
+      session = data.session;
+      sb.auth.onAuthStateChange((_e, s) => { const had = !!session; session = s; if(!had && s) location.reload(); });
+      return { canWrite: !!session, userId: session ? session.user.id : null, needsSignIn: !session };
+    },
+    watchPlans(cb){
+      return watchTable(T.plans, async () => { const { data, error } = await sb.from(T.plans).select('*').order('position'); fail(error); return data.map(fromPlanRow); }, cb);
+    },
+    watchClients(cb){
+      return watchTable(T.clients, async () => { const { data, error } = await sb.from(T.clients).select('*').order('name'); fail(error); return data.map(fromClientRow); }, cb);
+    },
+    watchLog(clientId, cb){
+      return watchTable(T.log, async () => { const { data, error } = await sb.from(T.log).select('*').eq('client_id', clientId).order('at', {ascending:false}).limit(200); fail(error); return data.map(fromLogRow); }, cb, 'client_id=eq.' + clientId);
+    },
+    async saveClient(c){ const { error } = await sb.from(T.clients).upsert(toClientRow(c)); fail(error); },
+    async updateClient(id, fields){
+      const row = {updated_at: new Date().toISOString()};
+      Object.entries(fields).forEach(([k,v]) => { if(FIELD[k]) row[FIELD[k]] = (k === 'addons') ? (v||[]) : (k === 'health' ? (v||'') : nz(v)); });
+      const { error } = await sb.from(T.clients).update(row).eq('id', id); fail(error);
+    },
+    async deleteClient(id){ const { error } = await sb.from(T.clients).delete().eq('id', id); fail(error); }, // log rows cascade
+    async savePlans(plans){
+      const rows = plans.map((p,i) => ({id:p.id, name:p.name, color:p.color, term:p.term||0, cadence:p.cadence||0, standard:!!p.standard, blurb:p.blurb||'', position:i}));
+      const { error } = await sb.from(T.plans).upsert(rows); fail(error);
+      const keep = rows.map(r => r.id);
+      const { data, error: e2 } = await sb.from(T.plans).select('id'); fail(e2);
+      const drop = data.map(r => r.id).filter(id => !keep.includes(id));
+      if(drop.length){ const { error: e3 } = await sb.from(T.plans).delete().in('id', drop); fail(e3); }
+    },
+    async addLog(entry){
+      const name = session ? (session.user.user_metadata?.full_name || session.user.email || '') : '';
+      const { error } = await sb.from(T.log).insert({client_id:entry.clientId, kind:entry.kind, text:entry.text||'', at:entry.at, author_id: session ? session.user.id : null, author_name:name});
+      fail(error);
+    },
+    async uploadLogo(blob){
+      const path = `clients/${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
+      const { error } = await sb.storage.from(BUCKET).upload(path, blob, {contentType:'image/png', upsert:false}); fail(error);
+      return { url: sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl, id: path };
+    },
+    async deleteLogo(path){ if(path && !path.startsWith('data:')) await sb.storage.from(BUCKET).remove([path]); },
+    async userNames(){ return {}; }, // author_name is stored on each log row
+    async signIn(email){ const { error } = await sb.auth.signInWithOtp({email, options:{emailRedirectTo: location.href}}); fail(error); }
+  };
+}
+
+/* ---------------------------------------------------------------------
+   DEMO  (no server: loads grand-cast-data.json once, then keeps edits in
+   this browser's localStorage. For trying the app locally only.)
+   --------------------------------------------------------------------- */
+function demoBackend(cfg){
+  const KEY = 'grand-cast-demo';
+  let store = null; const subs = new Set();
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(e){} subs.forEach(f => f()); };
+  const copy = o => JSON.parse(JSON.stringify(o));
+  async function load(){
+    if(store) return;
+    try { store = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch(e){}
+    if(!store){
+      const r = await fetch(cfg.seedUrl || 'grand-cast-data.json');
+      const d = await r.json();
+      store = {plans: d.plans, clients: d.clients, log: d.log || []};
+      save();
+    }
+  }
+  const watch = (get, cb) => { const f = () => cb(copy(get())); subs.add(f); load().then(f); return () => subs.delete(f); };
+  return {
+    async init(){ await load(); return {canWrite:true, userId:'demo-user'}; },
+    watchPlans: cb => watch(() => store.plans, cb),
+    watchClients: cb => watch(() => store.clients, cb),
+    watchLog: (id, cb) => watch(() => store.log.filter(l => l.clientId === id).sort((a,b) => b.at.localeCompare(a.at)), cb),
+    async saveClient(c){ const i = store.clients.findIndex(x => x.id === c.id); const v = copy(c); v.updatedAt = new Date().toISOString(); if(i >= 0) store.clients[i] = v; else store.clients.push(v); save(); },
+    async updateClient(id, f){ const c = store.clients.find(x => x.id === id); if(!c) throw {code:'error', message:'not found'}; Object.assign(c, copy(f), {updatedAt:new Date().toISOString()}); save(); },
+    async deleteClient(id){ store.clients = store.clients.filter(x => x.id !== id); store.log = store.log.filter(l => l.clientId !== id); save(); },
+    async savePlans(p){ store.plans = copy(p); save(); },
+    async addLog(e){ store.log.push(Object.assign({id: Math.random().toString(36).slice(2), authorName:'You'}, copy(e))); save(); },
+    async uploadLogo(blob){ const url = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); }); return {url, id:''}; },
+    async deleteLogo(){},
+    async userNames(ids){ return Object.fromEntries(ids.map(i => [i, 'You'])); }
+  };
+}
+</script>
+<!-- ===================== APP (no platform-specific code) ===================== -->
+<script>
+(function(){
+'use strict';
+/* ================= constants ================= */
+const ADDONS = [
+  {id:'site', name:'Template website', ok:s=>!s.standard, why:'custom site included on Standard'},
+  {id:'content', name:'Content (social management)', ok:()=>true},
+  {id:'membership', name:'Membership management', ok:s=>!!s.standard, why:'Standard and up only'}
+];
+const CANCEL_REASONS = ['Price or budget','Not seeing results','Closed or sold the gym','Switched to another provider','Took it in-house','Paused or seasonal','Other'];
+const HEALTH = {
+  green:{label:'Healthy', color:'#3FB950'},
+  yellow:{label:'Watch', color:'#E3B341'},
+  red:{label:'At risk', color:'#F85149'},
+  '':{label:'Not set', color:'#7D8A99'}
+};
+const LOG_KINDS = {note:'Note', call:'Strategy call', contact:'Contact', win:'Win', issue:'Issue'};
+const PALETTE = ['#F5A623','#2A9D8F','#7C5CBF','#3A7BD5','#F4722B','#E63946','#4CAF50','#D16BA5','#5BC0EB','#9BC53D'];
+const REF = '#7FD1FF';
+
+/* ================= state ================= */
+const S = {services:[], clients:[], plansLoaded:false, clientsLoaded:false};
+const ui = loadUI();
+let B = null, canWrite = false, myId = null, needsSignIn = false, loadError = '';
+let selected = null, focusGroup = null, layoutCache = null, vb = null, userMoved = false;
+let asOf = null;            // null = today; otherwise ISO date for the timeline
+let query = '';
+let logs = [], logUnsub = null, logFor = null;
+let tableSel = new Set(), sortKey = 'name', sortDir = 1;
+const profileCache = {};
+
+function loadUI(){
+  const d = {view:'map', colorBy:'plan', groupBy:'plan', showCancelled:true, showReferrals:true};
+  try { return Object.assign(d, JSON.parse(localStorage.getItem('gc-ui2')||'{}')); } catch(e){ return d; }
+}
+function saveUI(){ try { localStorage.setItem('gc-ui2', JSON.stringify(ui)); } catch(e){} }
+
+/* ================= helpers ================= */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2,10);
+const svcById = id => S.services.find(s => s.id === id);
+const byId = id => S.clients.find(c => c.id === id);
+const money = n => '$' + Math.round(n).toLocaleString('en-US');
+const initials = n => { const w = (n||'').split(/\s+/).filter(x => /[A-Za-z0-9]/.test(x[0]||'')); if(!w.length) return '?'; return (w.length>1 ? w[0][0]+w[w.length-1][0] : w[0].slice(0,2)).toUpperCase(); };
+function iso(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+const TODAY = iso(new Date());
+const parse = d => new Date(d + 'T12:00:00');
+const days = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+function addMonths(d, m){ const t = parse(d); const day = t.getDate(); t.setDate(1); t.setMonth(t.getMonth()+m); const last = new Date(t.getFullYear(), t.getMonth()+1, 0).getDate(); t.setDate(Math.min(day,last)); return iso(t); }
+function fmtDate(d, short){ if(!d) return ''; const t = parse(d); return isNaN(t) ? d : t.toLocaleDateString(undefined, short ? {month:'short', day:'numeric'} : {month:'short', day:'numeric', year:'numeric'}); }
+function monthsBetween(a, b){ const x = parse(a), y = parse(b); let m = (y.getFullYear()-x.getFullYear())*12 + (y.getMonth()-x.getMonth()); if(y.getDate() < x.getDate()) m--; return Math.max(0, m); }
+function tenureText(from, to){
+  if(!from) return '';
+  const m = monthsBetween(from, to || TODAY);
+  if(m < 1) return 'Less than a month';
+  const y = Math.floor(m/12), r = m%12, p = [];
+  if(y) p.push(y + (y===1?' year':' years')); if(r) p.push(r + (r===1?' month':' months'));
+  return p.join(', ');
+}
+function stateOf(c){ const m = (c.location||'').match(/,\s*([A-Za-z]{2})\s*$/); return m ? m[1].toUpperCase() : ''; }
+const isGone = c => c.status === 'cancelled';
+const referred = c => !!(c.referredBy || c.referredByOther);
+const referralsOf = id => S.clients.filter(x => x.referredBy === id);
+function clientAddons(c){ const s = svcById(c.serviceId); return (c.addons||[]).map(id => ADDONS.find(a => a.id === id)).filter(a => a && s && a.ok(s)); }
+
+/* next renewal: contract rolls forward in plan-term blocks from the start date */
+function nextRenewal(c){
+  const s = svcById(c.serviceId);
+  if(!s || !s.term || !c.since || isGone(c)) return null;
+  let d = addMonths(c.since, +s.term), i = 1;
+  while(d < TODAY && i < 400){ i++; d = addMonths(c.since, +s.term * i); }
+  return d;
+}
+
+/* signals that make a client actionable */
+function flagsFor(c){
+  const f = [];
+  if(isGone(c)) return f;
+  const s = svcById(c.serviceId);
+  const r = nextRenewal(c);
+  if(r){ const n = days(TODAY, r);
+    if(n <= 30) f.push({level:'red', key:'renewal', text: n === 0 ? `Renews today (${fmtDate(r)})` : `Renews in ${n} ${n===1?'day':'days'} (${fmtDate(r)})`});
+    else if(n <= 60) f.push({level:'amber', key:'renewal', text:`Renews in ${n} days (${fmtDate(r)})`});
+    else if(n <= 90) f.push({level:'info', key:'renewal', text:`Renews in ${n} days (${fmtDate(r)})`});
+  }
+  if(c.health === 'red') f.push({level:'red', key:'health', text:'Marked at risk'});
+  else if(c.health === 'yellow') f.push({level:'amber', key:'health', text:'Marked as watch'});
+  const cad = s && +s.cadence;
+  if(cad){
+    if(c.lastCall){ const n = days(c.lastCall, TODAY);
+      if(n > cad*2) f.push({level:'red', key:'call', text:`No strategy call in ${n} days`});
+      else if(n > Math.round(cad*1.5)) f.push({level:'amber', key:'call', text:`Strategy call due (${n} days since last)`});
+    } else f.push({level:'info', key:'call', text:'No strategy call logged yet'});
+  }
+  if(c.lastContact){ const n = days(c.lastContact, TODAY); if(n > 30) f.push({level:'amber', key:'contact', text:`No contact in ${n} days`}); }
+  return f;
+}
+const needsAttention = c => flagsFor(c).some(f => f.level === 'red' || f.level === 'amber');
+const attentionLevel = c => { const f = flagsFor(c); return f.some(x=>x.level==='red') ? 2 : f.some(x=>x.level==='amber') ? 1 : 0; };
+
+/* timeline: the roster as it stood on a given date */
+function statusAt(c){
+  if(!asOf) return c.status;
+  if(c.since && c.since > asOf) return 'future';
+  if(isGone(c) && (!c.cancelledOn || c.cancelledOn <= asOf)) return 'cancelled';
+  return 'active';
+}
+function roster(){
+  return S.clients.map(c => ({c, st: statusAt(c)})).filter(x => x.st !== 'future' && (ui.showCancelled || x.st !== 'cancelled'));
+}
+
+/* grouping */
+function groupKey(c){
+  switch(ui.groupBy){
+    case 'manager': return 'm:' + (c.manager || 'Unassigned');
+    case 'year': return 'y:' + (c.since ? c.since.slice(0,4) : 'No start date');
+    case 'health': return 'h:' + (c.health || '');
+    case 'state': return 's:' + (stateOf(c) || 'No location');
+    default: return c.serviceId || 'none';
+  }
+}
+function groupMeta(key, i){
+  if(ui.groupBy === 'plan'){ const s = svcById(key); return {name: s ? s.name : 'No plan', color: s ? s.color : '#7D8A99'}; }
+  if(ui.groupBy === 'health'){ const h = HEALTH[key.slice(2)] || HEALTH['']; return {name: h.label, color: h.color}; }
+  return {name: key.slice(2), color: PALETTE[i % PALETTE.length]};
+}
+function ringColor(c, st){
+  if(st === 'cancelled') return '#8e9aaa';
+  if(ui.colorBy === 'health') return (HEALTH[c.health||''] || HEALTH['']).color;
+  if(ui.colorBy === 'renewal'){ const r = nextRenewal(c); if(!r) return '#4F6D8A'; const n = days(TODAY, r); return n <= 30 ? '#F85149' : n <= 60 ? '#E3B341' : n <= 90 ? '#5BC0EB' : '#4F6D8A'; }
+  if(ui.colorBy === 'attention'){ const l = attentionLevel(c); return l === 2 ? '#F85149' : l === 1 ? '#E3B341' : '#3FB950'; }
+  const s = svcById(c.serviceId); return s ? s.color : '#7D8A99';
+}
+function logoHTML(c, cls){
+  return `<div class="p-logo ${cls||''}${isGone(c)?' gone':''}">${c.logo?`<img src="${esc(c.logo)}" alt="">`:`<span class="ini">${esc(initials(c.name))}</span>`}</div>`;
+}
+function mini(c){ const s = svcById(c.serviceId); return `<span class="mini${isGone(c)?' gone':''}" style="--c:${esc(s?s.color:'#ccc')}">${c.logo?`<img src="${esc(c.logo)}" alt="">`:esc(initials(c.name))}</span>`; }
+
+let toastT;
+function toast(msg, ms){ const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), ms || 2600); }
+
+/* ================= writes ================= */
+const clean = o => JSON.parse(JSON.stringify(o));
+async function saveClient(rec){
+  if(!B) { toast('Not connected to the database.'); return false; }
+  try { await B.saveClient(clean(rec)); return true; }
+  catch(e){ writeError(e); return false; }
+}
+async function patchClient(id, fields){
+  if(!B) { toast('Not connected to the database.'); return false; }
+  try { await B.updateClient(id, clean(fields)); return true; }
+  catch(e){ writeError(e); return false; }
+}
+async function savePlans(){
+  if(!B) return toast('Not connected to the database.');
+  try { await B.savePlans(clean(S.services)); toast('Plans saved'); }
+  catch(e){ writeError(e); }
+}
+function writeError(e){
+  const code = e && e.code;
+  console.error(e);
+  if(code === 'forbidden'){ canWrite = false; toast('You can view this map, but you don\'t have edit access.', 4000); renderChrome(); }
+  else if(code === 'quota') toast('Storage is full. Delete old log entries or clients to free space.', 5000);
+  else if(code === 'rate_limited') toast('Too many changes at once. Wait a moment and try again.', 4000);
+  else toast('Save failed. Check your connection and try again.', 4000);
+}
+async function addLog(clientId, kind, text){
+  if(!B) return false;
+  try { await B.addLog({clientId, kind, text: text||'', at: new Date().toISOString(), authorId: myId || ''}); return true; }
+  catch(e){ writeError(e); return false; }
+}
+
+/* ================= shell ================= */
+const root = document.getElementById('root');
+root.innerHTML = `
+<header class="top">
+  <div class="brand"><div class="badge" aria-hidden="true">GS</div>
+    <div><h1>The Grand Cast</h1><p id="sub">Loading clients…</p></div></div>
+  <div class="actions">
+    <div class="views" role="group" aria-label="View">
+      <button data-v="map">Map</button><button data-v="table">Table</button><button data-v="insights">Insights<span class="count" id="attnCount" hidden></span></button>
+    </div>
+    <button class="btn primary" id="editBtn" hidden>Manage clients</button>
+  </div>
+</header>
+<div class="toolbar" id="toolbar">
+  <input class="search" id="q" type="search" placeholder="Find a client" aria-label="Find a client" autocomplete="off" list="qlist"><datalist id="qlist"></datalist>
+  <label class="sel">Group by <select id="groupBy"><option value="plan">Plan</option><option value="manager">Account manager</option><option value="state">State</option><option value="year">Start year</option><option value="health">Health</option></select></label>
+  <label class="sel">Color by <select id="colorBy"><option value="plan">Plan</option><option value="attention">Needs attention</option><option value="health">Health</option><option value="renewal">Renewal date</option></select></label>
+  <label class="toggle"><input type="checkbox" id="showReferrals"> Referrals</label>
+  <label class="toggle"><input type="checkbox" id="showCancelled"> Cancelled</label>
+</div>
+<div class="notice" id="notice" hidden></div>
+<main class="stage" id="stage">
+  <div class="mapcol">
+    <div class="board" id="board">
+      <svg id="map" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Map of clients"></svg>
+      <div class="asof" id="asof" hidden></div>
+      <div class="legend" id="legend"></div>
+      <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zfit">Fit</button></div>
+    </div>
+    <div class="timeline" id="timeline">
+      <button class="btn small" id="tlPlay" aria-label="Play the timeline">Play</button>
+      <input type="range" id="tl" min="0" max="100" value="100" aria-label="Timeline date">
+      <span class="when" id="tlWhen"></span>
+      <button class="btn small" id="tlToday" hidden>Back to today</button>
+    </div>
+  </div>
+  <aside class="panel" id="panel" hidden aria-live="polite"></aside>
+</main>
+<div id="tableView" hidden style="flex:1;min-height:0;display:flex;flex-direction:column"></div>
+<div id="insightsView" class="insights" hidden></div>
+<div id="drawerWrap" hidden><div class="scrim" id="scrim"></div><section class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Manage clients"></section></div>
+<div class="toast" id="toast" role="status"></div>`;
+
+const svg = $('map');
+$('groupBy').value = ui.groupBy; $('colorBy').value = ui.colorBy;
+$('showCancelled').checked = !!ui.showCancelled; $('showReferrals').checked = ui.showReferrals !== false;
+$('groupBy').addEventListener('change', e => { ui.groupBy = e.target.value; focusGroup = null; saveUI(); renderAll(true); });
+$('colorBy').addEventListener('change', e => { ui.colorBy = e.target.value; saveUI(); renderMap(); renderLegend(); });
+$('showCancelled').addEventListener('change', e => { ui.showCancelled = e.target.checked; saveUI(); renderAll(true); });
+$('showReferrals').addEventListener('change', e => { ui.showReferrals = e.target.checked; saveUI(); renderMap(); renderLegend(); });
+document.querySelectorAll('.views button').forEach(b => b.addEventListener('click', () => setView(b.dataset.v)));
+$('editBtn').addEventListener('click', () => openDrawer('clients'));
+$('zin').addEventListener('click', () => zoomBy(0.8));
+$('zout').addEventListener('click', () => zoomBy(1.25));
+$('zfit').addEventListener('click', () => fit());
+
+/* search */
+$('q').addEventListener('input', e => {
+  query = e.target.value.trim();
+  const hit = S.clients.find(c => c.name.toLowerCase() === query.toLowerCase());
+  if(hit){ if(ui.view !== 'map') setView('map'); selectClient(hit.id, true); }
+  else if(ui.view === 'map') renderMap(); else if(ui.view === 'table') renderTable();
+});
+$('q').addEventListener('keydown', e => {
+  if(e.key === 'Enter'){ const q = query.toLowerCase(); const hit = S.clients.find(c => c.name.toLowerCase().includes(q)); if(hit && q){ if(ui.view !== 'map') setView('map'); selectClient(hit.id, true); } }
+  if(e.key === 'Escape'){ e.target.value = ''; query = ''; renderMap(); if(ui.view==='table') renderTable(); }
+});
+
+function setView(v){
+  ui.view = v; saveUI();
+  document.querySelectorAll('.views button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v));
+  $('stage').hidden = v !== 'map'; $('tableView').hidden = v !== 'table'; $('insightsView').hidden = v !== 'insights';
+  ['groupBy','colorBy','showReferrals'].forEach(id => $(id).closest('label').hidden = v !== 'map');
+  $('showCancelled').closest('label').hidden = v === 'insights';
+  $('q').closest('.toolbar').hidden = v === 'insights';
+  if(v === 'map'){ requestAnimationFrame(() => refit()); renderMap(); }
+  if(v === 'table') renderTable();
+  if(v === 'insights') renderInsights();
+}
+
+function renderChrome(){
+  $('editBtn').hidden = !canWrite;
+  const n = $('notice');
+  if(loadError){ n.hidden = false; n.textContent = loadError; }
+  else if(needsSignIn){ n.hidden = false; n.innerHTML = `Sign in to see and edit clients. <input id="siEmail" type="email" placeholder="you@company.com" style="margin:0 6px;padding:5px 8px;border:1px solid var(--line);border-radius:6px"><button class="btn small" id="siGo">Email me a sign-in link</button>`;
+    $('siGo').onclick = async () => { const em = $('siEmail').value.trim(); if(!em) return; try { await B.signIn(em); toast('Check your email for the sign-in link.', 5000); } catch(e){ toast('Sign-in failed: ' + (e.message||'try again')); } }; }
+  else if(S.clientsLoaded && !S.clients.length){ n.hidden = false; n.textContent = canWrite ? 'No clients yet. Use Manage clients to add your first one.' : 'No clients have been added yet.'; }
+  else n.hidden = true;
+}
+
+function renderAll(refit){
+  renderHeader(); renderChrome();
+  $('qlist').innerHTML = S.clients.map(c => `<option value="${esc(c.name)}">`).join('');
+  if(selected && !byId(selected)) selected = null;
+  layoutCache = computeLayout();
+  renderMap(); renderLegend(); renderTimeline();
+  if(ui.view === 'map') renderPanel();
+  if(refit || !vb) fit(); else applyVB();
+  if(ui.view === 'table') renderTable();
+  if(ui.view === 'insights') renderInsights();
+  if(!$('drawerWrap').hidden && dTab === 'clients' && !editing) renderClientList();
+}
+
+function renderHeader(){
+  const active = S.clients.filter(c => !isGone(c));
+  const gone = S.clients.length - active.length;
+  const attn = active.filter(needsAttention).length;
+  const refd = S.clients.filter(referred).length;
+  const parts = [`${active.length} active ${active.length===1?'client':'clients'}`];
+  if(gone) parts.push(`${gone} cancelled`);
+  if(attn) parts.push(`${attn} need attention`);
+  if(refd) parts.push(`${refd} came by referral`);
+  $('sub').textContent = S.clientsLoaded ? parts.join(', ') : (B ? 'Loading clients…' : 'Waiting for data');
+  const ac = $('attnCount'); ac.hidden = !attn; ac.textContent = attn;
+}
+
+/* ================= layout ================= */
+function computeLayout(){
+  const items = roster();
+  const keys = [];
+  if(ui.groupBy === 'plan') S.services.forEach(s => keys.push(s.id));
+  items.forEach(x => { const k = groupKey(x.c); if(!keys.includes(k)) keys.push(k); });
+  if(ui.groupBy !== 'plan') keys.sort((a,b) => {
+    if(ui.groupBy === 'health'){ const o = {'h:red':0,'h:yellow':1,'h:green':2,'h:':3}; return (o[a]??9) - (o[b]??9); }
+    return a.localeCompare(b);
+  });
+  const groups = [];
+  keys.forEach((k, i) => {
+    const list = items.filter(x => groupKey(x.c) === k)
+      .sort((a,b) => (a.st==='cancelled') - (b.st==='cancelled') || a.c.name.localeCompare(b.c.name));
+    if(!list.length) return;
+    const meta = groupMeta(k, i);
+    const rings = []; let placed = 0, ring = 0;
+    const span0 = 2*Math.PI - 0.9;
+    while(placed < list.length){
+      const r = 112 + ring*96, cap = Math.max(5, Math.floor(span0*r/112));
+      const take = Math.min(cap, list.length - placed);
+      rings.push({r, items:list.slice(placed, placed+take), full: take === cap}); placed += take; ring++;
+    }
+    const outer = rings.length ? rings[rings.length-1].r + 48 : 70;
+    groups.push({key:k, meta, rings, outer, count:list.filter(x=>x.st!=='cancelled').length});
+  });
+  const n = groups.length;
+  const W = groups.reduce((t,g) => t + g.outer + 25, 0) || 1;
+  const hubs = [], nodes = [];
+  let acc = -Math.PI/2 - (n ? Math.PI*(groups[0].outer+25)/W : 0);
+  groups.forEach(g => {
+    const share = 2*Math.PI*(g.outer+25)/W, ang = acc + share/2; acc += share;
+    const half = Math.min(share/2, Math.PI/2 - 0.05);
+    const R = n === 1 ? 95 + g.outer : Math.max(95 + g.outer, (g.outer+25)/Math.sin(half));
+    const hx = R*Math.cos(ang), hy = R*Math.sin(ang);
+    hubs.push({key:g.key, meta:g.meta, x:hx, y:hy, count:g.count});
+    const toward = ang + Math.PI, gap = 0.9, span = 2*Math.PI - gap;
+    g.rings.forEach((ring, ri) => {
+      const k = ring.items.length, step = span / k, shift = (ri % 2 && ring.full) ? step/2 : 0;
+      ring.items.forEach((x, j) => {
+        const a = toward + gap/2 + (j + 0.5) * step + shift;
+        nodes.push({c:x.c, st:x.st, key:g.key, color:g.meta.color, hx, hy, x: hx + ring.r*Math.cos(a), y: hy + ring.r*Math.sin(a)});
+      });
+    });
+  });
+  let minX=-80, minY=-80, maxX=80, maxY=80;
+  const grow = (x,y,rx,top,bot) => { minX=Math.min(minX,x-rx); maxX=Math.max(maxX,x+rx); minY=Math.min(minY,y-top); maxY=Math.max(maxY,y+bot); };
+  hubs.forEach(h => grow(h.x,h.y,70,70,70));
+  nodes.forEach(nd => grow(nd.x,nd.y,72,44,72));
+  return {hubs, nodes, bounds:{x:minX-16, y:minY-16, w:maxX-minX+32, h:maxY-minY+32}};
+}
+
+/* ================= map ================= */
+function wrapWords(t, max){
+  const words = String(t).split(/\s+/), lines = []; let cur = '';
+  words.forEach(w => { if((cur+' '+w).trim().length > max && cur){ lines.push(cur); cur = w; } else cur = (cur+' '+w).trim(); });
+  if(cur) lines.push(cur);
+  if(lines.length > 3){ lines.length = 3; lines[2] = lines[2].slice(0, max-1) + '…'; }
+  return lines;
+}
+const trunc = (t, n) => t.length > n ? t.slice(0, n-1) + '…' : t;
+
+function renderMap(){
+  if(!layoutCache) return;
+  const L = layoutCache, q = query.toLowerCase();
+  const dimFor = key => focusGroup && focusGroup !== key;
+  let edges = '', hubs = '', nodes = '', refs = '';
+  L.hubs.forEach(h => {
+    const d = dimFor(h.key) ? ' dim' : '';
+    edges += `<line class="edge${d}" x1="0" y1="0" x2="${h.x}" y2="${h.y}" stroke="rgba(245,166,35,.45)" stroke-width="2.5"/>`;
+    const lines = wrapWords(h.meta.name, 11), lh = 16, top = -((lines.length-1)*lh)/2 - 6;
+    hubs += `<g class="node hub${d}" data-group="${esc(h.key)}" transform="translate(${h.x},${h.y})" tabindex="0" role="button" aria-label="${esc(h.meta.name)}, ${h.count} active">
+      <circle r="60" fill="#10243a" stroke="${esc(h.meta.color)}" stroke-width="3.5"/>
+      <circle class="focusring" r="66" fill="none" stroke="transparent"/>
+      ${lines.map((l,i)=>`<text class="hn" y="${top+i*lh}" dominant-baseline="central">${esc(l)}</text>`).join('')}
+      <text class="hc" y="${top+lines.length*lh+4}" dominant-baseline="central">${h.count} active</text></g>`;
+  });
+  const pos = {};
+  L.nodes.forEach(nd => {
+    const c = nd.c, gone = nd.st === 'cancelled', col = ringColor(c, nd.st);
+    pos[c.id] = nd;
+    const match = q && c.name.toLowerCase().includes(q);
+    const dim = (dimFor(nd.key) || (q && !match)) ? ' dim' : '';
+    edges += `<line class="edge${gone?' cx':''}${dim}" x1="${nd.hx}" y1="${nd.hy}" x2="${nd.x}" y2="${nd.y}" ${gone?'':`stroke="${esc(nd.color)}" stroke-opacity=".5"`}/>`;
+    const art = c.logo
+      ? `<circle r="30" fill="#fff"/><image href="${esc(c.logo)}" x="-22" y="-22" width="44" height="44" preserveAspectRatio="xMidYMid meet"/>`
+      : (ui.colorBy === 'plan' ? `<circle r="30" fill="${esc(svcById(c.serviceId)?.color || '#7D8A99')}"/><text class="ini">${esc(initials(c.name))}</text>`
+         : `<circle r="30" fill="#1f3a57"/><text class="ini" style="fill:#e8eef5">${esc(initials(c.name))}</text>`);
+    const ad = clientAddons(c).length, attn = !gone && !asOf ? attentionLevel(c) : 0;
+    nodes += `<g class="node client${gone?' cancelled':''}${dim}${selected===c.id?' sel':''}${match?' match':''}" data-id="${esc(c.id)}" transform="translate(${nd.x},${nd.y})" tabindex="0" role="button" aria-label="${esc(c.name)}${gone?', cancelled':''}${attn?', needs attention':''}">
+      <title>${esc(c.name)}</title>
+      ${selected===c.id?'<circle r="42" fill="none" stroke="#ffffff" stroke-width="2.5"/>':''}
+      <circle class="focusring" r="42" fill="none" stroke="transparent"/>
+      <g class="art">${art}<circle r="33.5" fill="none" stroke="${esc(col)}" stroke-width="${ui.colorBy==='plan'?3:4.5}" ${gone?'stroke-dasharray="5 4"':''}/></g>
+      ${ad && !gone ? `<g transform="translate(24,-24)"><circle r="10" fill="#F5A623" stroke="#0d1b2a" stroke-width="2"/><text class="ab">+${ad}</text></g>` : ''}
+      ${attn && ui.colorBy !== 'attention' ? `<g transform="translate(-24,-24)"><circle r="8" fill="${attn===2?'#F85149':'#E3B341'}" stroke="#0d1b2a" stroke-width="2"/><text class="ab" style="font-size:11px">!</text></g>` : ''}
+      <text class="nm" y="52">${esc(trunc(c.name,22))}</text>
+      ${gone?'<text class="gone" y="66">Cancelled</text>':''}</g>`;
+  });
+  if(ui.showReferrals !== false){
+    L.nodes.forEach(b => {
+      const a = b.c.referredBy && pos[b.c.referredBy]; if(!a) return;
+      const dx = b.x-a.x, dy = b.y-a.y, d = Math.hypot(dx,dy) || 1;
+      const cx = (a.x+b.x)/2 - dy*0.22, cy = (a.y+b.y)/2 + dx*0.22;
+      const la = Math.hypot(cx-a.x, cy-a.y) || 1, lb = Math.hypot(b.x-cx, b.y-cy) || 1;
+      const sx = a.x + (cx-a.x)/la*36, sy = a.y + (cy-a.y)/la*36, ex = b.x - (b.x-cx)/lb*39, ey = b.y - (b.y-cy)/lb*39;
+      const hot = selected && (selected === a.c.id || selected === b.c.id);
+      const cls = selected ? (hot ? ' hot' : ' faint') : ((dimFor(a.key) && dimFor(b.key)) || q ? ' faint' : '');
+      refs += `<path class="ref${cls}" d="M${sx},${sy} Q${cx},${cy} ${ex},${ey}" marker-end="url(#arr)"><title>${esc(a.c.name)} referred ${esc(b.c.name)}</title></path>`;
+    });
+  }
+  const center = `<g class="center"><circle r="62" fill="#F5A623"/><circle r="70" fill="none" stroke="rgba(245,166,35,.35)" stroke-width="1.5"/>
+    <text class="c1" dy="-8" dominant-baseline="central">GS</text><text class="c2" y="24">GROUND STANDARD</text></g>`;
+  svg.innerHTML = `<defs><filter id="gray"><feColorMatrix type="saturate" values="0"/></filter>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${REF}"/></marker></defs>
+    <g class="svgtxt">${edges}${center}${hubs}${refs}${nodes}</g>`;
+  const ao = $('asof'); ao.hidden = !asOf; if(asOf) ao.textContent = 'Roster as of ' + fmtDate(asOf);
+}
+
+function renderLegend(){
+  const sw = (c, t, dash) => `<span><i style="border-color:${c}${dash?';border-style:dashed':''}"></i>${t}</span>`;
+  let h = '';
+  if(ui.colorBy === 'health') h = ['green','yellow','red',''].map(k => sw(HEALTH[k].color, HEALTH[k].label)).join('');
+  else if(ui.colorBy === 'renewal') h = sw('#F85149','Renews within 30 days') + sw('#E3B341','31 to 60 days') + sw('#5BC0EB','61 to 90 days') + sw('#4F6D8A','Later');
+  else if(ui.colorBy === 'attention') h = sw('#F85149','Urgent') + sw('#E3B341','Needs attention') + sw('#3FB950','On track');
+  else h = S.services.filter(s => S.clients.some(c => c.serviceId === s.id)).map(s => sw(s.color, esc(s.name))).join('');
+  h += sw('#8e9aaa','Cancelled', true);
+  if(ui.colorBy !== 'attention') h += `<span><svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="6" fill="#F85149"/></svg>Needs attention</span>`;
+  if(ui.showReferrals !== false) h += `<span><svg width="26" height="10" aria-hidden="true"><path d="M1 8 Q13 0 22 5" fill="none" stroke="${REF}" stroke-width="2"/><path d="M20 2 L25 6 L19 8z" fill="${REF}"/></svg>Referral</span>`;
+  $('legend').innerHTML = h;
+}
+
+/* ================= timeline ================= */
+let tlMin = TODAY, tlPlayT = null;
+function renderTimeline(){
+  const starts = S.clients.map(c => c.since).filter(Boolean).sort();
+  tlMin = starts[0] || TODAY;
+  const span = Math.max(1, days(tlMin, TODAY));
+  const r = $('tl'); r.max = span; r.value = asOf ? days(tlMin, asOf) : span;
+  updateWhen();
+}
+function updateWhen(){
+  const d = asOf || TODAY;
+  const n = !asOf ? S.clients.filter(c => !isGone(c)).length : S.clients.filter(c => statusAt(c) === 'active').length;
+  $('tlWhen').innerHTML = `${asOf ? fmtDate(asOf) : 'Today'}<small>${n} active</small>`;
+  $('tlToday').hidden = !asOf;
+}
+function setAsOf(d){
+  asOf = (!d || d >= TODAY) ? null : d;
+  if(asOf) selected = null;
+  layoutCache = computeLayout(); renderMap(); updateWhen(); if(!userMoved) fit(); else applyVB();
+  if(ui.view === 'map') renderPanel();
+}
+$('tl').addEventListener('input', e => { stopPlay(); const t = parse(tlMin); t.setDate(t.getDate() + +e.target.value); setAsOf(iso(t)); });
+$('tlToday').addEventListener('click', () => { stopPlay(); setAsOf(null); renderTimeline(); });
+$('tlPlay').addEventListener('click', () => {
+  if(tlPlayT) return stopPlay();
+  let d = tlMin; $('tlPlay').textContent = 'Pause';
+  tlPlayT = setInterval(() => {
+    d = addMonths(d, 1);
+    if(d >= TODAY){ stopPlay(); setAsOf(null); renderTimeline(); return; }
+    setAsOf(d); $('tl').value = days(tlMin, d);
+  }, 450);
+});
+function stopPlay(){ if(tlPlayT){ clearInterval(tlPlayT); tlPlayT = null; } $('tlPlay').textContent = 'Play'; }
+
+/* ================= pan & zoom ================= */
+function fit(){
+  if(!layoutCache) return;
+  const b = layoutCache.bounds, r = svg.getBoundingClientRect();
+  const ar = (r.width||800)/(r.height||600);
+  let w = b.w, h = b.h;
+  if(w/h > ar) h = w/ar; else w = h*ar;
+  vb = {x: b.x + b.w/2 - w/2, y: b.y + b.h/2 - h/2, w, h}; userMoved = false; applyVB();
+}
+function refit(){
+  if(!userMoved || !vb) return fit();
+  const r = svg.getBoundingClientRect(); if(!r.width || !r.height) return;
+  const cx = vb.x + vb.w/2, cy = vb.y + vb.h/2, ar = r.width/r.height;
+  const h = Math.max(vb.h, vb.w/ar), w = h*ar;
+  vb = {x: cx-w/2, y: cy-h/2, w, h}; applyVB();
+}
+function applyVB(){
+  if(!vb) return;
+  svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+  const r = svg.getBoundingClientRect();
+  svg.classList.toggle('quiet', r.width && (r.width / vb.w) < 0.78);
+}
+function zoomBy(f, cx, cy){
+  if(!vb) return;
+  if(cx === undefined){ cx = vb.x + vb.w/2; cy = vb.y + vb.h/2; }
+  const nw = Math.min(Math.max(vb.w*f, 200), 30000), k = nw/vb.w;
+  vb = {x: cx - (cx-vb.x)*k, y: cy - (cy-vb.y)*k, w: nw, h: vb.h*k}; userMoved = true; applyVB();
+}
+function toSvg(e){ const r = svg.getBoundingClientRect(); return {x: vb.x + (e.clientX-r.left)/r.width*vb.w, y: vb.y + (e.clientY-r.top)/r.height*vb.h}; }
+svg.addEventListener('wheel', e => { if(!vb) return; e.preventDefault(); const p = toSvg(e); zoomBy(e.deltaY>0?1.12:0.89, p.x, p.y); }, {passive:false});
+let drag = null;
+svg.addEventListener('pointerdown', e => { if(vb) drag = {sx:e.clientX, sy:e.clientY, vx:vb.x, vy:vb.y, moved:false, id:e.pointerId}; });
+svg.addEventListener('pointermove', e => {
+  if(!drag || e.pointerId !== drag.id) return;
+  const dx = e.clientX-drag.sx, dy = e.clientY-drag.sy;
+  if(!drag.moved && Math.hypot(dx,dy) > 5){ drag.moved = true; svg.classList.add('dragging'); try{ svg.setPointerCapture(e.pointerId); }catch(_){} }
+  if(drag.moved){ userMoved = true; const r = svg.getBoundingClientRect(); vb.x = drag.vx - dx/r.width*vb.w; vb.y = drag.vy - dy/r.height*vb.h; applyVB(); }
+});
+const endDrag = e => { if(!drag) return; const moved = drag.moved; drag = null; svg.classList.remove('dragging'); if(!moved && e.type === 'pointerup') activate(e.target); };
+svg.addEventListener('pointerup', endDrag); svg.addEventListener('pointercancel', endDrag);
+svg.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activate(e.target); } });
+function activate(t){
+  const cl = t.closest && t.closest('.client'), hub = t.closest && t.closest('.hub');
+  if(cl) return selectClient(cl.dataset.id, false);
+  if(hub){ focusGroup = focusGroup === hub.dataset.group ? null : hub.dataset.group; selected = null; renderMap(); return renderPanel(); }
+}
+let rzT; new ResizeObserver(() => { clearTimeout(rzT); rzT = setTimeout(refit, 60); }).observe(svg);
+
+/* ================= panel ================= */
+function selectClient(id, pan){
+  const c = byId(id); if(!c) return;
+  if(ui.view !== 'map') setView('map');
+  selected = id;
+  if(asOf && statusAt(c) === 'future'){ asOf = null; renderTimeline(); layoutCache = computeLayout(); }
+  if(isGone(c) && !ui.showCancelled){ ui.showCancelled = true; $('showCancelled').checked = true; saveUI(); layoutCache = computeLayout(); }
+  renderMap(); renderPanel();
+  if(pan){ const nd = layoutCache.nodes.find(n => n.c.id === id); if(nd && vb){ const w = Math.min(vb.w, 1400), h = vb.h * w / vb.w; vb = {x: nd.x - w/2, y: nd.y - h/2, w, h}; userMoved = true; applyVB(); } }
+}
+function openPanel(html){
+  const p = $('panel'); const key = selected || focusGroup; if(p.dataset.key !== key){ p.scrollTop = 0; p.dataset.key = key || ''; } p.innerHTML = `<button class="x" id="pClose" aria-label="Close">×</button>` + html; p.hidden = false; $('stage').classList.add('has-panel');
+  $('pClose').addEventListener('click', () => { selected = null; focusGroup = null; closePanel(); renderMap(); });
+  p.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => selectClient(b.dataset.go, true)));
+}
+function closePanel(){ $('panel').hidden = true; $('stage').classList.remove('has-panel'); stopLog(); }
+function renderPanel(){
+  if(selected && byId(selected)) return showClientPanel(byId(selected));
+  if(focusGroup) return showGroupPanel(focusGroup);
+  closePanel();
+}
+
+function showClientPanel(c){
+  const s = svcById(c.serviceId), gone = isGone(c);
+  const r = byId(c.referredBy), rs = referralsOf(c.id), fl = flagsFor(c), ren = nextRenewal(c);
+  const h = HEALTH[c.health||''] || HEALTH[''];
+  openPanel(`<div style="display:flex;gap:14px;align-items:center">${logoHTML(c)}<div><h2>${esc(c.name)}</h2>
+      <span class="status ${gone?'off':'on'}">${gone?'Cancelled':'Active client'}</span></div></div>
+    ${fl.length ? `<div class="flags">${fl.map(f=>`<div class="flag ${f.level}">${esc(f.text)}</div>`).join('')}</div>` : (gone ? '' : '<div class="flags"><div class="flag good">Nothing needs attention</div></div>')}
+    ${canWrite && !gone ? `<div class="quick"><button class="btn small" id="qCall">Log strategy call</button><button class="btn small" id="qContact">Log contact</button>
+      <select class="btn small" id="qHealth" aria-label="Set health"><option value="">Health: not set</option>${['green','yellow','red'].map(k=>`<option value="${k}" ${c.health===k?'selected':''}>Health: ${HEALTH[k].label}</option>`).join('')}</select></div>` : ''}
+    <dl>
+      <dt>Plan</dt><dd><span class="svcpill"><span class="dot" style="background:${esc(s?s.color:'#ccc')}"></span>${esc(s?s.name:'No plan')}</span></dd>
+      ${!gone?`<dt>Health</dt><dd><span class="hdot"><span class="dot" style="background:${h.color}"></span>${h.label}</span></dd>`:''}
+      ${c.price?`<dt>Monthly price</dt><dd>${money(c.price)}/mo</dd>`:''}
+      ${ren?`<dt>Next renewal</dt><dd>${esc(fmtDate(ren))} <small style="color:var(--muted)">(${s.term}-month term)</small></dd>`:''}
+      ${c.lastCall?`<dt>Last strategy call</dt><dd>${esc(fmtDate(c.lastCall))}</dd>`:''}
+      ${c.lastContact?`<dt>Last contact</dt><dd>${esc(fmtDate(c.lastContact))}</dd>`:''}
+      ${clientAddons(c).length?`<dt>Add-ons</dt><dd>${clientAddons(c).map(a=>esc(a.name)).join('<br>')}</dd>`:''}
+      ${c.since?`<dt>Client since</dt><dd>${esc(fmtDate(c.since))}</dd>`:''}
+      ${gone&&c.cancelledOn?`<dt>Cancelled on</dt><dd>${esc(fmtDate(c.cancelledOn))}</dd>`:''}
+      ${gone?`<dt>Reason</dt><dd>${esc(c.cancelReason||'Not recorded')}${c.cancelNote?`<br><small style="color:var(--muted)">${esc(c.cancelNote)}</small>`:''}</dd>`:''}
+      ${c.since?`<dt>${gone?'Was with us':'With us'}</dt><dd>${esc(tenureText(c.since, gone?c.cancelledOn:null))}</dd>`:''}
+      ${r?`<dt>Referred by</dt><dd><button class="linkbtn" data-go="${esc(r.id)}">${esc(r.name)}</button></dd>`:(c.referredByOther?`<dt>Referred by</dt><dd>${esc(c.referredByOther)}</dd>`:'')}
+      ${rs.length?`<dt>Referred</dt><dd>${rs.map(x=>`<button class="linkbtn" data-go="${esc(x.id)}">${esc(x.name)}</button>`).join('<br>')}</dd>`:''}
+      ${c.manager?`<dt>Account manager</dt><dd>${esc(c.manager)}</dd>`:''}
+      ${c.location?`<dt>Location</dt><dd>${esc(c.location)}</dd>`:''}
+    </dl>
+    ${c.notes?`<div class="p-notes">${esc(c.notes)}</div>`:''}
+    ${canWrite?'<button class="btn" id="pEdit">Edit client</button>':''}
+    <div class="log"><h3>Activity</h3>
+      ${canWrite?`<div class="log-form"><textarea id="logText" placeholder="What happened? Calls, wins, issues, next steps"></textarea>
+        <div class="row2"><select id="logKind" aria-label="Entry type">${Object.entries(LOG_KINDS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><button class="btn small primary" id="logAdd">Add entry</button></div></div>`:''}
+      <div id="logList"><p class="empty">${B?'Loading activity…':'Activity is unavailable.'}</p></div></div>`);
+  if($('pEdit')) $('pEdit').addEventListener('click', () => openDrawer('clients', c.id));
+  if($('qCall')) $('qCall').addEventListener('click', async () => { if(await patchClient(c.id, {lastCall:TODAY, lastContact:TODAY})){ await addLog(c.id,'call',''); toast('Strategy call logged for today'); } });
+  if($('qContact')) $('qContact').addEventListener('click', async () => { if(await patchClient(c.id, {lastContact:TODAY})){ await addLog(c.id,'contact',''); toast('Contact logged for today'); } });
+  if($('qHealth')) $('qHealth').addEventListener('change', async e => { const v = e.target.value; if(await patchClient(c.id, {health:v})) addLog(c.id, 'note', `Health set to ${HEALTH[v].label}`); });
+  if($('logAdd')) $('logAdd').addEventListener('click', async () => {
+    const text = $('logText').value.trim(), kind = $('logKind').value;
+    if(!text && kind !== 'call' && kind !== 'contact') { $('logText').focus(); return toast('Write a note first.'); }
+    if(await addLog(c.id, kind, text)){
+      $('logText').value = '';
+      if(kind === 'call') patchClient(c.id, {lastCall:TODAY, lastContact:TODAY}); else if(kind === 'contact') patchClient(c.id, {lastContact:TODAY});
+    }
+  });
+  watchLog(c.id);
+}
+
+function showGroupPanel(key){
+  const L = layoutCache; const hub = L && L.hubs.find(h => h.key === key); if(!hub){ focusGroup = null; return closePanel(); }
+  const list = S.clients.filter(c => groupKey(c) === key).sort((a,b) => isGone(a) - isGone(b) || attentionLevel(b) - attentionLevel(a) || a.name.localeCompare(b.name));
+  const act = list.filter(c => !isGone(c)), s = ui.groupBy === 'plan' ? svcById(key) : null;
+  openPanel(`<span class="svcpill"><span class="dot" style="background:${esc(hub.meta.color)}"></span>${({plan:'Plan',manager:'Account manager',state:'State',year:'Start year',health:'Health'})[ui.groupBy]}</span>
+    <h2 style="margin-top:6px">${esc(hub.meta.name)}</h2>
+    ${s&&s.blurb?`<p style="margin:0 0 4px">${esc(s.blurb)}</p>`:''}
+    ${s&&s.term?`<p style="margin:0 0 4px;color:var(--muted)">${s.term}-month contract${s.cadence?`, strategy call every ${s.cadence} days`:''}</p>`:''}
+    <p style="margin:0 0 6px;color:var(--muted)">${act.length} active, ${list.length-act.length} cancelled, ${act.filter(needsAttention).length} need attention</p>
+    <ul class="p-list">${list.map(c=>`<li><button data-go="${esc(c.id)}">${mini(c)}<span style="flex:1">${esc(c.name)}${isGone(c)?' <small style="color:var(--muted)">(cancelled)</small>':''}</span>${!isGone(c)&&attentionLevel(c)?`<span class="dot" style="background:${attentionLevel(c)===2?'#F85149':'#E3B341'}"></span>`:''}</button></li>`).join('')}</ul>`);
+}
+
+/* activity log subscription: one per open client */
+function stopLog(){ if(logUnsub){ logUnsub(); logUnsub = null; } logFor = null; }
+function watchLog(id){
+  if(logFor === id){ renderLog(); return; }
+  stopLog(); logs = []; logFor = id;
+  if(!B) return;
+  logUnsub = B.watchLog(id, list => { logs = list.slice().sort((a,b) => (b.at||'').localeCompare(a.at||'')); renderLog(); });
+}
+async function renderLog(){
+  const el = $('logList'); if(!el) return;
+  if(!logs.length){ el.innerHTML = '<p class="empty">No activity yet. Log calls, wins and issues here so the whole team sees the history.</p>'; return; }
+  const ids = [...new Set(logs.filter(l => !l.authorName).map(l => l.authorId).filter(Boolean))].filter(i => !(i in profileCache));
+  if(ids.length && B){ try { const ps = await B.userNames(ids); ids.forEach(i => profileCache[i] = (ps && ps[i]) || ''); } catch(e){ ids.forEach(i => profileCache[i] = ''); } }
+  if(!$('logList')) return;
+  $('logList').innerHTML = logs.slice(0, 40).map(l => `<div class="entry"><div class="meta"><span class="kind ${esc(l.kind)}">${esc(LOG_KINDS[l.kind]||'Note')}</span><span>${esc(fmtDate((l.at||'').slice(0,10)))}</span><span>${esc(l.authorName || profileCache[l.authorId] || '')}</span></div>${l.text?`<p>${esc(l.text)}</p>`:''}</div>`).join('') + (logs.length > 40 ? `<p class="empty">Showing the latest 40 of ${logs.length} entries.</p>` : '');
+}
+
+/* ================= table ================= */
+const COLS = [
+  {k:'name', t:'Client', v:c=>c.name.toLowerCase()},
+  {k:'plan', t:'Plan', v:c=>svcById(c.serviceId)?.name||''},
+  {k:'status', t:'Status', v:c=>c.status},
+  {k:'attn', t:'Attention', v:c=>isGone(c)?-1:attentionLevel(c)},
+  {k:'health', t:'Health', v:c=>({red:0,yellow:1,green:2})[c.health] ?? 3},
+  {k:'renewal', t:'Next renewal', v:c=>nextRenewal(c)||'9999'},
+  {k:'lastCall', t:'Last call', v:c=>c.lastCall||''},
+  {k:'since', t:'Client since', v:c=>c.since||''},
+  {k:'tenure', t:'Tenure (mo)', v:c=>c.since?monthsBetween(c.since, isGone(c)&&c.cancelledOn?c.cancelledOn:TODAY):-1},
+  {k:'price', t:'Price', v:c=>+c.price||0},
+  {k:'manager', t:'Manager', v:c=>(c.manager||'').toLowerCase()},
+  {k:'location', t:'Location', v:c=>(c.location||'').toLowerCase()},
+  {k:'ref', t:'Referred by', v:c=>(byId(c.referredBy)?.name||c.referredByOther||'').toLowerCase()},
+  {k:'refs', t:'Referrals', v:c=>referralsOf(c.id).length}
+];
+function tableRows(){
+  const q = query.toLowerCase();
+  const col = COLS.find(x => x.k === sortKey) || COLS[0];
+  return S.clients.filter(c => (ui.showCancelled || !isGone(c)) && (!q || c.name.toLowerCase().includes(q) || (c.manager||'').toLowerCase().includes(q) || (c.location||'').toLowerCase().includes(q)))
+    .sort((a,b) => { const x = col.v(a), y = col.v(b); return (x < y ? -1 : x > y ? 1 : a.name.localeCompare(b.name)) * sortDir; });
+}
+function renderTable(){
+  const rows = tableRows();
+  tableSel.forEach(id => { if(!byId(id)) tableSel.delete(id); });
+  const allOn = rows.length && rows.every(c => tableSel.has(c.id));
+  const cell = (c, k) => {
+    const s = svcById(c.serviceId);
+    switch(k){
+      case 'name': return `<td class="name"><button data-go="${esc(c.id)}">${mini(c)}<span>${esc(c.name)}</span></button></td>`;
+      case 'plan': return `<td><span class="hdot"><span class="dot" style="background:${esc(s?s.color:'#ccc')}"></span>${esc(s?s.name:'')}</span></td>`;
+      case 'status': return `<td>${isGone(c)?'Cancelled':'Active'}</td>`;
+      case 'attn': { if(isGone(c)) return '<td></td>'; const f = flagsFor(c).filter(x=>x.level!=='info'); return `<td>${f.length?`<span class="${f.some(x=>x.level==='red')?'warn':'soon'}">${esc(f[0].text)}${f.length>1?` +${f.length-1}`:''}</span>`:'<span style="color:var(--muted)">On track</span>'}</td>`; }
+      case 'health': { if(isGone(c)) return '<td></td>'; const h = HEALTH[c.health||'']; return `<td><span class="hdot"><span class="dot" style="background:${h.color}"></span>${h.label}</span></td>`; }
+      case 'renewal': { const r = nextRenewal(c); if(!r) return '<td></td>'; const n = days(TODAY, r); return `<td class="${n<=30?'warn':n<=60?'soon':''}">${esc(fmtDate(r))}</td>`; }
+      case 'lastCall': return `<td>${esc(fmtDate(c.lastCall))}</td>`;
+      case 'since': return `<td>${esc(fmtDate(c.since))}</td>`;
+      case 'tenure': return `<td>${c.since?monthsBetween(c.since, isGone(c)&&c.cancelledOn?c.cancelledOn:TODAY):''}</td>`;
+      case 'price': return `<td>${c.price?money(c.price):''}</td>`;
+      case 'manager': return `<td>${esc(c.manager||'')}</td>`;
+      case 'location': return `<td>${esc(c.location||'')}</td>`;
+      case 'ref': { const r = byId(c.referredBy); return `<td>${r?`<button class="linkbtn" data-go="${esc(r.id)}">${esc(r.name)}</button>`:esc(c.referredByOther||'')}</td>`; }
+      case 'refs': { const n = referralsOf(c.id).length; return `<td>${n||''}</td>`; }
+    }
+  };
+  const managers = [...new Set(S.clients.map(c => c.manager).filter(Boolean))];
+  $('tableView').innerHTML = `
+    <div class="toolbar" style="justify-content:space-between"><span style="color:var(--muted);font-size:14px">${rows.length} ${rows.length===1?'client':'clients'}${query?` matching "${esc(query)}"`:''}</span>
+      <button class="btn small" id="csvBtn">Export CSV</button></div>
+    ${canWrite && tableSel.size ? `<div class="bulk"><b>${tableSel.size} selected</b>
+      <select id="bPlan" aria-label="Set plan"><option value="">Set plan…</option>${S.services.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</select>
+      <select id="bHealth" aria-label="Set health"><option value="-">Set health…</option>${['green','yellow','red',''].map(k=>`<option value="${k}">${HEALTH[k].label}</option>`).join('')}</select>
+      <input id="bMgr" list="bMgrs" placeholder="Set manager" aria-label="Set account manager" style="width:130px"><datalist id="bMgrs">${managers.map(m=>`<option value="${esc(m)}">`).join('')}</datalist><button class="btn small" id="bMgrGo">Apply</button>
+      <button class="btn small" id="bCall">Log call today</button>
+      <select id="bCancel" aria-label="Cancel with reason"><option value="">Cancel with reason…</option>${CANCEL_REASONS.map(r=>`<option>${esc(r)}</option>`).join('')}</select>
+      <button class="btn small" id="bActive">Reactivate</button>
+      <button class="btn small" id="bClear">Clear selection</button></div>` : ''}
+    <div class="tablewrap"><table><thead><tr>
+      ${canWrite?`<th><input type="checkbox" id="selAll" aria-label="Select all" ${allOn?'checked':''}></th>`:''}
+      ${COLS.map(col=>`<th><button data-sort="${col.k}" ${sortKey===col.k?`aria-sort="${sortDir>0?'ascending':'descending'}"`:''}>${col.t}${sortKey===col.k?(sortDir>0?' ↑':' ↓'):''}</button></th>`).join('')}
+    </tr></thead><tbody>
+      ${rows.map(c=>`<tr class="${isGone(c)?'gone':''}">${canWrite?`<td><input type="checkbox" data-sel="${esc(c.id)}" ${tableSel.has(c.id)?'checked':''} aria-label="Select ${esc(c.name)}"></td>`:''}${COLS.map(col=>cell(c,col.k)).join('')}</tr>`).join('')}
+    </tbody></table>${rows.length?'':'<p class="empty" style="padding:16px">No clients match.</p>'}</div>`;
+  const tv = $('tableView');
+  tv.querySelectorAll('[data-sort]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.sort; if(sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = (k==='attn'||k==='refs'||k==='price'||k==='tenure') ? -1 : 1; } renderTable(); }));
+  tv.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => selectClient(b.dataset.go, true)));
+  tv.querySelectorAll('[data-sel]').forEach(b => b.addEventListener('change', () => { b.checked ? tableSel.add(b.dataset.sel) : tableSel.delete(b.dataset.sel); renderTable(); }));
+  if($('selAll')) $('selAll').addEventListener('change', e => { rows.forEach(c => e.target.checked ? tableSel.add(c.id) : tableSel.delete(c.id)); renderTable(); });
+  $('csvBtn').addEventListener('click', () => exportCSV(rows));
+  if(!tableSel.size) return;
+  const ids = [...tableSel];
+  const bulk = async (fields, label, logKind) => {
+    let ok = 0; for(const id of ids){ const f = typeof fields === 'function' ? fields(byId(id)) : fields; if(await patchClient(id, f)){ ok++; if(logKind) await addLog(id, logKind, ''); } }
+    toast(`${label} for ${ok} ${ok===1?'client':'clients'}`);
+  };
+  $('bPlan').addEventListener('change', e => { if(e.target.value) bulk({serviceId:e.target.value}, 'Plan updated'); });
+  $('bHealth').addEventListener('change', e => { if(e.target.value !== '-') bulk({health:e.target.value}, 'Health updated'); });
+  $('bMgrGo').addEventListener('click', () => bulk({manager:$('bMgr').value.trim()}, 'Manager updated'));
+  $('bCall').addEventListener('click', () => bulk({lastCall:TODAY, lastContact:TODAY}, 'Call logged', 'call'));
+  $('bCancel').addEventListener('change', e => { const r = e.target.value; if(!r) return; if(!confirm(`Mark ${ids.length} ${ids.length===1?'client':'clients'} as cancelled today (${r})?`)){ e.target.value=''; return; } bulk({status:'cancelled', cancelledOn:TODAY, cancelReason:r}, 'Marked cancelled'); });
+  $('bActive').addEventListener('click', () => bulk({status:'active', cancelledOn:'', cancelReason:'', cancelNote:''}, 'Reactivated'));
+  $('bClear').addEventListener('click', () => { tableSel.clear(); renderTable(); });
+}
+async function exportCSV(rows){
+  const head = ['Client','Plan','Status','Health','Needs attention','Next renewal','Last strategy call','Last contact','Client since','Cancelled on','Cancel reason','Tenure (months)','Monthly price','Account manager','Location','Referred by','Referrals made','Add-ons','Notes'];
+  const q = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
+  const lines = [head.join(',')].concat(rows.map(c => [c.name, svcById(c.serviceId)?.name||'', isGone(c)?'Cancelled':'Active', isGone(c)?'':HEALTH[c.health||''].label,
+    flagsFor(c).filter(f=>f.level!=='info').map(f=>f.text).join('; '), nextRenewal(c)||'', c.lastCall||'', c.lastContact||'', c.since||'', c.cancelledOn||'', c.cancelReason||'',
+    c.since?monthsBetween(c.since, isGone(c)&&c.cancelledOn?c.cancelledOn:TODAY):'', c.price||'', c.manager||'', c.location||'', byId(c.referredBy)?.name||c.referredByOther||'',
+    referralsOf(c.id).length||'', clientAddons(c).map(a=>a.name).join('; '), c.notes||''].map(q).join(',')));
+  const data = lines.join('\n');
+  const url = URL.createObjectURL(new Blob([data], {type:'text/csv;charset=utf-8'}));
+  const a = document.createElement('a'); a.href = url; a.download = `gs-clients-${TODAY}.csv`; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000); toast('CSV downloaded');
+}
+
+/* ================= insights ================= */
+function renderInsights(){
+  const all = S.clients, active = all.filter(c => !isGone(c)), gone = all.filter(isGone);
+  const li = (c, why, dot) => `<li><button data-go="${esc(c.id)}">${mini(c)}<span class="nm2">${esc(c.name)}</span><span class="why">${why}</span>${dot?`<span class="dot" style="background:${dot}"></span>`:''}</button></li>`;
+
+  const attn = active.filter(needsAttention).sort((a,b) => attentionLevel(b) - attentionLevel(a) || a.name.localeCompare(b.name));
+  const ren = active.map(c => ({c, d: nextRenewal(c)})).filter(x => x.d && days(TODAY, x.d) <= 90).sort((a,b) => a.d.localeCompare(b.d));
+  const noCall = active.filter(c => { const s = svcById(c.serviceId); return s && s.cadence && !c.lastCall; }).length;
+
+  const tenures = gone.filter(c => c.since && c.cancelledOn).map(c => monthsBetween(c.since, c.cancelledOn));
+  const avgT = tenures.length ? (tenures.reduce((a,b)=>a+b,0)/tenures.length) : 0;
+  const reasons = {}; gone.forEach(c => { const r = c.cancelReason || 'No reason recorded'; reasons[r] = (reasons[r]||0) + 1; });
+  const reasonRows = Object.entries(reasons).sort((a,b) => b[1]-a[1]);
+  const maxR = Math.max(1, ...reasonRows.map(r => r[1]));
+  const refd = all.filter(referred), notRefd = all.filter(c => !referred(c));
+  const pct = arr => arr.length ? Math.round(100 * arr.filter(c=>!isGone(c)).length / arr.length) : 0;
+  const lastYear = addMonths(TODAY, -12);
+  const goneYear = gone.filter(c => c.cancelledOn && c.cancelledOn >= lastYear).length;
+
+  const refCounts = {}; all.forEach(c => { if(c.referredBy && byId(c.referredBy)) refCounts[c.referredBy] = (refCounts[c.referredBy]||0) + 1; });
+  const leaders = Object.entries(refCounts).sort((a,b) => b[1]-a[1]).slice(0,8).map(([id,n]) => ({c:byId(id), n, live: all.filter(x=>x.referredBy===id && !isGone(x)).length}));
+  const ask = active.filter(c => c.since && monthsBetween(c.since, TODAY) >= 6 && c.health !== 'red' && c.health !== 'yellow' && !referralsOf(c.id).length)
+    .sort((a,b) => (a.health==='green'?0:1) - (b.health==='green'?0:1) || a.since.localeCompare(b.since)).slice(0,10);
+
+  const priced = active.filter(c => +c.price > 0);
+  const mrr = priced.reduce((t,c) => t + +c.price, 0);
+  const lost = gone.filter(c => +c.price > 0).reduce((t,c) => t + +c.price, 0);
+  const refMrr = priced.filter(referred).reduce((t,c) => t + +c.price, 0);
+
+  const hc = {green:0, yellow:0, red:0, '':0}; active.forEach(c => hc[c.health||''] = (hc[c.health||'']||0) + 1);
+
+  // last 12 months: new vs cancelled
+  const months = []; for(let i = 11; i >= 0; i--){ const d = addMonths(TODAY.slice(0,8)+'01', -i); months.push(d.slice(0,7)); }
+  const newBy = months.map(m => all.filter(c => (c.since||'').slice(0,7) === m).length);
+  const goneBy = months.map(m => gone.filter(c => (c.cancelledOn||'').slice(0,7) === m).length);
+  const maxM = Math.max(1, ...newBy, ...goneBy);
+  const W = 1200, H = 150, bw = W/12;
+  const chart = `<svg class="chart" viewBox="0 0 ${W} ${H+24}" role="img" aria-label="New and cancelled clients per month for the last 12 months">
+    ${months.map((m,i) => { const x = i*bw, hn = newBy[i]/maxM*H, hg = goneBy[i]/maxM*H;
+      return `<rect x="${x+bw*0.14}" y="${H-hn}" width="${bw*0.34}" height="${hn}" rx="2" fill="#F5A623"><title>${m}: ${newBy[i]} new</title></rect>
+        <rect x="${x+bw*0.52}" y="${H-hg}" width="${bw*0.34}" height="${hg}" rx="2" fill="#8e9aaa"><title>${m}: ${goneBy[i]} cancelled</title></rect>
+        ${newBy[i]?`<text x="${x+bw*0.31}" y="${H-hn-4}" text-anchor="middle">${newBy[i]}</text>`:''}${goneBy[i]?`<text x="${x+bw*0.69}" y="${H-hg-4}" text-anchor="middle">${goneBy[i]}</text>`:''}
+        <text x="${x+bw/2}" y="${H+16}" text-anchor="middle">${parse(m+'-01').toLocaleDateString(undefined,{month:'short'})}</text>`; }).join('')}
+    <line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="var(--line)"/></svg>`;
+
+  $('insightsView').innerHTML = `<div class="ins-grid">
+    <section class="card"><h2>Needs attention</h2><p class="sub">Renewals within 60 days, overdue strategy calls, clients marked watch or at risk, and no contact in 30+ days.</p>
+      ${attn.length ? `<ul class="ilist">${attn.map(c => { const f = flagsFor(c).filter(x=>x.level!=='info'); return li(c, esc(f[0].text) + (f.length>1?` +${f.length-1}`:''), attentionLevel(c)===2?'#F85149':'#E3B341'); }).join('')}</ul>` : '<p class="empty">Nothing urgent. Everyone is on track.</p>'}
+      ${noCall ? `<p class="empty" style="margin-top:10px">${noCall} active ${noCall===1?'client has':'clients have'} no strategy call logged yet. Use "Log strategy call" on a client, or bulk-log in the Table view, to start tracking.</p>` : ''}</section>
+    <section class="card"><h2>Renewals in the next 90 days</h2><p class="sub">Next renewal is calculated from each client's start date and plan term.</p>
+      ${ren.length ? `<ul class="ilist">${ren.map(x => { const n = days(TODAY, x.d); return li(x.c, `${fmtDate(x.d)} (${n ? n + 'd' : 'today'})`, n<=30?'#F85149':n<=60?'#E3B341':'#5BC0EB'); }).join('')}</ul>` : '<p class="empty">No renewals in the next 90 days.</p>'}</section>
+    <section class="card"><h2>Health</h2><p class="sub">Active clients by health status.</p>
+      <div class="stats">${['green','yellow','red',''].map(k=>`<div class="stat"><b style="color:${HEALTH[k].color}">${hc[k]||0}</b><span>${HEALTH[k].label}</span></div>`).join('')}</div>
+      ${hc['']===active.length && active.length ? '<p class="empty">No health set yet. Set it from a client\'s panel or in bulk from the Table view.</p>' : ''}</section>
+    <section class="card wide"><h2>Growth</h2><p class="sub">New clients (gold) and cancellations (grey) per month, last 12 months.</p>${chart}</section>
+    <section class="card"><h2>Churn</h2><p class="sub">Why clients leave and how long they stay first.</p>
+      <div class="stats"><div class="stat"><b>${gone.length}</b><span>Cancelled total</span></div><div class="stat"><b>${goneYear}</b><span>In the last 12 months</span></div><div class="stat"><b>${tenures.length ? avgT.toFixed(1) : '–'}</b><span>Avg months before cancelling</span></div></div>
+      ${reasonRows.length ? `<div class="bars">${reasonRows.map(([r,n]) => `<div class="bar"><span>${esc(r)}</span><div class="track"><div class="fill" style="width:${n/maxR*100}%;${r==='No reason recorded'?'background:#8e9aaa':''}"></div></div><b>${n}</b></div>`).join('')}</div>` : '<p class="empty">No cancellations yet.</p>'}
+      ${reasons['No reason recorded'] ? `<p class="empty" style="margin-top:10px">Add reasons to past cancellations in Manage clients so these patterns are complete.</p>` : ''}</section>
+    <section class="card"><h2>Referrals</h2><p class="sub">Who sends you clients, and whether referred clients stay.</p>
+      <div class="stats"><div class="stat"><b>${refd.length}</b><span>Came by referral</span></div><div class="stat"><b>${pct(refd)}%</b><span>Referred still active</span></div><div class="stat"><b>${pct(notRefd)}%</b><span>Non-referred still active</span></div></div>
+      ${leaders.length ? `<h3 style="font:700 16px var(--display);margin:10px 0 4px">Top referrers</h3><ul class="ilist">${leaders.map(x => li(x.c, `${x.n} referred, ${x.live} active`)).join('')}</ul>` : '<p class="empty">No referrals between clients recorded yet.</p>'}</section>
+    <section class="card"><h2>Ask for a referral</h2><p class="sub">Active 6+ months, not marked watch or at risk, and haven't referred anyone yet. Healthy clients first.</p>
+      ${ask.length ? `<ul class="ilist">${ask.map(c => li(c, tenureText(c.since), c.health==='green'?'#3FB950':'')).join('')}</ul>` : '<p class="empty">No one fits right now.</p>'}</section>
+    <section class="card"><h2>Revenue</h2><p class="sub">From each client's monthly price. Only clients with a price entered are counted.</p>
+      <div class="stats"><div class="stat"><b>${money(mrr)}</b><span>Monthly, active</span></div><div class="stat"><b>${priced.length ? money(mrr/priced.length) : '–'}</b><span>Average per client</span></div></div>
+      <div class="stats"><div class="stat"><b>${money(refMrr)}</b><span>From referred clients</span></div><div class="stat"><b>${money(lost)}</b><span>Lost to cancellations</span></div></div>
+      <p class="empty">${priced.length} of ${active.length} active clients have a price entered.</p></section>
+  </div>`;
+  $('insightsView').querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => selectClient(b.dataset.go, true)));
+}
+
+/* ================= drawer ================= */
+let dTab = 'clients', editing = null, dQuery = '';
+function openDrawer(tab, clientId){ if(!canWrite) return; dTab = tab; editing = clientId || null; $('drawerWrap').hidden = false; renderDrawer(); }
+function closeDrawer(){ $('drawerWrap').hidden = true; editing = null; $('editBtn').focus(); }
+$('scrim').addEventListener('click', closeDrawer);
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && !$('drawerWrap').hidden) closeDrawer(); });
+
+function renderDrawer(){
+  $('drawer').innerHTML = `<div class="d-head"><h2>Manage clients</h2><button class="btn small" id="dClose">Done</button></div>
+    <div class="tabs" role="tablist"><button role="tab" data-t="clients" aria-selected="${dTab==='clients'}">Clients</button><button role="tab" data-t="plans" aria-selected="${dTab==='plans'}">Plans</button></div>
+    <div class="d-body" id="dInner"></div>`;
+  $('dClose').addEventListener('click', closeDrawer);
+  $('drawer').querySelectorAll('[role=tab]').forEach(b => b.addEventListener('click', () => { dTab = b.dataset.t; editing = null; renderDrawer(); }));
+  if(dTab === 'plans') renderPlans(); else if(editing) renderClientForm(); else renderClientList();
+}
+function renderClientList(){
+  const q = dQuery.toLowerCase();
+  const list = S.clients.filter(c => !q || c.name.toLowerCase().includes(q)).sort((a,b) => isGone(a) - isGone(b) || a.name.localeCompare(b.name));
+  const noReason = S.clients.filter(c => isGone(c) && !c.cancelReason).length;
+  $('dInner').innerHTML = `<div style="display:flex;gap:8px;margin-bottom:8px"><input class="search" id="dq" placeholder="Search clients" value="${esc(dQuery)}"><button class="btn primary" id="addC" style="white-space:nowrap">Add client</button></div>
+    ${noReason ? `<p class="d-warn">${noReason} cancelled ${noReason===1?'client is':'clients are'} missing a cancellation reason.</p>` : ''}
+    ${list.map(c => { const s = svcById(c.serviceId); return `<div class="row">${mini(c)}<div class="grow"><b>${esc(c.name)}</b><small>${esc(s?s.name:'No plan')}${isGone(c)?`, cancelled${c.cancelReason?'':' (no reason)'}`:''}</small></div><button class="btn small" data-e="${esc(c.id)}">Edit</button></div>`; }).join('')
+      || `<p class="empty">${S.clients.length ? 'No clients match that search.' : 'No clients yet. Add your first one.'}</p>`}`;
+  const qi = $('dq'); qi.addEventListener('input', () => { dQuery = qi.value; const p = qi.selectionStart; renderClientList(); const n = $('dq'); n.focus(); n.setSelectionRange(p,p); });
+  $('addC').addEventListener('click', () => { if(!S.services.length){ toast('Add a plan first.'); dTab = 'plans'; return renderDrawer(); } editing = 'new'; renderDrawer(); });
+  $('dInner').querySelectorAll('[data-e]').forEach(b => b.addEventListener('click', () => { editing = b.dataset.e; renderDrawer(); }));
+}
+
+function renderClientForm(){
+  const isNew = editing === 'new';
+  const src = isNew ? {id:'c' + uid(), name:'', serviceId:(ui.groupBy==='plan'&&focusGroup)||S.services[S.services.length-1]?.id||'', status:'active', since:TODAY, health:'', addons:[]} : byId(editing);
+  if(!src){ editing = null; return renderClientList(); }
+  const c = clean(src);
+  let logo = c.logo || '', logoAssetId = c.logoAssetId || '';
+  const managers = [...new Set(S.clients.map(x => x.manager).filter(Boolean))];
+  const inner = $('dInner');
+  inner.innerHTML = `<button class="btn small" id="back" style="margin-bottom:14px">Back to all clients</button>
+    <div class="logo-edit"><div id="lp"></div><div style="display:flex;gap:8px;flex-wrap:wrap">
+      <label class="btn small" style="cursor:pointer">Upload logo<input type="file" id="lf" accept="image/*" hidden></label>
+      <button class="btn small" id="lr" ${logo?'':'hidden'}>Remove logo</button></div></div>
+    <label class="field"><span>Client name</span><input id="fName" value="${esc(c.name)}"></label>
+    <div class="two"><label class="field"><span>Plan</span><select id="fSvc">${S.services.map(s=>`<option value="${esc(s.id)}" ${s.id===c.serviceId?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>
+      <label class="field"><span>Monthly price</span><input type="number" id="fPrice" min="0" step="1" value="${esc(c.price||'')}" placeholder="Optional"></label></div>
+    <div class="field"><span>Status</span><div class="seg">
+      <label><input type="radio" name="st" value="active" ${!isGone(c)?'checked':''}>Active</label>
+      <label><input type="radio" name="st" value="cancelled" ${isGone(c)?'checked':''}>Cancelled</label></div></div>
+    <fieldset class="fieldset" id="cxBox"><legend>Cancellation</legend>
+      <div class="two"><label class="field"><span>Cancelled on</span><input type="date" id="fCx" value="${esc(c.cancelledOn||'')}"></label>
+        <label class="field"><span>Reason</span><select id="fReason"><option value="">Choose a reason</option>${CANCEL_REASONS.map(r=>`<option ${c.cancelReason===r?'selected':''}>${esc(r)}</option>`).join('')}</select></label></div>
+      <label class="field"><span>Details</span><input id="fCxNote" value="${esc(c.cancelNote||'')}" placeholder="What did they say?"></label></fieldset>
+    <fieldset class="fieldset" id="hBox"><legend>Health and contact</legend>
+      <div class="field"><span>Health</span><div class="seg">${['green','yellow','red',''].map(k=>`<label><input type="radio" name="hl" value="${k}" ${(c.health||'')===k?'checked':''}>${HEALTH[k].label}</label>`).join('')}</div></div>
+      <div class="two"><label class="field"><span>Last strategy call</span><input type="date" id="fCall" value="${esc(c.lastCall||'')}"></label>
+        <label class="field"><span>Last contact</span><input type="date" id="fContact" value="${esc(c.lastContact||'')}"></label></div></fieldset>
+    <div class="field"><span>Add-ons</span><div id="fAdd"></div></div>
+    <div class="two"><label class="field"><span>Client since</span><input type="date" id="fSince" value="${esc(c.since||'')}"></label>
+      <label class="field"><span>Account manager</span><input id="fMgr" value="${esc(c.manager||'')}" list="mgrs"><datalist id="mgrs">${managers.map(m=>`<option value="${esc(m)}">`).join('')}</datalist></label></div>
+    <label class="field"><span>Referred by</span><select id="fRef"><option value="">Not a referral</option>${S.clients.filter(x=>x.id!==c.id).sort((a,b)=>a.name.localeCompare(b.name)).map(x=>`<option value="${esc(x.id)}" ${x.id===c.referredBy?'selected':''}>${esc(x.name)}</option>`).join('')}<option value="__other" ${!c.referredBy&&c.referredByOther?'selected':''}>Someone not on the map</option></select></label>
+    <label class="field" id="refOtherWrap"><span>Who referred them</span><input id="fRefOther" value="${esc(c.referredByOther||'')}" placeholder="Name of person or business"></label>
+    <label class="field"><span>Location</span><input id="fLoc" value="${esc(c.location||'')}" placeholder="City, ST"></label>
+    <label class="field"><span>Background notes</span><textarea id="fNotes" placeholder="Context that doesn't change often. Use the activity log for calls and updates.">${esc(c.notes||'')}</textarea></label>
+    <div class="formbar"><button class="btn primary" id="save">${isNew?'Add client':'Save changes'}</button>${isNew?'':'<button class="btn danger" id="del">Delete client</button>'}</div>`;
+  const stVal = () => inner.querySelector('[name=st]:checked').value;
+  const drawLogo = () => { $('lp').innerHTML = logoHTML(Object.assign({}, c, {logo, name:$('fName').value||c.name, status:stVal()})); $('lr').hidden = !logo; };
+  const syncSt = () => { const gone = stVal() === 'cancelled'; $('cxBox').hidden = !gone; $('hBox').hidden = gone; if(gone && !$('fCx').value) $('fCx').value = TODAY; drawLogo(); };
+  let addons = new Set(c.addons || []);
+  const drawAdd = () => { const sv = svcById($('fSvc').value);
+    $('fAdd').innerHTML = ADDONS.map(a => { const ok = sv && a.ok(sv); return `<label style="display:flex;gap:8px;align-items:center;padding:3px 0;${ok?'':'opacity:.45'}"><input type="checkbox" value="${a.id}" ${addons.has(a.id)&&ok?'checked':''} ${ok?'':'disabled'} style="accent-color:var(--gold)">${esc(a.name)}${ok?'':` <small style="color:var(--muted)">${esc(a.why||'')}</small>`}</label>`; }).join('');
+    $('fAdd').querySelectorAll('input').forEach(i => i.addEventListener('change', () => { i.checked ? addons.add(i.value) : addons.delete(i.value); })); };
+  const syncRef = () => { $('refOtherWrap').hidden = $('fRef').value !== '__other'; };
+  drawAdd(); syncSt(); syncRef();
+  $('fSvc').addEventListener('change', drawAdd); $('fRef').addEventListener('change', syncRef);
+  inner.querySelectorAll('[name=st]').forEach(r => r.addEventListener('change', syncSt));
+  $('fName').addEventListener('input', drawLogo);
+  $('back').addEventListener('click', () => { editing = null; renderDrawer(); });
+  $('lf').addEventListener('change', async e => {
+    const f = e.target.files[0]; if(!f) return;
+    try { const r = await processLogo(f); logo = r.url; logoAssetId = r.id || ''; drawLogo(); }
+    catch(err){ toast(err && err.message ? err.message : 'That file could not be used as a logo. Try a PNG or JPG.', 4000); }
+  });
+  $('lr').addEventListener('click', () => { logo = ''; logoAssetId = ''; drawLogo(); });
+  $('save').addEventListener('click', async () => {
+    const name = $('fName').value.trim(); if(!name){ $('fName').focus(); return toast('Add a client name.'); }
+    const status = stVal();
+    if(status === 'cancelled' && !$('fReason').value){ $('fReason').focus(); return toast('Choose a cancellation reason.'); }
+    const sv = svcById($('fSvc').value), refv = $('fRef').value;
+    const rec = Object.assign(c, {
+      name, serviceId:$('fSvc').value, status, price: +$('fPrice').value || 0,
+      cancelledOn: status==='cancelled' ? $('fCx').value : '', cancelReason: status==='cancelled' ? $('fReason').value : '', cancelNote: status==='cancelled' ? $('fCxNote').value.trim() : '',
+      health: inner.querySelector('[name=hl]:checked')?.value || '', lastCall:$('fCall').value, lastContact:$('fContact').value,
+      since:$('fSince').value, manager:$('fMgr').value.trim(), location:$('fLoc').value.trim(), notes:$('fNotes').value.trim(), logo, logoAssetId,
+      referredBy: (refv && refv !== '__other') ? refv : '', referredByOther: refv === '__other' ? $('fRefOther').value.trim() : '',
+      addons: [...addons].filter(id => { const a = ADDONS.find(x => x.id === id); return sv && a && a.ok(sv); })
+    });
+    const wasGone = !isNew && isGone(src) !== (status === 'cancelled');
+    $('save').disabled = true;
+    if(await saveClient(rec)){
+      if(isNew) addLog(rec.id, 'note', 'Added to the Grand Cast');
+      else if(wasGone) addLog(rec.id, status === 'cancelled' ? 'issue' : 'win', status === 'cancelled' ? `Cancelled: ${rec.cancelReason}${rec.cancelNote ? ` (${rec.cancelNote})` : ''}` : 'Reactivated');
+      if(src.logoAssetId && src.logoAssetId !== logoAssetId){ B.deleteLogo(src.logoAssetId).catch(()=>{}); }
+      toast(isNew ? 'Client added' : 'Changes saved'); editing = null; selected = rec.id; renderDrawer();
+    } else $('save').disabled = false;
+  });
+  if(!isNew) $('del').addEventListener('click', async () => {
+    if(!confirm(`Delete ${c.name} from the Grand Cast? Their activity log is deleted too. To keep them as a past client, mark them Cancelled instead.`)) return;
+    try {
+      for(const x of S.clients.filter(x => x.referredBy === c.id)) await patchClient(x.id, {referredBy:'', referredByOther:c.name});
+      await B.deleteClient(c.id);
+      if(c.logoAssetId) B.deleteLogo(c.logoAssetId).catch(()=>{});
+      if(selected === c.id) selected = null;
+      editing = null; renderDrawer(); toast('Client deleted');
+    } catch(e){ writeError(e); }
+  });
+}
+
+/* logo: resize to 200px, upload to the asset store when available */
+function processLogo(file){
+  return new Promise((res, rej) => {
+    const fr = new FileReader(); fr.onerror = () => rej(new Error('That file could not be read.'));
+    fr.onload = () => {
+      const img = new Image(); img.onerror = () => rej(new Error('That file is not an image this browser can read. Try a PNG or JPG.'));
+      img.onload = () => {
+        const Sz = 200, cv = document.createElement('canvas'); cv.width = Sz; cv.height = Sz;
+        const ctx = cv.getContext('2d'), w0 = img.naturalWidth||Sz, h0 = img.naturalHeight||Sz, sc = Math.min(Sz/w0, Sz/h0);
+        ctx.drawImage(img, (Sz-w0*sc)/2, (Sz-h0*sc)/2, w0*sc, h0*sc);
+        cv.toBlob(async blob => {
+          if(!blob) return rej(new Error('That image could not be processed.'));
+          try { res(await B.uploadLogo(blob)); }
+          catch(e){ rej(new Error(e && e.code === 'quota' ? 'Logo storage is full. Remove unused logos and try again.' : 'The logo upload failed. Try again.')); }
+        }, 'image/png');
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+function renderPlans(){
+  const inner = $('dInner');
+  inner.innerHTML = `<p class="d-warn" style="margin-top:0">Term sets each client's renewal date. Call cadence (days between strategy calls) drives the overdue-call alerts; leave it blank for plans without scheduled calls.</p>
+    <div class="row" style="font-size:12px;color:var(--muted);border:0;padding-bottom:0"><span style="width:36px"></span><span style="flex:1">Name</span><span style="width:64px">Term (mo)</span><span style="width:64px">Call every (days)</span><span style="width:60px"></span></div>
+    ${S.services.map(s => { const n = S.clients.filter(c => c.serviceId === s.id).length;
+      return `<div class="row svc-row" data-id="${esc(s.id)}"><input type="color" value="${esc(s.color)}" aria-label="Color for ${esc(s.name)}"><input type="text" value="${esc(s.name)}" aria-label="Plan name" style="flex:1"><input type="number" data-k="term" value="${esc(s.term||'')}" aria-label="Contract months" style="width:64px"><input type="number" data-k="cadence" value="${esc(s.cadence||'')}" aria-label="Days between strategy calls" style="width:64px"><button class="btn small danger" data-del ${n?`title="${n} clients on this plan"`:''}>Delete</button></div>`; }).join('')}
+    <div class="formbar" style="margin-top:14px"><button class="btn" id="addS">Add plan</button><button class="btn primary" id="saveS">Save plans</button></div>`;
+  const commit = () => inner.querySelectorAll('.svc-row').forEach(r => { const s = svcById(r.dataset.id); if(!s) return;
+    s.name = r.querySelector('input[type=text]').value.trim() || s.name; s.color = r.querySelector('input[type=color]').value;
+    s.term = +r.querySelector('[data-k=term]').value || 0; s.cadence = +r.querySelector('[data-k=cadence]').value || 0; });
+  inner.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
+    const id = b.closest('.row').dataset.id, n = S.clients.filter(c => c.serviceId === id).length;
+    if(n) return toast(`Move the ${n} ${n===1?'client':'clients'} on this plan first.`, 3400);
+    commit(); S.services = S.services.filter(s => s.id !== id); savePlans(); renderPlans();
+  }));
+  $('addS').addEventListener('click', () => { commit(); S.services.push({id:'p' + uid(), name:'New plan', color:PALETTE[S.services.length % PALETTE.length], term:0, cadence:0}); renderPlans(); });
+  $('saveS').addEventListener('click', () => { commit(); savePlans(); });
+}
+
+/* ================= boot ================= */
+setView(ui.view);
+renderAll(true);
+(async () => {
+  try {
+    B = createBackend(window.GRAND_CAST_CONFIG || {});
+    const info = await B.init();
+    canWrite = !!info.canWrite; myId = info.userId || null; needsSignIn = !!info.needsSignIn;
+  } catch(e){ console.error(e); B = null; loadError = 'Could not connect to the database. Check GRAND_CAST_CONFIG at the top of this file.'; renderChrome(); return; }
+  if(needsSignIn){ renderAll(false); return; }
+  let first = true;
+  B.watchPlans(list => { S.services = clean(list); S.plansLoaded = true; renderAll(false); });
+  B.watchClients(list => { S.clients = clean(list); S.clientsLoaded = true; renderAll(first); first = false; });
+})();
+})();
+</script>
+</body>
+</html>
