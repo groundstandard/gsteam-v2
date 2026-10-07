@@ -13,7 +13,7 @@
 // re-installs the SW (and re-fetches the SHELL precache) when this string
 // differs from the previously-installed copy.
 
-const VERSION = '1789668282';
+const VERSION = '1791394529';
 const CACHE   = `cabt-${VERSION}`;
 
 // Files known at install time. Other same-origin requests are cached on first hit.
@@ -106,9 +106,12 @@ self.addEventListener('fetch', (event) => {
   // here — Claude's sign-in page came back as the React shell, which renders
   // nothing for that path. A blank screen, and a connector that can never
   // finish connecting.
+  // /grand-cast/ is a page of its own (Kurt's client map, 2026-10-08), not an app route: handed the shell, it
+  // showed the scoreboard instead.
   if (url.pathname.startsWith('/api/')
       || url.pathname === '/mcp'
-      || url.pathname.startsWith('/.well-known/')) {
+      || url.pathname.startsWith('/.well-known/')
+      || url.pathname.startsWith('/grand-cast')) {
     return;
   }
 

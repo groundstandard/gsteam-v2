@@ -148,3 +148,27 @@ credentials.
   Postgres for `count(*)` instead of counting line breaks in the copied stream.
 - **Chain of ownership to respect**: `clients.ae` → `sales_team` → `profiles` → `auth.users`.
   Removing a person means deciding what happens to the records that name them.
+
+## Grand Cast (2026-10-08)
+
+Kurt's client map (his claude.ai artifact, handed off as `Desktop\grand-cast-handoff\`) now runs inside the
+scoreboard at **/grand-cast/**, on the scoreboard's own Supabase project and sign-in (the page reads `/config.js`).
+
+- Its own tables and bucket: `gc_plans`, `gc_clients`, `gc_log`, `grand-cast-logos`
+  (`supabase/migrations/20261008_001_grand_cast.sql`). The handoff's schema named them `plans`, `clients`, `log`
+  and would have hit our `clients` table and opened it to every signed-in user.
+- Access: `gc_can_use()` = owner, admin, integrator, CA. Sales sees nothing; anonymous sees nothing (checked).
+- Data: 5 plans, 48 clients (39 active, 9 cancelled), 18 referrals, loaded from
+  `Desktop\grand-cast-handoff\work\gc_seed.sql` in the SQL editor. **Not in this repo** (it is public).
+- The page itself: `grand-cast/index.html`, generated from the handoff by
+  `Desktop\grand-cast-handoff\adapt_for_scoreboard.py <repo>`; the same file is meant for v1.
+- Commits from `eaf744d` on are on local `main` but **not pushed**: the groundstandard GitHub account needs 2FA first. Production
+  was deployed straight from a clean `git archive` of local `main` with the Vercel CLI (team groundstandard,
+  project gsteam-v2), so `.env*` never left this machine. Push the commit as soon as GitHub works again, or the next
+  GitHub deploy will drop the page.
+- Sign-in: open the scoreboard and sign in first; /grand-cast/ on the same domain shares that session.
+- In the app: a "Grand Cast" item in the desktop sidebar for admin and CA (`href` + `sidebarOnly` in
+  `src/app-shell.jsx`; the phone tab bar skips it). The page has a "← Scoreboard" pill back home.
+- The service worker lets `/grand-cast` through (`service-worker.js`); before that, installed apps were handed
+  the scoreboard shell for that URL.
+- v1 (team.groundstandard.com, project `wlaebsifygvnoyridobr`): not done yet. Same migration, seed and page.
