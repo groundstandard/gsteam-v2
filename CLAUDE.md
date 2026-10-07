@@ -171,4 +171,8 @@ scoreboard at **/grand-cast/**, on the scoreboard's own Supabase project and sig
   `src/app-shell.jsx`; the phone tab bar skips it). The page has a "← Scoreboard" pill back home.
 - The service worker lets `/grand-cast` through (`service-worker.js`); before that, installed apps were handed
   the scoreboard shell for that URL.
-- v1 (team.groundstandard.com, project `wlaebsifygvnoyridobr`): not done yet. Same migration, seed and page.
+- v1 (team.groundstandard.com, project `wlaebsifygvnoyridobr`, repo `Desktop\gsteam`, Vercel project `gsteam`): live
+  since 2026-10-08 with the same migration, seed and page (v1 commit `0b246c3`, deployed with the Vercel CLI from a
+  clean archive, not pushed to GitHub yet). Kurt uses v1.
+- Updating the page: Kurt edits his Claude chat and sends a new export; rerun `adapt_for_scoreboard.py` on both repos.
+  Client data is edited on the live page; the chat's copy of the data is separate.
