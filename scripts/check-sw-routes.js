@@ -62,6 +62,7 @@ expect('dynamic client registration', `${ORIGIN}/api/oauth/register`, false, 'co
 expect('the MCP endpoint', `${ORIGIN}/mcp`, false, 'cors');
 expect('OAuth discovery', `${ORIGIN}/.well-known/oauth-authorization-server`, false, 'cors');
 expect('protected resource metadata', `${ORIGIN}/.well-known/oauth-protected-resource`, false, 'cors');
+expect('the Grand Cast, a page of its own', `${ORIGIN}/grand-cast/`, false);
 
 console.log('\nstill served by the worker, as before:');
 expect('the app itself', `${ORIGIN}/`, true);

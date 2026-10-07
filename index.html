@@ -4,6 +4,18 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>gsTeam Scoreboard</title>
+<script>
+  /* /grand-cast/ is a page of its own (2026-10-08). A service worker from before then hands it this shell
+     instead, whose scripts 404 there: a blank screen. Fetch the current worker, which lets /grand-cast
+     through, and load the page again once it takes over. */
+  (function () {
+    if (location.pathname.indexOf('/grand-cast') !== 0 || !('serviceWorker' in navigator)) return;
+    var sw = navigator.serviceWorker, was = sw.controller, done = false;
+    function again() { if (!done && sw.controller !== was) { done = true; location.reload(); } }
+    sw.addEventListener('controllerchange', again);
+    sw.getRegistration().then(function (reg) { return reg && reg.update(); }).then(again, again);
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <!-- The families every theme in ui.jsx actually names. This used to load
