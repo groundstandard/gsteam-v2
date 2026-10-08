@@ -179,3 +179,33 @@ scoreboard at **/grand-cast/**, on the scoreboard's own Supabase project and sig
   columns on `gc_clients` (`supabase/migrations/20261008_002_grand_cast_churn.sql`, run on v1 and v2 before the page
   goes live, since the page writes them on every save). The adapter adds his 3 extra reasons under Fit and adoption.
   Client data is edited on the live page; the chat's copy of the data is separate.
+
+## Working on v1 and v2 together (from 2026-10-08)
+
+This repo is v2. v1, the live scoreboard Kurt and the team use every day, is `Desktop\gsteam`
+(team.groundstandard.com). Both get the same change unless James says otherwise. Open them together with
+`Desktop\gs-team.code-workspace`; this repo is listed first, so the session starts here.
+
+| | v1 (live) | v2 |
+|---|---|---|
+| Repo | `Desktop\gsteam`, github.com/groundstandard/gsteam | this repo, github.com/groundstandard/gsteam-v2 |
+| Site | team.groundstandard.com (also gsteam.vercel.app) | gsteam-v2.vercel.app |
+| Vercel project | `gsteam`, team groundstandard | `gsteam-v2`, team groundstandard |
+| Supabase | `wlaebsifygvnoyridobr` ("GS Team" in the dashboard) | `obfekzpumitnybxfgnol` ("GS Scoreboard") |
+| Deploy folder | `Desktop\gsteam-deploy\v1` | `Desktop\gsteam-deploy\v2` |
+| Commit message | `Kurt 2026-10-08: what changed` | `feat(...)` / `fix(...)` |
+
+- **GitHub:** there is no GitHub login on this machine and the groundstandard account needs 2FA, so pushes fail.
+  Local `main` in both repos is ahead of GitHub. Push both as soon as GitHub works: a GitHub-triggered deploy
+  before that would drop everything since.
+- **Deploying:** refresh the deploy folder from the repo (`git archive HEAD` into it, keeping `.vercel`, and
+  `.vercelignore` in v1's), then James runs `npx.cmd vercel deploy --prod --yes --scope groundstandard` inside it
+  (`vercel` is not on his PATH). No `.env*` file ever goes into a deploy folder. v1's repo has no
+  `.vercelignore`, so a notes file committed there would be served on the live site: keep notes here.
+- **Database changes:** James pastes the SQL into each project's SQL editor; there is no database login here.
+  v1 has no `supabase/` folder, so its SQL lives in this repo's `supabase/migrations/`.
+- **Frontend changes** (`src/`, `index.html`, `service-worker.js`): run `scripts/bump-pwa-version.sh` in each repo
+  before committing. Not needed for `grand-cast/`, which the service worker leaves alone.
+- **Calls board:** the weekly schedule is code: `src/calls-board.jsx` (`CALLS_GRID` and `CALLS_CLIENT_MATCH`), in
+  both repos.
+- **Grand Cast:** see its section above. The page generator and the one-off SQL live in `Desktop\grand-cast-handoff\`.
