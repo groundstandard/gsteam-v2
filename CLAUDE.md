@@ -162,18 +162,15 @@ scoreboard at **/grand-cast/**, on the scoreboard's own Supabase project and sig
   `Desktop\grand-cast-handoff\work\gc_seed.sql` in the SQL editor. **Not in this repo** (it is public).
 - The page itself: `grand-cast/index.html`, generated from the handoff by
   `Desktop\grand-cast-handoff\adapt_for_scoreboard.py <repo>`; the same file is meant for v1.
-- Commits from `eaf744d` on are on local `main` but **not pushed**: the groundstandard GitHub account needs 2FA first. Production
-  was deployed straight from a clean `git archive` of local `main` with the Vercel CLI (team groundstandard,
-  project gsteam-v2), so `.env*` never left this machine. Push the commit as soon as GitHub works again, or the next
-  GitHub deploy will drop the page.
+- Commits `eaf744d` to `fc35467` first went live with the Vercel CLI from a clean `git archive`, while GitHub pushes were
+  blocked by the groundstandard account's 2FA. They were pushed on 2026-10-09, once Bobby had set the 2FA up.
 - Sign-in: open the scoreboard and sign in first; /grand-cast/ on the same domain shares that session.
 - In the app: a "Grand Cast" item in the desktop sidebar for admin and CA (`href` + `sidebarOnly` in
   `src/app-shell.jsx`; the phone tab bar skips it). The page has a "← Scoreboard" pill back home.
 - The service worker lets `/grand-cast` through (`service-worker.js`); before that, installed apps were handed
   the scoreboard shell for that URL.
 - v1 (team.groundstandard.com, project `wlaebsifygvnoyridobr`, repo `Desktop\gsteam`, Vercel project `gsteam`): live
-  since 2026-10-08 with the same migration, seed and page (v1 commit `0b246c3`, deployed with the Vercel CLI from a
-  clean archive, not pushed to GitHub yet). Kurt uses v1.
+  since 2026-10-08 with the same migration, seed and page (v1 commit `0b246c3`). Kurt uses v1.
 - Updating the page: Kurt edits his Claude chat and sends a new export; rerun `adapt_for_scoreboard.py` on both repos.
 - Churn tracking (Kurt's second handoff, Oct 8, unzipped to `Desktop\grand-cast-handoff\handoff-2\`): 12 more
   columns on `gc_clients` (`supabase/migrations/20261008_002_grand_cast_churn.sql`, run on v1 and v2 before the page
@@ -197,16 +194,16 @@ This repo is v2. v1, the live scoreboard Kurt and the team use every day, is `De
 | Site | team.groundstandard.com (also gsteam.vercel.app) | gsteam-v2.vercel.app |
 | Vercel project | `gsteam`, team groundstandard | `gsteam-v2`, team groundstandard |
 | Supabase | `wlaebsifygvnoyridobr` ("GS Team" in the dashboard) | `obfekzpumitnybxfgnol` ("GS Scoreboard") |
-| Deploy folder | `Desktop\gsteam-deploy\v1` | `Desktop\gsteam-deploy\v2` |
 | Commit message | `Kurt 2026-10-08: what changed` | `feat(...)` / `fix(...)` |
 
-- **GitHub:** there is no GitHub login on this machine and the groundstandard account needs 2FA, so pushes fail.
-  Local `main` in both repos is ahead of GitHub. Push both as soon as GitHub works: a GitHub-triggered deploy
-  before that would drop everything since.
-- **Deploying:** refresh the deploy folder from the repo (`git archive HEAD` into it, keeping `.vercel`, and
-  `.vercelignore` in v1's), then James runs `npx.cmd vercel deploy --prod --yes --scope groundstandard` inside it
-  (`vercel` is not on his PATH). No `.env*` file ever goes into a deploy folder. v1's repo has no
-  `.vercelignore`, so a notes file committed there would be served on the live site: keep notes here.
+- **GitHub:** both repos are public. Pushes go out as the `groundstandard` account, logged in through `gh` on this
+  machine (git uses it as its credential helper). The account's 2FA is on Bobby's phone, set up 2026-10-09. If the
+  token stops working, run `gh auth login --web`; James enters the code at github.com/login/device in a browser
+  signed in as groundstandard.
+- **Deploying:** commit, then push `main`. Vercel builds production from GitHub for both projects. No Vercel CLI
+  deploys (James, 2026-10-09), so `Desktop\gsteam-deploy\` is no longer used. Check that the GitHub-triggered
+  deployment is READY and the change is live. v1's repo has no `.vercelignore`, so a notes file committed there
+  would be served on the live site: keep notes here. Daily EODs stay local, because both repos are public.
 - **Database changes:** James pastes the SQL into each project's SQL editor; there is no database login here.
   v1 has no `supabase/` folder, so its SQL lives in this repo's `supabase/migrations/`.
 - **Frontend changes** (`src/`, `index.html`, `service-worker.js`): run `scripts/bump-pwa-version.sh` in each repo
