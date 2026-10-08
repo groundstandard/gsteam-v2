@@ -45,7 +45,7 @@ const CALLS_GRID = {
   '2:30 PM':  ['Longos', null, 'Orlando 10P', null, 'Miguel'],
   '3:00 PM':  ['Mythic', 'Sugoi', 'Universal', 'Artistry', 'Champion Chiro'],
   '3:30 PM':  ['Range', 'WNK', 'Grit', null, null],
-  '4:00 PM':  ['Academy Eden Prarier', null, null, 'Centerline', 'Robby'],
+  '4:00 PM':  ['Academy Eden Prarier', null, 'Montgomery', 'Centerline', 'Robby'],
 };
 
 // Board labels are short / abbreviated; map each to a distinctive fragment of the
@@ -90,6 +90,7 @@ const CALLS_CLIENT_MATCH = {
   'Academy Eden Prarier':'eden prairie',
   'Centerline':          'centerline',
   'Robby':               'roberts family',
+  'Montgomery':          'montgomery',
 };
 
 function CallsBoard({ state, theme, navigate, isAdmin, onSetNote }) {
