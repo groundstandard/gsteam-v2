@@ -223,6 +223,10 @@ tr.gone td{color:var(--muted)}
   .tablewrap{margin:0 10px 10px}.insights{padding:0 10px 14px}.bulk{margin:0 10px 8px}
   .timeline .when{min-width:0}
 }
+
+.mini-t{font-size:13px;width:100%}
+.mini-t th,.mini-t td{padding:4px 6px}
+.mini-t small{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -271,7 +275,8 @@ tr.gone td{color:var(--muted)}
              churn (cancelled clients): noticeOn, cancelCategory, cancelReason (specific), cancelNote (their words),
              rootCategory, rootReason, controllable:'yes'|'partial'|'no', contractTiming:'onboarding'|'midterm'|'renewal'|'monthly',
              warned:'yes'|'no'|'unsure', firstWarningOn, competitor, winBack:'yes'|'maybe'|'no', winBackOn,
-             saves: [{date, offer, outcome:'saved'|'downgraded'|'lost', note}] (also on active clients)}
+             saves: [{date, offer, outcome:'saved'|'downgraded'|'lost', note}] (also on active clients),
+             sb: scoreboard snapshot or null, see README "Scoreboard data"}
      Log    {id, clientId, kind:'note'|'call'|'contact'|'win'|'issue', text, at (ISO), authorId, authorName}
 
    Interface:
@@ -318,13 +323,14 @@ function supabaseBackend(cfg){
     notice_on: nz(c.noticeOn), cancel_category: nz(c.cancelCategory), root_category: nz(c.rootCategory), root_reason: nz(c.rootReason),
     controllable: nz(c.controllable), contract_timing: nz(c.contractTiming), warned: nz(c.warned), first_warning_on: nz(c.firstWarningOn),
     competitor: nz(c.competitor), win_back: nz(c.winBack), win_back_on: nz(c.winBackOn), saves: c.saves || [],
+    sb: c.sb || null, ...(c.sb ? {scoreboard_id: c.sb.id} : {}),
     updated_at: new Date().toISOString()
   });
   const FIELD = {name:'name', serviceId:'service_id', status:'status', since:'since', cancelledOn:'cancelled_on', cancelReason:'cancel_reason',
     cancelNote:'cancel_note', health:'health', lastCall:'last_call', lastContact:'last_contact', price:'price', manager:'manager', location:'location',
     notes:'notes', logo:'logo_url', logoAssetId:'logo_path', referredBy:'referred_by', referredByOther:'referred_by_other', addons:'addons',
     noticeOn:'notice_on', cancelCategory:'cancel_category', rootCategory:'root_category', rootReason:'root_reason', controllable:'controllable',
-    contractTiming:'contract_timing', warned:'warned', firstWarningOn:'first_warning_on', competitor:'competitor', winBack:'win_back', winBackOn:'win_back_on', saves:'saves'};
+    contractTiming:'contract_timing', warned:'warned', firstWarningOn:'first_warning_on', competitor:'competitor', winBack:'win_back', winBackOn:'win_back_on', saves:'saves', sb:'sb'};
   const fromClientRow = r => ({
     id: r.id, name: r.name, serviceId: r.service_id || '', status: r.status, since: r.since || '', cancelledOn: r.cancelled_on || '',
     cancelReason: r.cancel_reason || '', cancelNote: r.cancel_note || '', health: r.health || '', lastCall: r.last_call || '',
@@ -333,7 +339,7 @@ function supabaseBackend(cfg){
     addons: r.addons || [], noticeOn: r.notice_on || '', cancelCategory: r.cancel_category || '', rootCategory: r.root_category || '',
     rootReason: r.root_reason || '', controllable: r.controllable || '', contractTiming: r.contract_timing || '', warned: r.warned || '',
     firstWarningOn: r.first_warning_on || '', competitor: r.competitor || '', winBack: r.win_back || '', winBackOn: r.win_back_on || '',
-    saves: r.saves || [], updatedAt: r.updated_at
+    saves: r.saves || [], sb: r.sb || null, updatedAt: r.updated_at
   });
   const fromPlanRow = r => ({id:r.id, name:r.name, color:r.color, term:r.term||0, cadence:r.cadence||0, standard:!!r.standard, blurb:r.blurb||''});
   const fromLogRow = r => ({id:r.id, clientId:r.client_id, kind:r.kind, text:r.text||'', at:r.at, authorId:r.author_id||'', authorName:r.author_name||''});
@@ -374,7 +380,7 @@ function supabaseBackend(cfg){
     async saveClient(c){ const { error } = await sb.from(T.clients).upsert(toClientRow(c)); fail(error); },
     async updateClient(id, fields){
       const row = {updated_at: new Date().toISOString()};
-      Object.entries(fields).forEach(([k,v]) => { if(FIELD[k]) row[FIELD[k]] = (k === 'addons' || k === 'saves') ? (v||[]) : (k === 'health' ? (v||'') : nz(v)); });
+      Object.entries(fields).forEach(([k,v]) => { if(FIELD[k]) row[FIELD[k]] = (k === 'sb') ? (v||null) : (k === 'addons' || k === 'saves') ? (v||[]) : (k === 'health' ? (v||'') : nz(v)); });
       const { error } = await sb.from(T.clients).update(row).eq('id', id); fail(error);
     },
     async deleteClient(id){ const { error } = await sb.from(T.clients).delete().eq('id', id); fail(error); }, // log rows cascade
@@ -502,6 +508,31 @@ const HEALTH = {
 const LOG_KINDS = {note:'Note', call:'Strategy call', contact:'Contact', win:'Win', issue:'Issue'};
 const PALETTE = ['#F5A623','#2A9D8F','#7C5CBF','#3A7BD5','#F4722B','#E63946','#4CAF50','#D16BA5','#5BC0EB','#9BC53D'];
 const REF = '#7FD1FF';
+/* ---- scoreboard (read from GS Team Scoreboard; stored on each client as c.sb) ---- */
+const SB_COLOR = {'on track':'#3FB950', 'watch':'#E3B341', 'at risk':'#F85149'};
+const pct = (a, b) => b > 0 ? Math.round(100 * a / b) + '%' : '–';
+function sbFunnel(title, m){
+  const n = v => (v == null ? '–' : Math.round(v).toLocaleString('en-US'));
+  return `<p style="margin:10px 0 4px;font-weight:600">${esc(title)}</p>
+    <div style="overflow-x:auto"><table class="mini-t"><thead><tr><th>Leads</th><th>Booked</th><th>Showed</th><th>Closed</th><th>Ad spend</th><th>Per lead</th></tr></thead>
+    <tbody><tr><td>${n(m.leads)}</td><td>${n(m.booked)} <small>${pct(m.booked,m.leads)}</small></td><td>${n(m.showed)} <small>${pct(m.showed,m.booked)}</small></td><td>${n(m.closed)} <small>${pct(m.closed,m.showed)}</small></td><td>${money(m.adSpend||0)}</td><td>${m.cpl!=null?'$'+(+m.cpl).toFixed(2):'–'}</td></tr></tbody></table></div>
+    ${(m.avgGymRevenue||m.gymRevenue) ? `<p class="empty" style="margin:4px 0 0">Gym's reported monthly revenue: ${money(m.avgGymRevenue||m.gymRevenue)}${m.avgGymRevenue?' (average)':''}</p>` : ''}`;
+}
+function sbHTML(c){
+  const b = c.sb; if(!b) return '';
+  const M = b.meta90;
+  return `<div class="log"><h3>Scoreboard</h3><p class="empty" style="margin:0 0 6px">From GS Team Scoreboard (${esc(b.id)}), read ${esc(fmtDate(b.syncedAt))}.</p>
+    <dl>
+      ${b.score!=null?`<dt>Score</dt><dd><span class="hdot"><span class="dot" style="background:${SB_COLOR[b.health]||'#7D8A99'}"></span>${b.score}, ${esc(b.health)}</span></dd>`:(b.callDay?'<dt>Score</dt><dd><span style="color:var(--muted)">No score yet</span></dd>':'')}
+      ${b.callDay?`<dt>Weekly call</dt><dd>${esc(b.callDay)} ${esc(b.callTime)}${b.callAccount && b.callAccount!==c.name?` <small style="color:var(--muted)">(board name "${esc(b.callAccount)}")</small>`:''}</dd>`:''}
+      <dt>Retainer</dt><dd>${money(b.retainer)}/mo</dd>
+      ${b.ae?`<dt>AE</dt><dd>${esc(b.ae)}</dd>`:''}
+    </dl>
+    ${b.lifetime ? sbFunnel(`All logged months (${b.lifetime.months})`, b.lifetime) : '<p class="empty">No monthly results logged in the scoreboard.</p>'}
+    ${b.latest ? sbFunnel('August 2026 (latest month logged)', b.latest) : ''}
+    ${M ? `<p style="margin:10px 0 4px;font-weight:600">Meta ads, last 90 days</p><p style="margin:0;font-size:14px">${money(M.spend)} spent, ${M.leads} leads${M.cpl!=null?`, $${M.cpl.toFixed(2)} per lead`:''}, ${M.clicks.toLocaleString('en-US')} clicks across ${M.campaigns} ${M.campaigns===1?'campaign':'campaigns'}</p>` : ''}
+  </div>`;
+}
 
 /* ================= state ================= */
 const S = {services:[], clients:[], plansLoaded:false, clientsLoaded:false};
@@ -614,6 +645,7 @@ function ringColor(c, st){
   if(st === 'cancelled') return '#8e9aaa';
   if(ui.colorBy === 'health') return (HEALTH[c.health||''] || HEALTH['']).color;
   if(ui.colorBy === 'renewal'){ const r = nextRenewal(c); if(!r) return '#4F6D8A'; const n = days(TODAY, r); return n <= 30 ? '#F85149' : n <= 60 ? '#E3B341' : n <= 90 ? '#5BC0EB' : '#4F6D8A'; }
+  if(ui.colorBy === 'score') return (c.sb && SB_COLOR[c.sb.health]) || '#4F6D8A';
   if(ui.colorBy === 'attention'){ const l = attentionLevel(c); return l === 2 ? '#F85149' : l === 1 ? '#E3B341' : '#3FB950'; }
   const s = svcById(c.serviceId); return s ? s.color : '#7D8A99';
 }
@@ -672,7 +704,7 @@ root.innerHTML = `
 <div class="toolbar" id="toolbar">
   <input class="search" id="q" type="search" placeholder="Find a client" aria-label="Find a client" autocomplete="off" list="qlist"><datalist id="qlist"></datalist>
   <label class="sel">Group by <select id="groupBy"><option value="plan">Plan</option><option value="manager">Account manager</option><option value="state">State</option><option value="year">Start year</option><option value="health">Health</option></select></label>
-  <label class="sel">Color by <select id="colorBy"><option value="plan">Plan</option><option value="attention">Needs attention</option><option value="health">Health</option><option value="renewal">Renewal date</option></select></label>
+  <label class="sel">Color by <select id="colorBy"><option value="plan">Plan</option><option value="attention">Needs attention</option><option value="health">Health</option><option value="renewal">Renewal date</option><option value="score">Scoreboard score</option></select></label>
   <label class="toggle"><input type="checkbox" id="showReferrals"> Referrals</label>
   <label class="toggle"><input type="checkbox" id="showCancelled"> Cancelled</label>
 </div>
@@ -896,6 +928,7 @@ function renderLegend(){
   let h = '';
   if(ui.colorBy === 'health') h = ['green','yellow','red',''].map(k => sw(HEALTH[k].color, HEALTH[k].label)).join('');
   else if(ui.colorBy === 'renewal') h = sw('#F85149','Renews within 30 days') + sw('#E3B341','31 to 60 days') + sw('#5BC0EB','61 to 90 days') + sw('#4F6D8A','Later');
+  else if(ui.colorBy === 'score') h = sw('#3FB950','On track') + sw('#E3B341','Watch') + sw('#F85149','At risk') + sw('#4F6D8A','No score');
   else if(ui.colorBy === 'attention') h = sw('#F85149','Urgent') + sw('#E3B341','Needs attention') + sw('#3FB950','On track');
   else h = S.services.filter(s => S.clients.some(c => c.serviceId === s.id)).map(s => sw(s.color, esc(s.name))).join('');
   h += sw('#8e9aaa','Cancelled', true);
@@ -1044,6 +1077,7 @@ function showClientPanel(c){
       ${c.location?`<dt>Location</dt><dd>${esc(c.location)}</dd>`:''}
     </dl>
     ${c.notes?`<div class="p-notes">${esc(c.notes)}</div>`:''}
+    ${sbHTML(c)}
     ${gone && churnMissing(c).length ? `<div class="flags"><div class="flag amber">Churn details missing: ${esc(churnMissing(c).join(', '))}</div></div>` : ''}
     ${canWrite?`<div class="quick"><button class="btn" id="pEdit">${gone && churnMissing(c).length ? 'Complete churn details' : 'Edit client'}</button>${!gone?'<button class="btn" id="pSave">Record a save attempt</button>':''}</div>
       <div id="saveForm" hidden class="fieldset" style="padding:12px"><div class="two"><label class="field"><span>Offer made</span><select id="svOffer">${SAVE_OFFERS.map(o=>`<option>${esc(o)}</option>`).join('')}</select></label>
@@ -1117,6 +1151,10 @@ const COLS = [
   {k:'price', t:'Price', v:c=>+c.price||0},
   {k:'manager', t:'Manager', v:c=>(c.manager||'').toLowerCase()},
   {k:'location', t:'Location', v:c=>(c.location||'').toLowerCase()},
+  {k:'score', t:'Score', v:c=>c.sb&&c.sb.score!=null?c.sb.score:-1},
+  {k:'leads', t:'Leads (logged)', v:c=>c.sb&&c.sb.lifetime?c.sb.lifetime.leads:-1},
+  {k:'close', t:'Close rate', v:c=>c.sb&&c.sb.lifetime&&c.sb.lifetime.showed>0?c.sb.lifetime.closed/c.sb.lifetime.showed:-1},
+  {k:'cpl90', t:'Meta CPL 90d', v:c=>c.sb&&c.sb.meta90&&c.sb.meta90.cpl!=null?c.sb.meta90.cpl:9999},
   {k:'churn', t:'Churn reason', v:c=>isGone(c)?churnLabel(churnOf(c).cat, churnOf(c).reason):''},
   {k:'ctrl', t:'Controllable', v:c=>isGone(c)?(churnOf(c).ctrl||'z'):''},
   {k:'ref', t:'Referred by', v:c=>(byId(c.referredBy)?.name||c.referredByOther||'').toLowerCase()},
@@ -1148,6 +1186,10 @@ function renderTable(){
       case 'manager': return `<td>${esc(c.manager||'')}</td>`;
       case 'location': return `<td>${esc(c.location||'')}</td>`;
       case 'ref': { const r = byId(c.referredBy); return `<td>${r?`<button class="linkbtn" data-go="${esc(r.id)}">${esc(r.name)}</button>`:esc(c.referredByOther||'')}</td>`; }
+      case 'score': return `<td>${c.sb&&c.sb.score!=null?`<span class="hdot"><span class="dot" style="background:${SB_COLOR[c.sb.health]}"></span>${c.sb.score}</span>`:''}</td>`;
+      case 'leads': return `<td>${c.sb&&c.sb.lifetime?c.sb.lifetime.leads.toLocaleString('en-US'):''}</td>`;
+      case 'close': return `<td>${c.sb&&c.sb.lifetime?pct(c.sb.lifetime.closed,c.sb.lifetime.showed):''}</td>`;
+      case 'cpl90': return `<td>${c.sb&&c.sb.meta90&&c.sb.meta90.cpl!=null?'$'+c.sb.meta90.cpl.toFixed(2):''}</td>`;
       case 'churn': { if(!isGone(c)) return '<td></td>'; const ch = churnOf(c); return `<td>${ch.cat?esc(churnLabel(ch.cat, ch.reason)):'<span class="soon">Not recorded</span>'}</td>`; }
       case 'ctrl': return `<td>${isGone(c)?esc(CTRL[churnOf(c).ctrl]||''):''}</td>`;
       case 'refs': { const n = referralsOf(c.id).length; return `<td>${n||''}</td>`; }
@@ -1192,13 +1234,14 @@ function renderTable(){
   $('bClear').addEventListener('click', () => { tableSel.clear(); renderTable(); });
 }
 async function exportCSV(rows){
-  const head = ['Client','Plan','Status','Health','Needs attention','Next renewal','Last strategy call','Last contact','Client since','Cancelled on','Notice given','Stated category','Stated reason','In their words','Root cause category','Root cause reason','Controllable','Contract timing','Saw it coming','First warning signs','Competitor','Win-back','Win-back check-in','Save attempts','Tenure (months)','Monthly price','Account manager','Location','Referred by','Referrals made','Add-ons','Notes'].filter(h => h !== 'Cancel reason');
+  const head = ['Client','Plan','Status','Health','Needs attention','Next renewal','Last strategy call','Last contact','Client since','Cancelled on','Notice given','Stated category','Stated reason','In their words','Root cause category','Root cause reason','Controllable','Contract timing','Saw it coming','First warning signs','Competitor','Win-back','Win-back check-in','Save attempts','Tenure (months)','Monthly price','Account manager','Location','Referred by','Referrals made','Add-ons','Notes','Scoreboard ID','Scoreboard score','Scoreboard health','Weekly call','Scoreboard retainer','Months logged','Leads (logged)','Booked','Showed','Closed','Ad spend (logged)','Meta spend 90d','Meta leads 90d','Meta CPL 90d'].filter(h => h !== 'Cancel reason');
   const q = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
   const lines = [head.join(',')].concat(rows.map(c => [c.name, svcById(c.serviceId)?.name||'', isGone(c)?'Cancelled':'Active', isGone(c)?'':HEALTH[c.health||''].label,
     flagsFor(c).filter(f=>f.level!=='info').map(f=>f.text).join('; '), nextRenewal(c)||'', c.lastCall||'', c.lastContact||'', c.since||'', c.cancelledOn||'', c.noticeOn||'', ...(()=>{ const ch = churnOf(c), g = isGone(c); return g ? [catName(ch.cat), ch.reason, c.cancelNote||'', c.rootCategory?catName(ch.root):'', c.rootCategory?ch.rootReason:'', CTRL[ch.ctrl]||'', TIMING[c.contractTiming]||'', ({yes:'Yes',no:'No',unsure:'Unsure'})[c.warned]||'', c.firstWarningOn||'', c.competitor||'', WINBACK[c.winBack]||'', c.winBackOn||''] : ['','','','','','','','','','','','']; })(),
     (c.saves||[]).map(s=>`${s.date} ${s.offer} (${SAVE_OUTCOMES[s.outcome]||s.outcome})`).join('; '),
     c.since?monthsBetween(c.since, isGone(c)&&c.cancelledOn?c.cancelledOn:TODAY):'', c.price||'', c.manager||'', c.location||'', byId(c.referredBy)?.name||c.referredByOther||'',
-    referralsOf(c.id).length||'', clientAddons(c).map(a=>a.name).join('; '), c.notes||''].map(q).join(',')));
+    referralsOf(c.id).length||'', clientAddons(c).map(a=>a.name).join('; '), c.notes||'',
+    ...(()=>{ const b = c.sb || {}, L = b.lifetime || {}, M = b.meta90 || {}; return [b.id||'', b.score??'', b.health||'', b.callDay?b.callDay+' '+b.callTime:'', b.retainer||'', L.months||'', L.leads??'', L.booked??'', L.showed??'', L.closed??'', L.adSpend??'', M.spend??'', M.leads??'', M.cpl??'']; })()].map(q).join(',')));
   const data = lines.join('\n');
   const url = URL.createObjectURL(new Blob([data], {type:'text/csv;charset=utf-8'}));
   const a = document.createElement('a'); a.href = url; a.download = `gs-clients-${TODAY}.csv`; document.body.appendChild(a); a.click(); a.remove();
@@ -1257,6 +1300,7 @@ function renderInsights(){
     <section class="card"><h2>Health</h2><p class="sub">Active clients by health status.</p>
       <div class="stats">${['green','yellow','red',''].map(k=>`<div class="stat"><b style="color:${HEALTH[k].color}">${hc[k]||0}</b><span>${HEALTH[k].label}</span></div>`).join('')}</div>
       ${hc['']===active.length && active.length ? '<p class="empty">No health set yet. Set it from a client\'s panel or in bulk from the Table view.</p>' : ''}</section>
+    ${sbInsights(active)}
     <section class="card wide"><h2>Growth</h2><p class="sub">New clients (gold) and cancellations (grey) per month, last 12 months.</p>${chart}</section>
     ${churnHTML}
     <section class="card"><h2>Referrals</h2><p class="sub">Who sends you clients, and whether referred clients stay.</p>
@@ -1271,6 +1315,28 @@ function renderInsights(){
   </div>`;
   $('insightsView').querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => selectClient(b.dataset.go, true)));
   $('insightsView').querySelectorAll('[name=chSide]').forEach(r => r.addEventListener('change', () => { churnSide = r.value; const y = $('insightsView').scrollTop; renderInsights(); $('insightsView').scrollTop = y; }));
+}
+
+/* ================= scoreboard insights ================= */
+function sbInsights(active){
+  const linked = active.filter(c => c.sb);
+  if(!linked.length) return '';
+  const li = (c, why, dot) => `<li><button data-go="${esc(c.id)}">${mini(c)}<span class="nm2">${esc(c.name)}</span><span class="why">${why}</span>${dot?`<span class="dot" style="background:${dot}"></span>`:''}</button></li>`;
+  const scored = linked.filter(c => c.sb.score != null).sort((a,b) => a.sb.score - b.sb.score);
+  const counts = {'on track':0, watch:0, 'at risk':0}; scored.forEach(c => counts[c.sb.health] = (counts[c.sb.health]||0) + 1);
+  const withL = linked.filter(c => c.sb.lifetime), aug = linked.filter(c => c.sb.latest);
+  const T = withL.reduce((t,c) => { const L = c.sb.lifetime; t.leads+=L.leads; t.booked+=L.booked; t.showed+=L.showed; t.closed+=L.closed; t.spend+=L.adSpend; return t; }, {leads:0,booked:0,showed:0,closed:0,spend:0});
+  const noScore = linked.filter(c => c.sb.callDay && c.sb.score == null), noCall = linked.filter(c => !c.sb.callDay);
+  return `<section class="card"><h2>Scoreboard scores</h2><p class="sub">From the weekly calls board. Lowest scores first.</p>
+      <div class="stats"><div class="stat"><b style="color:#3FB950">${counts['on track']}</b><span>On track</span></div><div class="stat"><b style="color:#E3B341">${counts.watch}</b><span>Watch</span></div><div class="stat"><b style="color:#F85149">${counts['at risk']}</b><span>At risk</span></div></div>
+      <ul class="ilist">${scored.slice(0,12).map(c => li(c, `${c.sb.score}, ${c.sb.callDay} ${c.sb.callTime}`, SB_COLOR[c.sb.health])).join('')}</ul>
+      ${scored.length > 12 ? `<p class="empty">and ${scored.length-12} more. Sort the Table view by Score to see all.</p>` : ''}
+      ${noScore.length ? `<p class="empty">On the calls board with no score: ${noScore.map(c=>esc(c.name)).join(', ')}.</p>` : ''}
+      ${noCall.length ? `<p class="empty">Active but not on the calls board: ${noCall.map(c=>esc(c.name)).join(', ')}.</p>` : ''}</section>
+    <section class="card"><h2>Results logged</h2><p class="sub">Monthly results from the scoreboard, all logged months, active clients.</p>
+      <div class="stats"><div class="stat"><b>${T.leads.toLocaleString('en-US')}</b><span>Leads</span></div><div class="stat"><b>${pct(T.booked,T.leads)}</b><span>Booked</span></div><div class="stat"><b>${pct(T.showed,T.booked)}</b><span>Showed</span></div><div class="stat"><b>${pct(T.closed,T.showed)}</b><span>Closed</span></div></div>
+      <div class="stats"><div class="stat"><b>${money(T.spend)}</b><span>Ad spend</span></div><div class="stat"><b>${T.leads?'$'+(T.spend/T.leads).toFixed(2):'–'}</b><span>Per lead</span></div></div>
+      <p class="empty"><span class="soon">${aug.length} of ${active.length} active clients have August results logged, and none have September.</span> ${active.length - withL.length} active clients have no results logged at all.</p></section>`;
 }
 
 /* ================= churn insights ================= */
