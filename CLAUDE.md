@@ -179,6 +179,11 @@ scoreboard at **/grand-cast/**, on the scoreboard's own Supabase project and sig
   columns on `gc_clients` (`supabase/migrations/20261008_002_grand_cast_churn.sql`, run on v1 and v2 before the page
   goes live, since the page writes them on every save). The adapter adds his 3 extra reasons under Fit and adoption.
   Client data is edited on the live page; the chat's copy of the data is separate.
+- Scoreboard snapshot and health source (Kurt's third and fourth handoffs, Oct 8 evening, `handoff-3\`, `handoff-4\`):
+  `sb` jsonb and `health_source` on `gc_clients` (migrations 003 and 004, run before the page goes live). Their data went
+  in as update-only SQL from `Desktop\grand-cast-handoff\work\`, made from the difference between his exports, never his
+  whole seed, which would overwrite what was edited on the live page. Write SQL for the SQL editor as standalone
+  statements: v2's editor once ran a script's lines separately, and its temp table was gone by the next line.
 
 ## Working on v1 and v2 together (from 2026-10-08)
 

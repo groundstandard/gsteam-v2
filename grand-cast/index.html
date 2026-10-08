@@ -323,14 +323,14 @@ function supabaseBackend(cfg){
     notice_on: nz(c.noticeOn), cancel_category: nz(c.cancelCategory), root_category: nz(c.rootCategory), root_reason: nz(c.rootReason),
     controllable: nz(c.controllable), contract_timing: nz(c.contractTiming), warned: nz(c.warned), first_warning_on: nz(c.firstWarningOn),
     competitor: nz(c.competitor), win_back: nz(c.winBack), win_back_on: nz(c.winBackOn), saves: c.saves || [],
-    sb: c.sb || null, ...(c.sb ? {scoreboard_id: c.sb.id} : {}),
+    sb: c.sb || null, ...(c.sb ? {scoreboard_id: c.sb.id} : {}), health_source: nz(c.healthSource),
     updated_at: new Date().toISOString()
   });
   const FIELD = {name:'name', serviceId:'service_id', status:'status', since:'since', cancelledOn:'cancelled_on', cancelReason:'cancel_reason',
     cancelNote:'cancel_note', health:'health', lastCall:'last_call', lastContact:'last_contact', price:'price', manager:'manager', location:'location',
     notes:'notes', logo:'logo_url', logoAssetId:'logo_path', referredBy:'referred_by', referredByOther:'referred_by_other', addons:'addons',
     noticeOn:'notice_on', cancelCategory:'cancel_category', rootCategory:'root_category', rootReason:'root_reason', controllable:'controllable',
-    contractTiming:'contract_timing', warned:'warned', firstWarningOn:'first_warning_on', competitor:'competitor', winBack:'win_back', winBackOn:'win_back_on', saves:'saves', sb:'sb'};
+    contractTiming:'contract_timing', warned:'warned', firstWarningOn:'first_warning_on', competitor:'competitor', winBack:'win_back', winBackOn:'win_back_on', saves:'saves', sb:'sb', healthSource:'health_source'};
   const fromClientRow = r => ({
     id: r.id, name: r.name, serviceId: r.service_id || '', status: r.status, since: r.since || '', cancelledOn: r.cancelled_on || '',
     cancelReason: r.cancel_reason || '', cancelNote: r.cancel_note || '', health: r.health || '', lastCall: r.last_call || '',
@@ -339,7 +339,7 @@ function supabaseBackend(cfg){
     addons: r.addons || [], noticeOn: r.notice_on || '', cancelCategory: r.cancel_category || '', rootCategory: r.root_category || '',
     rootReason: r.root_reason || '', controllable: r.controllable || '', contractTiming: r.contract_timing || '', warned: r.warned || '',
     firstWarningOn: r.first_warning_on || '', competitor: r.competitor || '', winBack: r.win_back || '', winBackOn: r.win_back_on || '',
-    saves: r.saves || [], sb: r.sb || null, updatedAt: r.updated_at
+    saves: r.saves || [], sb: r.sb || null, healthSource: r.health_source || '', updatedAt: r.updated_at
   });
   const fromPlanRow = r => ({id:r.id, name:r.name, color:r.color, term:r.term||0, cadence:r.cadence||0, standard:!!r.standard, blurb:r.blurb||''});
   const fromLogRow = r => ({id:r.id, clientId:r.client_id, kind:r.kind, text:r.text||'', at:r.at, authorId:r.author_id||'', authorName:r.author_name||''});
@@ -510,6 +510,9 @@ const PALETTE = ['#F5A623','#2A9D8F','#7C5CBF','#3A7BD5','#F4722B','#E63946','#4
 const REF = '#7FD1FF';
 /* ---- scoreboard (read from GS Team Scoreboard; stored on each client as c.sb) ---- */
 const SB_COLOR = {'on track':'#3FB950', 'watch':'#E3B341', 'at risk':'#F85149'};
+const SB_HEALTH = {'on track':'green', 'watch':'yellow', 'at risk':'red'};
+/* health comes from the scoreboard score; a person can override it (healthSource = 'manual') */
+const healthNote = c => c.healthSource === 'manual' ? 'manual override' : (c.healthSource === 'scoreboard' ? 'from scoreboard' : '');
 const pct = (a, b) => b > 0 ? Math.round(100 * a / b) + '%' : '–';
 function sbFunnel(title, m){
   const n = v => (v == null ? '–' : Math.round(v).toLocaleString('en-US'));
@@ -1052,7 +1055,7 @@ function showClientPanel(c){
       <select class="btn small" id="qHealth" aria-label="Set health"><option value="">Health: not set</option>${['green','yellow','red'].map(k=>`<option value="${k}" ${c.health===k?'selected':''}>Health: ${HEALTH[k].label}</option>`).join('')}</select></div>` : ''}
     <dl>
       <dt>Plan</dt><dd><span class="svcpill"><span class="dot" style="background:${esc(s?s.color:'#ccc')}"></span>${esc(s?s.name:'No plan')}</span></dd>
-      ${!gone?`<dt>Health</dt><dd><span class="hdot"><span class="dot" style="background:${h.color}"></span>${h.label}</span></dd>`:''}
+      ${!gone?`<dt>Health</dt><dd><span class="hdot"><span class="dot" style="background:${h.color}"></span>${h.label}</span>${healthNote(c)?` <small style="color:var(--muted)">(${healthNote(c)})</small>`:''}${canWrite && c.healthSource==='manual' && c.sb && SB_HEALTH[c.sb.health] ? ` <button class="linkbtn" id="useSb">Use scoreboard (${esc(c.sb.health)})</button>` : ''}</dd>`:''}
       ${c.price?`<dt>Monthly price</dt><dd>${money(c.price)}/mo</dd>`:''}
       ${ren?`<dt>Next renewal</dt><dd>${esc(fmtDate(ren))} <small style="color:var(--muted)">(${s.term}-month term)</small></dd>`:''}
       ${c.lastCall?`<dt>Last strategy call</dt><dd>${esc(fmtDate(c.lastCall))}</dd>`:''}
@@ -1096,7 +1099,8 @@ function showClientPanel(c){
   });
   if($('qCall')) $('qCall').addEventListener('click', async () => { if(await patchClient(c.id, {lastCall:TODAY, lastContact:TODAY})){ await addLog(c.id,'call',''); toast('Strategy call logged for today'); } });
   if($('qContact')) $('qContact').addEventListener('click', async () => { if(await patchClient(c.id, {lastContact:TODAY})){ await addLog(c.id,'contact',''); toast('Contact logged for today'); } });
-  if($('qHealth')) $('qHealth').addEventListener('change', async e => { const v = e.target.value; if(await patchClient(c.id, {health:v})) addLog(c.id, 'note', `Health set to ${HEALTH[v].label}`); });
+  if($('qHealth')) $('qHealth').addEventListener('change', async e => { const v = e.target.value; if(await patchClient(c.id, {health:v, healthSource: v ? 'manual' : ''})) addLog(c.id, 'note', `Health set to ${HEALTH[v].label} (manual override)`); });
+  if($('useSb')) $('useSb').addEventListener('click', async () => { const v = SB_HEALTH[c.sb.health]; if(await patchClient(c.id, {health:v, healthSource:'scoreboard'})) addLog(c.id, 'note', `Health reset to the scoreboard (${HEALTH[v].label})`); });
   if($('logAdd')) $('logAdd').addEventListener('click', async () => {
     const text = $('logText').value.trim(), kind = $('logKind').value;
     if(!text && kind !== 'call' && kind !== 'contact') { $('logText').focus(); return toast('Write a note first.'); }
@@ -1226,7 +1230,7 @@ function renderTable(){
     toast(`${label} for ${ok} ${ok===1?'client':'clients'}`);
   };
   $('bPlan').addEventListener('change', e => { if(e.target.value) bulk({serviceId:e.target.value}, 'Plan updated'); });
-  $('bHealth').addEventListener('change', e => { if(e.target.value !== '-') bulk({health:e.target.value}, 'Health updated'); });
+  $('bHealth').addEventListener('change', e => { if(e.target.value !== '-') bulk({health:e.target.value, healthSource: e.target.value ? 'manual' : ''}, 'Health updated'); });
   $('bMgrGo').addEventListener('click', () => bulk({manager:$('bMgr').value.trim()}, 'Manager updated'));
   $('bCall').addEventListener('click', () => bulk({lastCall:TODAY, lastContact:TODAY}, 'Call logged', 'call'));
   $('bCancel').addEventListener('change', e => { const r = e.target.value; if(!r) return; if(!confirm(`Mark ${ids.length} ${ids.length===1?'client':'clients'} as cancelled today (${catName(r)})? You can add the specific reason and root cause afterwards.`)){ e.target.value=''; return; } bulk(c => ({status:'cancelled', cancelledOn:TODAY, cancelCategory:r, cancelReason:'', contractTiming:suggestTiming(c, TODAY)}), 'Marked cancelled'); });
@@ -1583,7 +1587,7 @@ function renderClientForm(){
     const rec = Object.assign(c, {
       name, serviceId:$('fSvc').value, status, price: +$('fPrice').value || 0,
       cancelledOn: status==='cancelled' ? $('fCx').value : '', cancelNote: status==='cancelled' ? $('fCxNote').value.trim() : '', saves, ...churnFields,
-      health: inner.querySelector('[name=hl]:checked')?.value || '', lastCall:$('fCall').value, lastContact:$('fContact').value,
+      health: inner.querySelector('[name=hl]:checked')?.value || '', healthSource: (()=>{ const v = inner.querySelector('[name=hl]:checked')?.value || ''; return v === (c.health||'') ? (c.healthSource||'') : (v ? 'manual' : ''); })(), lastCall:$('fCall').value, lastContact:$('fContact').value,
       since:$('fSince').value, manager:$('fMgr').value.trim(), location:$('fLoc').value.trim(), notes:$('fNotes').value.trim(), logo, logoAssetId,
       referredBy: (refv && refv !== '__other') ? refv : '', referredByOther: refv === '__other' ? $('fRefOther').value.trim() : '',
       addons: [...addons].filter(id => { const a = ADDONS.find(x => x.id === id); return sv && a && a.ok(sv); })
