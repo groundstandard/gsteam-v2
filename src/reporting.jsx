@@ -520,9 +520,9 @@ const AD_PLATFORMS = [
 
 // The sources Bobby listed that have no numbers behind them yet. Named rather
 // than hidden, so the gap between the brief and the build is visible.
+// Website (Analytics, Search Console, Business Profile) and Social have had their own sections since
+// 2026-09-18, so only what is still unconnected is listed here.
 const AD_PENDING_SOURCES = [
-  { title: 'Semrush / Google Analytics', what: 'Search visibility and site traffic, combined where the two would otherwise say the same thing twice.', needs: 'Semrush project access and a GA4 property id.' },
-  { title: 'Social media',               what: 'Per-platform reach and engagement beside the paid numbers.', needs: 'Which platforms count, and access to each.' },
   { title: 'Stripe',                     what: 'Revenue beside the spend that produced it.', needs: 'Stripe API key — the scoreboard already reads Stripe customer ids, so the join exists.' },
 ];
 
