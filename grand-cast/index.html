@@ -227,6 +227,25 @@ tr.gone td{color:var(--muted)}
 .mini-t{font-size:13px;width:100%}
 .mini-t th,.mini-t td{padding:4px 6px}
 .mini-t small{color:var(--muted)}
+
+/* tiers */
+.tier{grid-column:1/-1;display:flex;gap:14px;align-items:center;margin:14px 0 -4px;padding-top:12px;border-top:2px solid var(--line)}
+.tier .tn{flex:none;width:36px;height:36px;border-radius:50%;background:var(--gold);color:#0d1b2a;display:grid;place-items:center;font:800 19px var(--display)}
+.tier h2{margin:0;font:800 24px var(--display)}
+.tier p{margin:0;color:var(--muted);font-size:14px}
+.tier-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{border:1px solid var(--line);border-left:5px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;background:var(--surface-2)}
+.kpi.ok{border-left-color:#3FB950}.kpi.bad{border-left-color:#F85149}
+.kpi .kl{font-size:13px;color:var(--muted);font-weight:600}
+.kpi b{font:800 30px/1.1 var(--display)}
+.kpi .ks{font-size:12px;color:var(--muted)}
+.kpi .kt{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.kpi .kt input{border:1px solid var(--line);border-radius:6px;padding:4px 6px;background:var(--surface)}
+.flow{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.rules td{white-space:normal;vertical-align:top}
+.rules td:first-child{white-space:nowrap;font-weight:600}
+.rules input{border:1px solid var(--line);border-radius:6px;padding:4px 6px;background:var(--surface-2)}
 </style>
 </head>
 <body>
@@ -249,7 +268,7 @@ tr.gone td{color:var(--muted)}
     backend: c.SUPABASE_URL ? 'supabase' : 'demo',
     supabaseUrl: c.SUPABASE_URL || '',
     supabaseAnonKey: c.SUPABASE_ANON_KEY || '',
-    tables: { plans: 'gc_plans', clients: 'gc_clients', log: 'gc_log' },
+    tables: { plans: 'gc_plans', clients: 'gc_clients', log: 'gc_log', settings: 'gc_settings' },
     logoBucket: 'grand-cast-logos',
     seedUrl: 'grand-cast-data.json'
   };
@@ -292,6 +311,8 @@ tr.gone td{color:var(--muted)}
      uploadLogo(blob)               -> Promise<{url, id}>   (id = storage path, used to delete later)
      deleteLogo(id)                 -> Promise
      userNames(ids)                 -> Promise<{[id]: name}>
+     watchSettings(cb)              -> unsubscribe fn; cb({rules, targets} | null) now and on every change
+     saveSettings({rules, targets}) -> Promise
      signIn(email)                  -> Promise   (optional; magic-link fallback)
    Errors: throw {code, message}. Codes the UI understands:
      'forbidden' (no write access), 'quota', 'rate_limited', anything else = generic failure.
@@ -309,7 +330,7 @@ function createBackend(cfg){
 function supabaseBackend(cfg){
   if(!window.supabase || !window.supabase.createClient) throw new Error('supabase-js did not load');
   const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
-  const T = Object.assign({plans:'plans', clients:'clients', log:'log'}, cfg.tables || {});
+  const T = Object.assign({plans:'plans', clients:'clients', log:'log', settings:'settings'}, cfg.tables || {});
   const BUCKET = cfg.logoBucket || 'logos';
   let session = null;
 
@@ -404,6 +425,10 @@ function supabaseBackend(cfg){
     },
     async deleteLogo(path){ if(path && !path.startsWith('data:')) await sb.storage.from(BUCKET).remove([path]); },
     async userNames(){ return {}; }, // author_name is stored on each log row
+    watchSettings(cb){
+      return watchTable(T.settings, async () => { const { data, error } = await sb.from(T.settings).select('data').eq('id','main').maybeSingle(); fail(error); return data ? data.data : null; }, cb);
+    },
+    async saveSettings(obj){ const { error } = await sb.from(T.settings).upsert({id:'main', data:obj}); fail(error); },
     async signIn(email){ const { error } = await sb.auth.signInWithOtp({email, options:{emailRedirectTo: location.href}}); fail(error); }
   };
 }
@@ -440,7 +465,9 @@ function demoBackend(cfg){
     async addLog(e){ store.log.push(Object.assign({id: Math.random().toString(36).slice(2), authorName:'You'}, copy(e))); save(); },
     async uploadLogo(blob){ const url = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); }); return {url, id:''}; },
     async deleteLogo(){},
-    async userNames(ids){ return Object.fromEntries(ids.map(i => [i, 'You'])); }
+    async userNames(ids){ return Object.fromEntries(ids.map(i => [i, 'You'])); },
+    watchSettings: cb => watch(() => store.settings || null, cb),
+    async saveSettings(o){ store.settings = copy(o); save(); }
   };
 }
 </script>
@@ -599,20 +626,20 @@ function flagsFor(c){
   const s = svcById(c.serviceId);
   const r = nextRenewal(c);
   if(r){ const n = days(TODAY, r);
-    if(n <= 30) f.push({level:'red', key:'renewal', text: n === 0 ? `Renews today (${fmtDate(r)})` : `Renews in ${n} ${n===1?'day':'days'} (${fmtDate(r)})`});
-    else if(n <= 60) f.push({level:'amber', key:'renewal', text:`Renews in ${n} days (${fmtDate(r)})`});
-    else if(n <= 90) f.push({level:'info', key:'renewal', text:`Renews in ${n} days (${fmtDate(r)})`});
+    if(n <= RULES.renewRed) f.push({level:'red', key:'renewal', text: n === 0 ? `Renews today (${fmtDate(r)})` : `Renews in ${n} ${n===1?'day':'days'} (${fmtDate(r)})`});
+    else if(n <= RULES.renewAmber) f.push({level:'amber', key:'renewal', text:`Renews in ${n} days (${fmtDate(r)})`});
+    else if(n <= RULES.renewInfo) f.push({level:'info', key:'renewal', text:`Renews in ${n} days (${fmtDate(r)})`});
   }
   if(c.health === 'red') f.push({level:'red', key:'health', text:'Marked at risk'});
   else if(c.health === 'yellow') f.push({level:'amber', key:'health', text:'Marked as watch'});
   const cad = s && +s.cadence;
   if(cad){
     if(c.lastCall){ const n = days(c.lastCall, TODAY);
-      if(n > cad*2) f.push({level:'red', key:'call', text:`No strategy call in ${n} days`});
-      else if(n > Math.round(cad*1.5)) f.push({level:'amber', key:'call', text:`Strategy call due (${n} days since last)`});
+      if(n > cad*RULES.callRed) f.push({level:'red', key:'call', text:`No strategy call in ${n} days`});
+      else if(n > Math.round(cad*RULES.callAmber)) f.push({level:'amber', key:'call', text:`Strategy call due (${n} days since last)`});
     } else f.push({level:'info', key:'call', text:'No strategy call logged yet'});
   }
-  if(c.lastContact){ const n = days(c.lastContact, TODAY); if(n > 30) f.push({level:'amber', key:'contact', text:`No contact in ${n} days`}); }
+  if(c.lastContact){ const n = days(c.lastContact, TODAY); if(n > RULES.contactAmber) f.push({level:'amber', key:'contact', text:`No contact in ${n} days`}); }
   return f;
 }
 const needsAttention = c => flagsFor(c).some(f => f.level === 'red' || f.level === 'amber');
@@ -699,7 +726,7 @@ root.innerHTML = `
     <div><h1>The Grand Cast</h1><p id="sub">Loading clients…</p></div></div>
   <div class="actions">
     <div class="views" role="group" aria-label="View">
-      <button data-v="map">Map</button><button data-v="table">Table</button><button data-v="insights">Insights<span class="count" id="attnCount" hidden></span></button>
+      <button data-v="map">Map</button><button data-v="table">Table</button><button data-v="insights">Insights<span class="count" id="attnCount" hidden></span></button><button data-v="health">Health rules</button>
     </div>
     <button class="btn primary" id="editBtn" hidden>Manage clients</button>
   </div>
@@ -731,6 +758,7 @@ root.innerHTML = `
 </main>
 <div id="tableView" hidden style="flex:1;min-height:0;display:flex;flex-direction:column"></div>
 <div id="insightsView" class="insights" hidden></div>
+<div id="healthView" hidden style="flex:1;min-height:0;display:flex;flex-direction:column"></div>
 <div id="drawerWrap" hidden><div class="scrim" id="scrim"></div><section class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Manage clients"></section></div>
 <div class="toast" id="toast" role="status"></div>`;
 
@@ -762,13 +790,14 @@ $('q').addEventListener('keydown', e => {
 function setView(v){
   ui.view = v; saveUI();
   document.querySelectorAll('.views button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v));
-  $('stage').hidden = v !== 'map'; $('tableView').hidden = v !== 'table'; $('insightsView').hidden = v !== 'insights';
+  $('stage').hidden = v !== 'map'; $('tableView').hidden = v !== 'table'; $('insightsView').hidden = v !== 'insights'; $('healthView').hidden = v !== 'health';
   ['groupBy','colorBy','showReferrals'].forEach(id => $(id).closest('label').hidden = v !== 'map');
-  $('showCancelled').closest('label').hidden = v === 'insights';
-  $('q').closest('.toolbar').hidden = v === 'insights';
+  $('showCancelled').closest('label').hidden = v === 'insights' || v === 'health';
+  $('q').closest('.toolbar').hidden = v === 'insights' || v === 'health';
   if(v === 'map'){ requestAnimationFrame(() => refit()); renderMap(); }
   if(v === 'table') renderTable();
   if(v === 'insights') renderInsights();
+  if(v === 'health') renderHealthView();
 }
 
 function renderChrome(){
@@ -791,6 +820,7 @@ function renderAll(refit){
   if(refit || !vb) fit(); else applyVB();
   if(ui.view === 'table') renderTable();
   if(ui.view === 'insights') renderInsights();
+  if(ui.view === 'health') renderHealthView();
   if(!$('drawerWrap').hidden && dTab === 'clients' && !editing) renderClientList();
 }
 
@@ -1253,7 +1283,7 @@ async function exportCSV(rows){
 }
 
 /* ================= insights ================= */
-function renderInsights(){
+function renderInsightsLegacy(){
   const all = S.clients, active = all.filter(c => !isGone(c)), gone = all.filter(isGone);
   const li = (c, why, dot) => `<li><button data-go="${esc(c.id)}">${mini(c)}<span class="nm2">${esc(c.name)}</span><span class="why">${why}</span>${dot?`<span class="dot" style="background:${dot}"></span>`:''}</button></li>`;
 
@@ -1654,6 +1684,260 @@ function renderPlans(){
   $('saveS').addEventListener('click', () => { commit(); savePlans(); });
 }
 
+
+/* ================= settings: alert thresholds + scorecard targets ================= */
+const RULE_DEFAULTS = {renewRed:30, renewAmber:60, renewInfo:90, callAmber:1.5, callRed:2, contactAmber:30, earlyChurnDays:180};
+const RULE_INFO = [
+  {k:'renewRed', label:'Renewal: urgent within', unit:'days', why:'Red flag. Book a renewal conversation now.'},
+  {k:'renewAmber', label:'Renewal: needs attention within', unit:'days', why:'Amber flag. Plan the renewal pitch and fix any open issues.'},
+  {k:'renewInfo', label:'Renewal: on the radar within', unit:'days', why:'Shown in lists, not counted as needing attention.'},
+  {k:'callAmber', label:'Strategy call due after', unit:'× the plan\'s call cadence', why:'Amber flag. With weekly calls (7 days), 1.5 means 11 days.'},
+  {k:'callRed', label:'Strategy call overdue after', unit:'× the plan\'s call cadence', why:'Red flag. With weekly calls, 2 means 14 days.'},
+  {k:'contactAmber', label:'No contact after', unit:'days', why:'Amber flag, based on the last contact date.'},
+  {k:'earlyChurnDays', label:'Count as early churn when they leave within', unit:'days of starting', why:'Used in the early-churn KPI. Early churn usually points to onboarding or expectation problems.'}
+];
+let RULES = Object.assign({}, RULE_DEFAULTS), TARGETS = {}, settingsLoaded = false;
+function applySettings(s){ RULES = Object.assign({}, RULE_DEFAULTS, (s && s.rules) || {}); TARGETS = Object.assign({}, (s && s.targets) || {}); settingsLoaded = true; }
+async function persistSettings(){ try { await SETTINGS_IO.save({rules: RULES, targets: TARGETS}); toast('Saved'); } catch(e){ writeError(e); } }
+
+/* ================= book-level numbers ================= */
+const priceOf = c => +c.price || 0;
+function activeOn(d){ return S.clients.filter(c => c.since && c.since <= d && !(isGone(c) && c.cancelledOn && c.cancelledOn <= d)); }
+function book(){
+  const all = S.clients, active = all.filter(c => !isGone(c)), gone = all.filter(isGone);
+  const mrr = active.reduce((t,c) => t + priceOf(c), 0);
+  const priced = active.filter(c => priceOf(c) > 0);
+  const arpa = priced.length ? mrr / priced.length : 0;
+  const top5 = priced.slice().sort((a,b) => priceOf(b) - priceOf(a)).slice(0,5);
+  const top5Share = mrr ? top5.reduce((t,c) => t + priceOf(c), 0) / mrr : 0;
+  const d90 = addMonths(TODAY, -3);
+  const newC = all.filter(c => c.since && c.since > d90 && c.since <= TODAY);
+  const lostC = gone.filter(c => c.cancelledOn && c.cancelledOn > d90 && c.cancelledOn <= TODAY);
+  const netNewMrr = newC.reduce((t,c) => t + priceOf(c), 0) - lostC.reduce((t,c) => t + priceOf(c), 0);
+  const rates = [], revRates = [];
+  for(let i = 12; i >= 1; i--){
+    const start = addMonths(TODAY.slice(0,8) + '01', -i), end = addMonths(start, 1);
+    const base = activeOn(addMonths(start, 0)).filter(c => c.since < start);
+    const lost = gone.filter(c => c.cancelledOn && c.cancelledOn >= start && c.cancelledOn < end);
+    if(base.length){ rates.push(lost.length / base.length); const bm = base.reduce((t,c)=>t+priceOf(c),0); if(bm) revRates.push(lost.reduce((t,c)=>t+priceOf(c),0) / bm); }
+  }
+  const avg = a => a.length ? a.reduce((x,y)=>x+y,0) / a.length : null;
+  const tenures = gone.filter(c => c.since && c.cancelledOn).map(c => monthsBetween(c.since, c.cancelledOn));
+  const avgLife = avg(tenures);
+  const early = gone.filter(c => c.since && c.cancelledOn && days(c.since, c.cancelledOn) <= RULES.earlyChurnDays);
+  const atRisk = active.filter(c => c.health === 'red'), watch = active.filter(c => c.health === 'yellow');
+  const riskMrr = atRisk.reduce((t,c) => t + priceOf(c), 0), watchMrr = watch.reduce((t,c) => t + priceOf(c), 0);
+  const ren = active.map(c => ({c, d: nextRenewal(c)})).filter(x => x.d && days(TODAY, x.d) <= RULES.renewInfo);
+  const renMrr = ren.reduce((t,x) => t + priceOf(x.c), 0);
+  const sbA = active.filter(c => c.sb), logged = sbA.filter(c => c.sb.latest);
+  const T = sbA.filter(c => c.sb.lifetime).reduce((t,c) => { const L = c.sb.lifetime; t.leads+=L.leads; t.booked+=L.booked; t.showed+=Math.max(0,L.showed); t.closed+=L.closed; t.spend+=L.adSpend; return t; }, {leads:0,booked:0,showed:0,closed:0,spend:0});
+  const y1 = addMonths(TODAY, -12), new12 = all.filter(c => c.since && c.since > y1 && c.since <= TODAY);
+  const mgr = {}; active.forEach(c => { const k = c.manager || 'Unassigned'; mgr[k] = mgr[k] || {n:0, mrr:0, risk:0}; mgr[k].n++; mgr[k].mrr += priceOf(c); if(c.health === 'red') mgr[k].risk++; });
+  return {all, active, gone, mrr, priced, arpa, top5, top5Share, newC, lostC, netNewMrr, churnRate: avg(rates), revChurnRate: avg(revRates),
+    avgLife, ltv: avgLife != null ? arpa * avgLife : null, early, atRisk, watch, riskMrr, watchMrr, ren, renMrr, sbA, logged, T, new12,
+    refShare: new12.length ? new12.filter(referred).length / new12.length : null, mgr, clients90ago: activeOn(d90).length};
+}
+
+/* ================= scorecard ================= */
+const KPIS = [
+  {k:'active', label:'Active clients', dir:'min', fmt:v=>String(v), v:B=>B.active.length, sub:B=>`${B.active.length - B.clients90ago >= 0 ? '+' : ''}${B.active.length - B.clients90ago} vs 90 days ago`},
+  {k:'mrr', label:'Monthly recurring revenue', dir:'min', fmt:v=>money(v), v:B=>B.mrr, sub:B=>`${money(B.arpa)} average per client`},
+  {k:'netNew', label:'Net new MRR, last 90 days', dir:'min', fmt:v=>(v<0?'−':'+')+money(Math.abs(v)), v:B=>B.netNewMrr, sub:B=>`${B.newC.length} new, ${B.lostC.length} lost`},
+  {k:'churn', label:'Monthly client churn', dir:'max', unit:'%', fmt:v=>v==null?'–':(v*100).toFixed(1)+'%', v:B=>B.churnRate, sub:B=>`12-month average. Revenue churn ${B.revChurnRate==null?'–':(B.revChurnRate*100).toFixed(1)+'%'}`},
+  {k:'risk', label:'Revenue at risk', dir:'max', unit:'%', fmt:v=>v==null?'–':Math.round(v*100)+'%', v:B=>B.mrr?B.riskMrr/B.mrr:null, sub:B=>`${money(B.riskMrr)}/mo across ${B.atRisk.length} at-risk clients`},
+  {k:'logging', label:'Results logged last month', dir:'min', unit:'%', fmt:v=>v==null?'–':Math.round(v*100)+'%', v:B=>B.sbA.length?B.logged.length/B.sbA.length:null, sub:B=>`${B.logged.length} of ${B.sbA.length} active clients`}
+];
+function targetState(kpi, v){
+  const t = TARGETS[kpi.k]; if(t === undefined || t === '' || t === null || v == null) return null;
+  const tv = kpi.unit === '%' ? (+t)/100 : +t;
+  return kpi.dir === 'min' ? (v >= tv) : (v <= tv);
+}
+let editingTargets = false;
+function scorecardHTML(B){
+  return `<section class="card wide tier-card"><div class="tier-head"><div><h2>Scorecard</h2><p class="sub">The six numbers that say whether the agency is healthy. Check weekly. Green or red appears once a target is set.</p></div>
+    ${canWrite?`<button class="btn small" id="tgtBtn">${editingTargets?'Done':'Set targets'}</button>`:''}</div>
+    <div class="kpis">${KPIS.map(k => { const v = k.v(B), st = targetState(k, v);
+      return `<div class="kpi ${st===true?'ok':st===false?'bad':''}"><span class="kl">${esc(k.label)}</span><b>${k.fmt(v)}</b><span class="ks">${esc(k.sub(B))}</span>
+        ${editingTargets ? `<label class="kt">Target (${k.dir==='min'?'at least':'at most'}${k.unit?' %':''}) <input type="number" step="any" data-tgt="${k.k}" value="${esc(TARGETS[k.k]??'')}"></label>` : (TARGETS[k.k]!==undefined && TARGETS[k.k]!=='' ? `<span class="ks">Target: ${k.dir==='min'?'≥':'≤'} ${k.unit==='%'?TARGETS[k.k]+'%':(k.k==='active'?TARGETS[k.k]:money(+TARGETS[k.k]))}</span>` : '')}</div>`; }).join('')}</div></section>`;
+}
+
+/* ================= insights, tiered ================= */
+function tierHead(n, title, when, why){ return `<div class="tier"><span class="tn">${n}</span><div><h2>${esc(title)}</h2><p>${esc(when)}. ${esc(why)}</p></div></div>`; }
+function renderInsights(){
+  const B = book();
+  const li = (c, why, dot) => `<li><button data-go="${esc(c.id)}">${mini(c)}<span class="nm2">${esc(c.name)}</span><span class="why">${why}</span>${dot?`<span class="dot" style="background:${dot}"></span>`:''}</button></li>`;
+  const hc = c => (HEALTH[c.health||''] || HEALTH['']).color;
+
+  // ---- tier 1: act now
+  const attn = B.active.filter(needsAttention).sort((a,b) => attentionLevel(b) - attentionLevel(a) || priceOf(b) - priceOf(a));
+  const renSorted = B.ren.slice().sort((a,b) => a.d.localeCompare(b.d));
+  const riskRen = renSorted.filter(x => x.c.health === 'red' || x.c.health === 'yellow');
+  const wbDue = B.gone.filter(c => (c.winBack === 'yes' || c.winBack === 'maybe') && c.winBackOn && c.winBackOn <= addMonths(TODAY, 1)).sort((a,b) => a.winBackOn.localeCompare(b.winBackOn));
+  const missChurn = B.gone.filter(c => c.cancelledOn && c.cancelledOn >= addMonths(TODAY, -12) && churnMissing(c).length);
+  const noResults = B.sbA.filter(c => !c.sb.latest);
+  const t1 = `
+    <section class="card"><h2>Needs attention</h2><p class="sub">Every active client with a red or amber flag, most urgent and highest value first. See the Health rules view for what triggers each flag.</p>
+      ${attn.length ? `<ul class="ilist">${attn.slice(0,15).map(c => { const f = flagsFor(c).filter(x=>x.level!=='info'); return li(c, esc(f[0].text) + (f.length>1?` +${f.length-1}`:''), attentionLevel(c)===2?'#F85149':'#E3B341'); }).join('')}</ul>${attn.length>15?`<p class="empty">and ${attn.length-15} more. The Table view sorted by Attention shows all.</p>`:''}` : '<p class="empty">Nothing urgent.</p>'}</section>
+    <section class="card"><h2>Renewals at risk</h2><p class="sub">Renewing within ${RULES.renewInfo} days and marked watch or at risk. These are the conversations that protect revenue.</p>
+      <div class="stats"><div class="stat"><b>${money(riskRen.reduce((t,x)=>t+priceOf(x.c),0))}</b><span>Monthly revenue at risk of not renewing</span></div><div class="stat"><b>${riskRen.length} of ${renSorted.length}</b><span>Renewals flagged</span></div></div>
+      ${riskRen.length ? `<ul class="ilist">${riskRen.map(x => li(x.c, `${fmtDate(x.d)}, ${money(priceOf(x.c))}`, hc(x.c))).join('')}</ul>` : '<p class="empty">No flagged renewals.</p>'}
+      ${renSorted.length > riskRen.length ? `<p class="empty">Also renewing: ${renSorted.filter(x=>!riskRen.includes(x)).map(x=>`${esc(x.c.name)} (${fmtDate(x.d)})`).join(', ')}.</p>` : ''}</section>
+    <section class="card"><h2>Fix the data</h2><p class="sub">Gaps that make the reports below wrong or empty.</p>
+      <ul class="ilist">
+        <li><button data-view="table"><span class="nm2">Results not logged for last month</span><span class="why">${noResults.length} active</span><span class="dot" style="background:${noResults.length?'#E3B341':'#3FB950'}"></span></button></li>
+        <li><button data-view="table"><span class="nm2">Cancellations in 12 months missing churn details</span><span class="why">${missChurn.length}</span><span class="dot" style="background:${missChurn.length?'#E3B341':'#3FB950'}"></span></button></li>
+        <li><button data-view="table"><span class="nm2">Active clients with no strategy call logged</span><span class="why">${B.active.filter(c=>!c.lastCall).length}</span><span class="dot" style="background:${B.active.some(c=>!c.lastCall)?'#E3B341':'#3FB950'}"></span></button></li>
+        <li><button data-view="table"><span class="nm2">Active clients with no health</span><span class="why">${B.active.filter(c=>!c.health).length}</span><span class="dot" style="background:${B.active.some(c=>!c.health)?'#E3B341':'#3FB950'}"></span></button></li>
+      </ul>
+      ${wbDue.length ? `<h3 style="font:700 16px var(--display);margin:12px 0 4px">Win-back check-ins due</h3><ul class="ilist">${wbDue.map(c => li(c, fmtDate(c.winBackOn), '#3FB950')).join('')}</ul>` : ''}</section>`;
+
+  // ---- tier 2: health of the book
+  const healthMix = ['green','yellow','red',''].map(k => { const cs = B.active.filter(c => (c.health||'') === k); return {k, n: cs.length, mrr: cs.reduce((t,c)=>t+priceOf(c),0)}; });
+  const months = []; for(let i = 11; i >= 0; i--) months.push(addMonths(TODAY.slice(0,8)+'01', -i).slice(0,7));
+  const newBy = months.map(m => B.all.filter(c => (c.since||'').slice(0,7) === m).length);
+  const goneBy = months.map(m => B.gone.filter(c => (c.cancelledOn||'').slice(0,7) === m && c.cancelledOn <= TODAY).length);
+  const countBy = months.map(m => activeOn(m + '-28').length);
+  const maxM = Math.max(1, ...newBy, ...goneBy), maxC = Math.max(1, ...countBy);
+  const W = 1200, H = 160, bw = W/12;
+  const chart = `<svg class="chart" viewBox="0 0 ${W} ${H+24}" role="img" aria-label="Active clients, new and cancelled per month, last 12 months">
+    ${months.map((m,i) => { const x = i*bw, hn = newBy[i]/maxM*H*0.6, hg = goneBy[i]/maxM*H*0.6;
+      return `<rect x="${x+bw*0.2}" y="${H-hn}" width="${bw*0.28}" height="${hn}" rx="2" fill="#F5A623"><title>${m}: ${newBy[i]} new</title></rect>
+        <rect x="${x+bw*0.52}" y="${H-hg}" width="${bw*0.28}" height="${hg}" rx="2" fill="#8e9aaa"><title>${m}: ${goneBy[i]} cancelled</title></rect>
+        <text x="${x+bw/2}" y="${H+16}" text-anchor="middle">${parse(m+'-01').toLocaleDateString(undefined,{month:'short'})}</text>`; }).join('')}
+    <polyline fill="none" stroke="#5BC0EB" stroke-width="3" points="${countBy.map((n,i)=>`${i*bw+bw/2},${H - n/maxC*H*0.95}`).join(' ')}"/>
+    ${countBy.map((n,i)=>`<circle cx="${i*bw+bw/2}" cy="${H - n/maxC*H*0.95}" r="4" fill="#5BC0EB"><title>${months[i]}: ${n} active</title></circle>${i===0||i===11?`<text x="${i*bw+bw/2}" y="${H - n/maxC*H*0.95 - 9}" text-anchor="middle">${n}</text>`:''}`).join('')}
+    <line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="var(--line)"/></svg>`;
+  const t2 = `
+    <section class="card wide"><h2>Growth</h2><p class="sub">Active clients (blue line), new clients (gold) and cancellations (grey) per month.</p>${chart}</section>
+    <section class="card"><h2>Revenue</h2><p class="sub">From each client's monthly price.</p>
+      <div class="stats"><div class="stat"><b>${money(B.mrr)}</b><span>Monthly recurring</span></div><div class="stat"><b>${money(B.arpa)}</b><span>Average per client</span></div></div>
+      <div class="stats"><div class="stat"><b>${B.ltv!=null?money(B.ltv):'–'}</b><span>Est. lifetime value</span></div><div class="stat"><b>${B.avgLife!=null?B.avgLife.toFixed(1):'–'}</b><span>Avg months a cancelled client stayed</span></div></div>
+      <p class="empty">Top 5 clients are ${Math.round(B.top5Share*100)}% of revenue: ${B.top5.map(c=>`${esc(c.name)} (${money(priceOf(c))})`).join(', ')}.${B.top5Share > 0.25 ? ' <span class="soon">That is concentrated: losing one hurts.</span>' : ''}</p></section>
+    <section class="card"><h2>Health mix</h2><p class="sub">Active clients by health, by count and by revenue.</p>
+      <div class="bars">${healthMix.map(h => `<div class="bar"><span>${HEALTH[h.k].label} (${h.n})</span><div class="track"><div class="fill" style="width:${B.mrr?h.mrr/B.mrr*100:0}%;background:${HEALTH[h.k].color}"></div></div><b style="width:auto">${money(h.mrr)}</b></div>`).join('')}</div>
+      ${B.active.length && healthMix[2].n / B.active.length > 0.5 ? `<p class="empty"><span class="soon">${Math.round(healthMix[2].n/B.active.length*100)}% of clients are at risk.</span> When most clients are red, red stops meaning "act now". See the Health rules view.</p>` : ''}</section>
+    <section class="card"><h2>Retention</h2><p class="sub">How long clients stay, and how many leave early.</p>
+      <div class="stats"><div class="stat"><b>${B.churnRate==null?'–':(B.churnRate*100).toFixed(1)+'%'}</b><span>Monthly client churn</span></div><div class="stat"><b>${B.revChurnRate==null?'–':(B.revChurnRate*100).toFixed(1)+'%'}</b><span>Monthly revenue churn</span></div></div>
+      <div class="stats"><div class="stat"><b>${B.gone.length?Math.round(B.early.length/B.gone.length*100)+'%':'–'}</b><span>Of cancellations left within ${RULES.earlyChurnDays} days</span></div><div class="stat"><b>${B.refShare==null?'–':Math.round(B.refShare*100)+'%'}</b><span>Of new clients (12 mo) came by referral</span></div></div></section>
+    <section class="card"><h2>Account manager load</h2><p class="sub">Clients and revenue per manager.</p>
+      <table><thead><tr><th>Manager</th><th>Clients</th><th>Revenue</th><th>At risk</th></tr></thead><tbody>${Object.entries(B.mgr).sort((a,b)=>b[1].n-a[1].n).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.n}</td><td>${money(v.mrr)}</td><td>${v.risk}</td></tr>`).join('')}</tbody></table>
+      ${Object.values(B.mgr).some(v => v.n > 30) ? '<p class="empty"><span class="soon">One manager carries more than 30 clients on weekly calls.</span> That is a capacity and single-point-of-failure risk.</p>' : ''}</section>`;
+
+  // ---- tier 3: client results
+  const ranked = B.sbA.filter(c => c.sb.lifetime && c.sb.lifetime.leads >= 50);
+  const closeR = c => c.sb.lifetime.showed > 0 ? c.sb.lifetime.closed / c.sb.lifetime.showed : 0;
+  const worstClose = ranked.slice().sort((a,b) => closeR(a) - closeR(b)).slice(0,6);
+  const worstCpl = B.sbA.filter(c => c.sb.meta90 && c.sb.meta90.cpl != null && c.sb.meta90.leads >= 5).sort((a,b) => b.sb.meta90.cpl - a.sb.meta90.cpl).slice(0,6);
+  const t3 = `
+    <section class="card"><h2>Funnel, all clients</h2><p class="sub">Logged results from the scoreboard, all months, active clients.</p>
+      <div class="stats"><div class="stat"><b>${B.T.leads.toLocaleString('en-US')}</b><span>Leads</span></div><div class="stat"><b>${pct(B.T.booked,B.T.leads)}</b><span>Booked</span></div><div class="stat"><b>${pct(B.T.showed,B.T.booked)}</b><span>Showed</span></div><div class="stat"><b>${pct(B.T.closed,B.T.showed)}</b><span>Closed</span></div></div>
+      <div class="stats"><div class="stat"><b>${money(B.T.spend)}</b><span>Ad spend</span></div><div class="stat"><b>${B.T.leads?'$'+(B.T.spend/B.T.leads).toFixed(2):'–'}</b><span>Per lead</span></div><div class="stat"><b>${B.T.closed?money(B.T.spend/B.T.closed):'–'}</b><span>Ad spend per new member</span></div></div></section>
+    <section class="card"><h2>Weakest close rates</h2><p class="sub">Showed to closed, clients with 50+ logged leads. Usually a sales-process or follow-up problem at the gym.</p>
+      <ul class="ilist">${worstClose.map(c => li(c, `${pct(c.sb.lifetime.closed, c.sb.lifetime.showed)} of ${c.sb.lifetime.showed} showed`)).join('') || '<li class="empty">Not enough data.</li>'}</ul></section>
+    <section class="card"><h2>Highest cost per lead</h2><p class="sub">Meta ads, last 90 days, 5+ leads. Candidates for new creative or targeting.</p>
+      <ul class="ilist">${worstCpl.map(c => li(c, `$${c.sb.meta90.cpl.toFixed(2)} (${c.sb.meta90.leads} leads)`)).join('') || '<li class="empty">Not enough data.</li>'}</ul></section>
+    ${sbInsights(B.active)}`;
+
+  // ---- tier 4: why we win and lose
+  const refCounts = {}; B.all.forEach(c => { if(c.referredBy && byId(c.referredBy)) refCounts[c.referredBy] = (refCounts[c.referredBy]||0) + 1; });
+  const leaders = Object.entries(refCounts).sort((a,b) => b[1]-a[1]).slice(0,6).map(([id,n]) => ({c:byId(id), n, live: B.all.filter(x=>x.referredBy===id && !isGone(x)).length}));
+  const ask = B.active.filter(c => c.since && monthsBetween(c.since, TODAY) >= 6 && c.health !== 'red' && c.health !== 'yellow' && !referralsOf(c.id).length).sort((a,b) => a.since.localeCompare(b.since)).slice(0,8);
+  const refd = B.all.filter(referred), notRefd = B.all.filter(c => !referred(c));
+  const pctLive = arr => arr.length ? Math.round(100 * arr.filter(c=>!isGone(c)).length / arr.length) + '%' : '–';
+  const t4 = `${churnInsights(B.all, B.active, B.gone)}
+    <section class="card"><h2>Referrals</h2><p class="sub">Who sends you clients, and whether referred clients stay.</p>
+      <div class="stats"><div class="stat"><b>${refd.length}</b><span>Came by referral</span></div><div class="stat"><b>${pctLive(refd)}</b><span>Referred still active</span></div><div class="stat"><b>${pctLive(notRefd)}</b><span>Non-referred still active</span></div></div>
+      ${leaders.length ? `<ul class="ilist">${leaders.map(x => li(x.c, `${x.n} referred, ${x.live} active`)).join('')}</ul>` : ''}</section>
+    <section class="card"><h2>Ask for a referral</h2><p class="sub">Active 6+ months, not watch or at risk, no referrals yet.</p>
+      ${ask.length ? `<ul class="ilist">${ask.map(c => li(c, tenureText(c.since), c.health==='green'?'#3FB950':'')).join('')}</ul>` : '<p class="empty">No one fits right now. With most clients at risk, this list stays short.</p>'}</section>`;
+
+  $('insightsView').innerHTML = `<div class="ins-grid">
+    ${scorecardHTML(B)}
+    ${tierHead(1, 'Act this week', 'Check daily or weekly', 'Clients and revenue that need someone to do something now.')}
+    ${t1}
+    ${tierHead(2, 'Health of the book', 'Review monthly', 'Is the agency growing, holding revenue, and spreading risk well?')}
+    ${t2}
+    ${tierHead(3, 'Client results', 'Review monthly with the delivery team', 'Are clients getting results? Retention follows results.')}
+    ${t3}
+    ${tierHead(4, 'Why we win and lose', 'Review quarterly', 'Patterns behind churn, saves and referrals that should change how GS sells and delivers.')}
+    ${t4}
+  </div>`;
+  const iv = $('insightsView');
+  iv.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => selectClient(b.dataset.go, true)));
+  iv.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+  iv.querySelectorAll('[name=chSide]').forEach(r => r.addEventListener('change', () => { churnSide = r.value; const y = iv.scrollTop; renderInsights(); iv.scrollTop = y; }));
+  if($('tgtBtn')) $('tgtBtn').addEventListener('click', async () => {
+    if(editingTargets){ iv.querySelectorAll('[data-tgt]').forEach(i => { if(i.value === '') delete TARGETS[i.dataset.tgt]; else TARGETS[i.dataset.tgt] = +i.value; }); editingTargets = false; await persistSettings(); }
+    else editingTargets = true;
+    const y = iv.scrollTop; renderInsights(); iv.scrollTop = y;
+  });
+}
+
+/* ================= health rules view ================= */
+function renderHealthView(){
+  const active = S.clients.filter(c => !isGone(c));
+  const scored = active.filter(c => c.sb && c.sb.score != null);
+  const bands = {}; scored.forEach(c => { const b = bands[c.sb.health] = bands[c.sb.health] || {min:999, max:-1, n:0}; b.min = Math.min(b.min, c.sb.score); b.max = Math.max(b.max, c.sb.score); b.n++; });
+  const buckets = Array.from({length:10}, (_,i) => ({lo:i*10, items:scored.filter(c => Math.min(9, Math.floor(c.sb.score/10)) === i)}));
+  const maxB = Math.max(1, ...buckets.map(b => b.items.length));
+  const overrides = active.filter(c => c.healthSource === 'manual');
+  const ruleCount = (key, level) => active.filter(c => flagsFor(c).some(f => f.key === key && f.level === level)).length;
+  const RULE_FLAG = {renewRed:['renewal','red'], renewAmber:['renewal','amber'], renewInfo:['renewal','info'], callAmber:['call','amber'], callRed:['call','red'], contactAmber:['contact','amber']};
+  const flagged = active.filter(needsAttention);
+  const redShare = scored.length ? (bands['at risk']?.n || 0) / scored.length : 0;
+  const W = 500, H = 150, bw = W/10;
+  $('healthView').innerHTML = `<div class="insights"><div class="ins-grid">
+    <section class="card wide"><h2>How health and alerts work</h2><p class="sub">Two layers decide what lights up. The score comes from the scoreboard, and the alert rules are the Grand Cast's own. Thresholds marked editable can be changed below.</p>
+      <ol class="flow">
+        <li><b>Scoreboard score (0 to 100).</b> GS Team Scoreboard computes each account's score from its numbers and paints the calls board on track, watch, or at risk. <span class="soon">The formula lives in Angelo's code and isn't exposed to the Grand Cast.</span> The bands below are what the current data shows.</li>
+        <li><b>Health status.</b> Health copies the band: on track → Healthy, watch → Watch, at risk → At risk. If someone sets health by hand it becomes a <i>manual override</i> and stays until they click "Use scoreboard".</li>
+        <li><b>Alert flags.</b> Each active client is checked against the rules below. Red flags are urgent and amber flags need attention; both put the client on Needs attention. Blue flags are informational only.</li>
+        <li><b>Ordering.</b> Needs attention lists red before amber, then highest monthly price first.</li>
+      </ol></section>
+    <section class="card"><h2>Score bands seen in the data</h2><p class="sub">${scored.length} active clients have a score. These ranges are observed, not the official cut-offs.</p>
+      <table><thead><tr><th>Band</th><th>Clients</th><th>Lowest</th><th>Highest</th></tr></thead><tbody>
+        ${['on track','watch','at risk'].map(k => bands[k] ? `<tr><td><span class="hdot"><span class="dot" style="background:${SB_COLOR[k]}"></span>${k}</span></td><td>${bands[k].n}</td><td>${bands[k].min}</td><td>${bands[k].max}</td></tr>` : `<tr><td>${k}</td><td>0</td><td></td><td></td></tr>`).join('')}
+      </tbody></table>
+      <p class="empty">Clients with no score: ${active.filter(c => !(c.sb && c.sb.score != null)).map(c=>esc(c.name)).join(', ') || 'none'}.</p></section>
+    <section class="card"><h2>Score distribution</h2><p class="sub">Active clients per 10-point range, colored by band.</p>
+      <svg class="chart" viewBox="0 0 ${W} ${H+24}" role="img" aria-label="Score distribution">
+        ${buckets.map((b,i) => { let y = H; return b.items.sort((x,z)=>x.sb.score-z.sb.score).map(c => { const h = H*0.9/maxB; y -= h; return `<rect x="${i*bw+8}" y="${y}" width="${bw-16}" height="${h-2}" rx="2" fill="${SB_COLOR[c.sb.health]}"><title>${esc(c.name)}: ${c.sb.score}</title></rect>`; }).join('') + `<text x="${i*bw+bw/2}" y="${H+16}" text-anchor="middle">${b.lo}–${b.lo+9}</text>`; }).join('')}
+        <line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="var(--line)"/></svg>
+      ${redShare > 0.5 ? `<p class="empty"><span class="warn">${Math.round(redShare*100)}% of scored clients are at risk.</span> Either the book really is in trouble, or the at-risk cut-off is too high or the score is pulled down by missing data (for example months with no results logged). Worth checking with Angelo.</p>` : ''}</section>
+    <section class="card wide"><h2>Alert rules</h2><p class="sub">${flagged.length} of ${active.length} active clients currently need attention. ${canWrite ? 'Change a number and save to see the effect immediately.' : ''}</p>
+      <div style="overflow-x:auto"><table class="rules"><thead><tr><th>Rule</th><th>Threshold</th><th>Flag</th><th>Clients now</th><th>What it means</th></tr></thead><tbody>
+        <tr><td>Health is At risk</td><td>Scoreboard band or manual</td><td><span class="warn">Red</span></td><td>${active.filter(c=>c.health==='red').length}</td><td>Comes from the score (layer 1).</td></tr>
+        <tr><td>Health is Watch</td><td>Scoreboard band or manual</td><td><span class="soon">Amber</span></td><td>${active.filter(c=>c.health==='yellow').length}</td><td>Comes from the score (layer 1).</td></tr>
+        ${RULE_INFO.map(r => { const rf = RULE_FLAG[r.k];
+          const level = r.k === 'renewRed' || r.k === 'callRed' ? '<span class="warn">Red</span>' : r.k === 'renewInfo' || r.k === 'earlyChurnDays' ? 'Info' : '<span class="soon">Amber</span>';
+          return `<tr><td>${esc(r.label)}</td><td>${canWrite ? `<input type="number" step="any" min="0" data-rule="${r.k}" value="${RULES[r.k]}" style="width:70px">` : RULES[r.k]} ${esc(r.unit)}${RULES[r.k] !== RULE_DEFAULTS[r.k] ? ` <small style="color:var(--muted)">(default ${RULE_DEFAULTS[r.k]})</small>` : ''}</td><td>${level}</td><td>${rf ? ruleCount(rf[0], rf[1]) : ''}</td><td>${esc(r.why)}</td></tr>`; }).join('')}
+      </tbody></table></div>
+      ${canWrite ? '<div class="formbar" style="margin-top:12px"><button class="btn primary" id="rulesSave">Save rules</button><button class="btn" id="rulesReset">Reset to defaults</button></div>' : ''}
+      <p class="empty">Call alerts only start once a strategy call has been logged for that client. Clients with none logged get a blue "no call logged yet" note instead.</p></section>
+    <section class="card"><h2>Manual overrides</h2><p class="sub">Clients whose health was set by hand instead of the scoreboard.</p>
+      ${overrides.length ? `<ul class="ilist">${overrides.map(c => `<li><button data-go="${esc(c.id)}">${mini(c)}<span class="nm2">${esc(c.name)}</span><span class="why">${HEALTH[c.health||''].label}${c.sb&&c.sb.health?`, scoreboard says ${esc(c.sb.health)}`:''}</span></button></li>`).join('')}</ul>` : '<p class="empty">None. Every health status follows the scoreboard.</p>'}</section>
+    <section class="card"><h2>Questions for Angelo</h2><p class="sub">Needed to decide whether to tweak the score itself.</p>
+      <ol class="flow" style="margin:0">
+        <li>Which numbers feed the score, and how are they weighted?</li>
+        <li>What are the exact cut-offs for on track, watch and at risk?</li>
+        <li>How does a month with no results logged affect the score? Does it count as zero?</li>
+        <li>Is the score relative to each gym's own goals or history, or the same scale for every gym?</li>
+        <li>Can the scoreboard expose the score's components so the Grand Cast can show <i>why</i> a client is at risk?</li>
+      </ol></section>
+  </div></div>`;
+  const hv = $('healthView');
+  hv.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => selectClient(b.dataset.go, true)));
+  if($('rulesSave')) $('rulesSave').addEventListener('click', async () => {
+    hv.querySelectorAll('[data-rule]').forEach(i => { const v = +i.value; if(!isNaN(v) && v >= 0) RULES[i.dataset.rule] = v; });
+    if(RULES.renewRed > RULES.renewAmber || RULES.renewAmber > RULES.renewInfo) return toast('Renewal days must go urgent ≤ attention ≤ radar.');
+    if(RULES.callAmber > RULES.callRed) return toast('"Call due" must be less than "call overdue".');
+    await persistSettings(); renderAll(false); renderHealthView();
+  });
+  if($('rulesReset')) $('rulesReset').addEventListener('click', async () => { RULES = Object.assign({}, RULE_DEFAULTS); await persistSettings(); renderAll(false); renderHealthView(); });
+}
+
+const SETTINGS_IO = { save: s => B.saveSettings(clean(s)) };
+
 /* ================= boot ================= */
 setView(ui.view);
 renderAll(true);
@@ -1665,6 +1949,7 @@ renderAll(true);
   } catch(e){ console.error(e); B = null; loadError = 'Could not connect to the database. Check GRAND_CAST_CONFIG at the top of this file.'; renderChrome(); return; }
   if(needsSignIn){ renderAll(false); return; }
   let first = true;
+  B.watchSettings(s => { applySettings(s); renderAll(false); if(ui.view === 'health') renderHealthView(); });
   B.watchPlans(list => { S.services = clean(list); S.plansLoaded = true; renderAll(false); });
   B.watchClients(list => { S.clients = clean(list); S.clientsLoaded = true; renderAll(first); first = false; });
 })();

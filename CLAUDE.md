@@ -181,6 +181,9 @@ scoreboard at **/grand-cast/**, on the scoreboard's own Supabase project and sig
   in as update-only SQL from `Desktop\grand-cast-handoff\work\`, made from the difference between his exports, never his
   whole seed, which would overwrite what was edited on the live page. Write SQL for the SQL editor as standalone
   statements: v2's editor once ran a script's lines separately, and its temp table was gone by the next line.
+- Insights scorecard and Health rules (Kurt's fifth handoff, Oct 9, `handoff-5\`): one more table, `gc_settings`
+  (migration 005), for alert thresholds and scorecard targets. The handoff opened it to every signed-in user; ours
+  uses `gc_can_use()` like the other Grand Cast tables. No data changed in that handoff.
 
 ## Working on v1 and v2 together (from 2026-10-08)
 
