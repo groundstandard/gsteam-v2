@@ -2604,7 +2604,10 @@ function AdminDashboard({ state, theme, navigate, scopeCa }) {
       : null;
 
     // Last metric period as ISO (used both for sort + display)
-    const lastMetricIso = last ? last.month : null;
+    // Last metric is the newest month logged at all, not the newest inside the selected window. Kurt
+    // 2026-10-09: with the quarter still set to Apr-Jun it read "Jun 1, 2026" for every client, although
+    // results were logged after that. Display only: the score and the window columns are unchanged.
+    const lastMetricIso = eff.reduce((a, m) => (m.month && (!a || m.month > a) ? m.month : a), null);
 
     // Per-client Retention (TKT-12.3 spec): 1.0 if active and not flagged
     // inactive in the period; 0.0 if cancelled or flagged.
@@ -2979,7 +2982,7 @@ function AdminDashboard({ state, theme, navigate, scopeCa }) {
       mono: true, render: (r) => pct(r.satisfaction) },
     // Engagement
     { id: 'lastMetric',     label: 'Last metric',     group: 'Engagement', align: 'left', sortKey: 'lastMetric',
-      mono: true, render: (r) => formatDate(r.lastMetric) },
+      mono: true, render: (r) => CABT_fmtMonth(r.lastMetric) },
     { id: 'lastReview',     label: 'Last review',     group: 'Engagement', align: 'left', sortKey: 'lastReview',
       mono: true, render: (r) => formatDate(r.lastReview) },
     { id: 'lastTestimonial', label: 'Last testimonial', group: 'Engagement', align: 'left', sortKey: 'lastTestimonial',
