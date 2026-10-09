@@ -544,8 +544,8 @@ const pct = (a, b) => b > 0 ? Math.round(100 * a / b) + '%' : '–';
 function sbFunnel(title, m){
   const n = v => (v == null ? '–' : Math.round(v).toLocaleString('en-US'));
   return `<p style="margin:10px 0 4px;font-weight:600">${esc(title)}</p>
-    <div style="overflow-x:auto"><table class="mini-t"><thead><tr><th>Leads</th><th>Booked</th><th>Showed</th><th>Closed</th><th>Ad spend</th><th>Per lead</th></tr></thead>
-    <tbody><tr><td>${n(m.leads)}</td><td>${n(m.booked)} <small>${pct(m.booked,m.leads)}</small></td><td>${n(m.showed)} <small>${pct(m.showed,m.booked)}</small></td><td>${n(m.closed)} <small>${pct(m.closed,m.showed)}</small></td><td>${money(m.adSpend||0)}</td><td>${m.cpl!=null?'$'+(+m.cpl).toFixed(2):'–'}</td></tr></tbody></table></div>
+    <div style="overflow-x:auto"><table class="mini-t"><thead><tr><th>Leads</th><th>Booked</th><th>Showed</th><th>Closed*</th><th>Ad spend</th><th>Per lead</th><th>Per sign-up*</th><th>Leads converted*</th></tr></thead>
+    <tbody><tr><td>${n(m.leads)}</td><td>${n(m.booked)} <small>${pct(m.booked,m.leads)}</small></td><td>${n(m.showed)} <small>${pct(m.showed,m.booked)}</small></td><td>${n(m.closed)} <small>${pct(m.closed,m.showed)}*</small></td><td>${money(m.adSpend||0)}</td><td>${m.cpl!=null?'$'+(+m.cpl).toFixed(2):'–'}</td><td>${m.closed>0?'$'+((m.adSpend||0)/m.closed).toFixed(2):'–'}</td><td>${pct(m.closed,m.leads)}</td></tr></tbody></table></div>
     ${(m.avgGymRevenue||m.gymRevenue) ? `<p class="empty" style="margin:4px 0 0">Gym's reported monthly revenue: ${money(m.avgGymRevenue||m.gymRevenue)}${m.avgGymRevenue?' (average)':''}</p>` : ''}`;
 }
 function sbHTML(c){
@@ -560,6 +560,7 @@ function sbHTML(c){
     </dl>
     ${b.lifetime ? sbFunnel(`All logged months (${b.lifetime.months})`, b.lifetime) : '<p class="empty">No monthly results logged in the scoreboard.</p>'}
     ${b.latest ? sbFunnel('August 2026 (latest month logged)', b.latest) : ''}
+    ${b.lifetime || b.latest ? `<p class="empty" style="margin:6px 0 0;font-size:12px">*Closed is total sign-ups from the MMS, including family members, walk-ins, referrals and reactivations, so it can be higher than showed. Treat showed-to-closed % as approximate.</p>` : ''}
     ${M ? `<p style="margin:10px 0 4px;font-weight:600">Meta ads, last 90 days</p><p style="margin:0;font-size:14px">${money(M.spend)} spent, ${M.leads} leads${M.cpl!=null?`, $${M.cpl.toFixed(2)} per lead`:''}, ${M.clicks.toLocaleString('en-US')} clicks across ${M.campaigns} ${M.campaigns===1?'campaign':'campaigns'}</p>` : ''}
   </div>`;
 }
@@ -1187,7 +1188,9 @@ const COLS = [
   {k:'location', t:'Location', v:c=>(c.location||'').toLowerCase()},
   {k:'score', t:'Score', v:c=>c.sb&&c.sb.score!=null?c.sb.score:-1},
   {k:'leads', t:'Leads (logged)', v:c=>c.sb&&c.sb.lifetime?c.sb.lifetime.leads:-1},
-  {k:'close', t:'Close rate', v:c=>c.sb&&c.sb.lifetime&&c.sb.lifetime.showed>0?c.sb.lifetime.closed/c.sb.lifetime.showed:-1},
+  {k:'close', t:'Close rate*', v:c=>c.sb&&c.sb.lifetime&&c.sb.lifetime.showed>0?c.sb.lifetime.closed/c.sb.lifetime.showed:-1},
+  {k:'spu', t:'Ad spend per sign-up*', v:c=>c.sb&&c.sb.lifetime&&c.sb.lifetime.closed>0?c.sb.lifetime.adSpend/c.sb.lifetime.closed:99999},
+  {k:'lconv', t:'% of leads converted*', v:c=>c.sb&&c.sb.lifetime&&c.sb.lifetime.leads>0?c.sb.lifetime.closed/c.sb.lifetime.leads:-1},
   {k:'cpl90', t:'Meta CPL 90d', v:c=>c.sb&&c.sb.meta90&&c.sb.meta90.cpl!=null?c.sb.meta90.cpl:9999},
   {k:'churn', t:'Churn reason', v:c=>isGone(c)?churnLabel(churnOf(c).cat, churnOf(c).reason):''},
   {k:'ctrl', t:'Controllable', v:c=>isGone(c)?(churnOf(c).ctrl||'z'):''},
@@ -1223,6 +1226,8 @@ function renderTable(){
       case 'score': return `<td>${c.sb&&c.sb.score!=null?`<span class="hdot"><span class="dot" style="background:${SB_COLOR[c.sb.health]}"></span>${c.sb.score}</span>`:''}</td>`;
       case 'leads': return `<td>${c.sb&&c.sb.lifetime?c.sb.lifetime.leads.toLocaleString('en-US'):''}</td>`;
       case 'close': return `<td>${c.sb&&c.sb.lifetime?pct(c.sb.lifetime.closed,c.sb.lifetime.showed):''}</td>`;
+      case 'spu': return `<td>${c.sb&&c.sb.lifetime&&c.sb.lifetime.closed>0?'$'+(c.sb.lifetime.adSpend/c.sb.lifetime.closed).toFixed(2):''}</td>`;
+      case 'lconv': return `<td>${c.sb&&c.sb.lifetime&&c.sb.lifetime.leads>0?pct(c.sb.lifetime.closed,c.sb.lifetime.leads):''}</td>`;
       case 'cpl90': return `<td>${c.sb&&c.sb.meta90&&c.sb.meta90.cpl!=null?'$'+c.sb.meta90.cpl.toFixed(2):''}</td>`;
       case 'churn': { if(!isGone(c)) return '<td></td>'; const ch = churnOf(c); return `<td>${ch.cat?esc(churnLabel(ch.cat, ch.reason)):'<span class="soon">Not recorded</span>'}</td>`; }
       case 'ctrl': return `<td>${isGone(c)?esc(CTRL[churnOf(c).ctrl]||''):''}</td>`;
@@ -1246,7 +1251,8 @@ function renderTable(){
       ${COLS.map(col=>`<th><button data-sort="${col.k}" ${sortKey===col.k?`aria-sort="${sortDir>0?'ascending':'descending'}"`:''}>${col.t}${sortKey===col.k?(sortDir>0?' ↑':' ↓'):''}</button></th>`).join('')}
     </tr></thead><tbody>
       ${rows.map(c=>`<tr class="${isGone(c)?'gone':''}">${canWrite?`<td><input type="checkbox" data-sel="${esc(c.id)}" ${tableSel.has(c.id)?'checked':''} aria-label="Select ${esc(c.name)}"></td>`:''}${COLS.map(col=>cell(c,col.k)).join('')}</tr>`).join('')}
-    </tbody></table>${rows.length?'':'<p class="empty" style="padding:16px">No clients match.</p>'}</div>`;
+    </tbody></table>${rows.length?'':'<p class="empty" style="padding:16px">No clients match.</p>'}</div>
+    <p class="empty" style="margin:-10px 24px 14px;font-size:12px">*Closed is total sign-ups from the MMS, including family members, walk-ins, referrals and reactivations, so it can be higher than showed. Treat showed-to-closed % as approximate.</p>`;
   const tv = $('tableView');
   tv.querySelectorAll('[data-sort]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.sort; if(sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = (k==='attn'||k==='refs'||k==='price'||k==='tenure') ? -1 : 1; } renderTable(); }));
   tv.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => selectClient(b.dataset.go, true)));
@@ -1268,14 +1274,14 @@ function renderTable(){
   $('bClear').addEventListener('click', () => { tableSel.clear(); renderTable(); });
 }
 async function exportCSV(rows){
-  const head = ['Client','Plan','Status','Health','Needs attention','Next renewal','Last strategy call','Last contact','Client since','Cancelled on','Notice given','Stated category','Stated reason','In their words','Root cause category','Root cause reason','Controllable','Contract timing','Saw it coming','First warning signs','Competitor','Win-back','Win-back check-in','Save attempts','Tenure (months)','Monthly price','Account manager','Location','Referred by','Referrals made','Add-ons','Notes','Scoreboard ID','Scoreboard score','Scoreboard health','Weekly call','Scoreboard retainer','Months logged','Leads (logged)','Booked','Showed','Closed','Ad spend (logged)','Meta spend 90d','Meta leads 90d','Meta CPL 90d'].filter(h => h !== 'Cancel reason');
+  const head = ['Client','Plan','Status','Health','Needs attention','Next renewal','Last strategy call','Last contact','Client since','Cancelled on','Notice given','Stated category','Stated reason','In their words','Root cause category','Root cause reason','Controllable','Contract timing','Saw it coming','First warning signs','Competitor','Win-back','Win-back check-in','Save attempts','Tenure (months)','Monthly price','Account manager','Location','Referred by','Referrals made','Add-ons','Notes','Scoreboard ID','Scoreboard score','Scoreboard health','Weekly call','Scoreboard retainer','Months logged','Leads (logged)','Booked','Showed','Closed','Ad spend per sign-up','% of leads converted','Ad spend (logged)','Meta spend 90d','Meta leads 90d','Meta CPL 90d'].filter(h => h !== 'Cancel reason');
   const q = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
   const lines = [head.join(',')].concat(rows.map(c => [c.name, svcById(c.serviceId)?.name||'', isGone(c)?'Cancelled':'Active', isGone(c)?'':HEALTH[c.health||''].label,
     flagsFor(c).filter(f=>f.level!=='info').map(f=>f.text).join('; '), nextRenewal(c)||'', c.lastCall||'', c.lastContact||'', c.since||'', c.cancelledOn||'', c.noticeOn||'', ...(()=>{ const ch = churnOf(c), g = isGone(c); return g ? [catName(ch.cat), ch.reason, c.cancelNote||'', c.rootCategory?catName(ch.root):'', c.rootCategory?ch.rootReason:'', CTRL[ch.ctrl]||'', TIMING[c.contractTiming]||'', ({yes:'Yes',no:'No',unsure:'Unsure'})[c.warned]||'', c.firstWarningOn||'', c.competitor||'', WINBACK[c.winBack]||'', c.winBackOn||''] : ['','','','','','','','','','','','']; })(),
     (c.saves||[]).map(s=>`${s.date} ${s.offer} (${SAVE_OUTCOMES[s.outcome]||s.outcome})`).join('; '),
     c.since?monthsBetween(c.since, isGone(c)&&c.cancelledOn?c.cancelledOn:TODAY):'', c.price||'', c.manager||'', c.location||'', byId(c.referredBy)?.name||c.referredByOther||'',
     referralsOf(c.id).length||'', clientAddons(c).map(a=>a.name).join('; '), c.notes||'',
-    ...(()=>{ const b = c.sb || {}, L = b.lifetime || {}, M = b.meta90 || {}; return [b.id||'', b.score??'', b.health||'', b.callDay?b.callDay+' '+b.callTime:'', b.retainer||'', L.months||'', L.leads??'', L.booked??'', L.showed??'', L.closed??'', L.adSpend??'', M.spend??'', M.leads??'', M.cpl??'']; })()].map(q).join(',')));
+    ...(()=>{ const b = c.sb || {}, L = b.lifetime || {}, M = b.meta90 || {}; return [b.id||'', b.score??'', b.health||'', b.callDay?b.callDay+' '+b.callTime:'', b.retainer||'', L.months||'', L.leads??'', L.booked??'', L.showed??'', L.closed??'', L.closed>0?(L.adSpend/L.closed).toFixed(2):'', L.leads>0?Math.round(100*L.closed/L.leads)+'%':'', L.adSpend??'', M.spend??'', M.leads??'', M.cpl??'']; })()].map(q).join(',')));
   const data = lines.join('\n');
   const url = URL.createObjectURL(new Blob([data], {type:'text/csv;charset=utf-8'}));
   const a = document.createElement('a'); a.href = url; a.download = `gs-clients-${TODAY}.csv`; document.body.appendChild(a); a.click(); a.remove();
@@ -1368,8 +1374,9 @@ function sbInsights(active){
       ${noScore.length ? `<p class="empty">On the calls board with no score: ${noScore.map(c=>esc(c.name)).join(', ')}.</p>` : ''}
       ${noCall.length ? `<p class="empty">Active but not on the calls board: ${noCall.map(c=>esc(c.name)).join(', ')}.</p>` : ''}</section>
     <section class="card"><h2>Results logged</h2><p class="sub">Monthly results from the scoreboard, all logged months, active clients.</p>
-      <div class="stats"><div class="stat"><b>${T.leads.toLocaleString('en-US')}</b><span>Leads</span></div><div class="stat"><b>${pct(T.booked,T.leads)}</b><span>Booked</span></div><div class="stat"><b>${pct(T.showed,T.booked)}</b><span>Showed</span></div><div class="stat"><b>${pct(T.closed,T.showed)}</b><span>Closed</span></div></div>
+      <div class="stats"><div class="stat"><b>${T.leads.toLocaleString('en-US')}</b><span>Leads</span></div><div class="stat"><b>${pct(T.booked,T.leads)}</b><span>Booked</span></div><div class="stat"><b>${pct(T.showed,T.booked)}</b><span>Showed</span></div><div class="stat"><b>${pct(T.closed,T.showed)}</b><span>Closed*</span></div></div>
       <div class="stats"><div class="stat"><b>${money(T.spend)}</b><span>Ad spend</span></div><div class="stat"><b>${T.leads?'$'+(T.spend/T.leads).toFixed(2):'–'}</b><span>Per lead</span></div></div>
+      <p class="empty" style="font-size:12px">*Closed is total sign-ups from the MMS, including family members, walk-ins, referrals and reactivations, so it can be higher than showed. Treat showed-to-closed % as approximate.</p>
       <p class="empty"><span class="soon">${aug.length} of ${active.length} active clients have August results logged, and none have September.</span> ${active.length - withL.length} active clients have no results logged at all.</p></section>`;
 }
 
@@ -1830,10 +1837,12 @@ function renderInsights(){
   const worstCpl = B.sbA.filter(c => c.sb.meta90 && c.sb.meta90.cpl != null && c.sb.meta90.leads >= 5).sort((a,b) => b.sb.meta90.cpl - a.sb.meta90.cpl).slice(0,6);
   const t3 = `
     <section class="card"><h2>Funnel, all clients</h2><p class="sub">Logged results from the scoreboard, all months, active clients.</p>
-      <div class="stats"><div class="stat"><b>${B.T.leads.toLocaleString('en-US')}</b><span>Leads</span></div><div class="stat"><b>${pct(B.T.booked,B.T.leads)}</b><span>Booked</span></div><div class="stat"><b>${pct(B.T.showed,B.T.booked)}</b><span>Showed</span></div><div class="stat"><b>${pct(B.T.closed,B.T.showed)}</b><span>Closed</span></div></div>
-      <div class="stats"><div class="stat"><b>${money(B.T.spend)}</b><span>Ad spend</span></div><div class="stat"><b>${B.T.leads?'$'+(B.T.spend/B.T.leads).toFixed(2):'–'}</b><span>Per lead</span></div><div class="stat"><b>${B.T.closed?money(B.T.spend/B.T.closed):'–'}</b><span>Ad spend per new member</span></div></div></section>
-    <section class="card"><h2>Weakest close rates</h2><p class="sub">Showed to closed, clients with 50+ logged leads. Usually a sales-process or follow-up problem at the gym.</p>
-      <ul class="ilist">${worstClose.map(c => li(c, `${pct(c.sb.lifetime.closed, c.sb.lifetime.showed)} of ${c.sb.lifetime.showed} showed`)).join('') || '<li class="empty">Not enough data.</li>'}</ul></section>
+      <div class="stats"><div class="stat"><b>${B.T.leads.toLocaleString('en-US')}</b><span>Leads</span></div><div class="stat"><b>${pct(B.T.booked,B.T.leads)}</b><span>Booked</span></div><div class="stat"><b>${pct(B.T.showed,B.T.booked)}</b><span>Showed</span></div><div class="stat"><b>${pct(B.T.closed,B.T.showed)}</b><span>Closed*</span></div></div>
+      <div class="stats"><div class="stat"><b>${money(B.T.spend)}</b><span>Ad spend</span></div><div class="stat"><b>${B.T.leads?'$'+(B.T.spend/B.T.leads).toFixed(2):'–'}</b><span>Per lead</span></div><div class="stat"><b>${B.T.closed?money(B.T.spend/B.T.closed):'–'}</b><span>Ad spend per new member</span></div></div>
+      <p class="empty" style="font-size:12px">*Closed is total sign-ups from the MMS, including family members, walk-ins, referrals and reactivations, so it can be higher than showed. Treat showed-to-closed % as approximate.</p></section>
+    <section class="card"><h2>Weakest close rates*</h2><p class="sub">Showed to closed, clients with 50+ logged leads. A low rate usually points to a sales-process or follow-up problem at the gym.</p>
+      <ul class="ilist">${worstClose.map(c => li(c, `${pct(c.sb.lifetime.closed, c.sb.lifetime.showed)}* of ${c.sb.lifetime.showed} showed`)).join('') || '<li class="empty">Not enough data.</li>'}</ul>
+      <p class="empty" style="font-size:12px">*Closed is total sign-ups from the MMS, including family members, walk-ins, referrals and reactivations, so it can be higher than showed. Treat showed-to-closed % as approximate.</p></section>
     <section class="card"><h2>Highest cost per lead</h2><p class="sub">Meta ads, last 90 days, 5+ leads. Candidates for new creative or targeting.</p>
       <ul class="ilist">${worstCpl.map(c => li(c, `$${c.sb.meta90.cpl.toFixed(2)} (${c.sb.meta90.leads} leads)`)).join('') || '<li class="empty">Not enough data.</li>'}</ul></section>
     ${sbInsights(B.active)}`;
