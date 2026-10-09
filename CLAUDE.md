@@ -200,9 +200,11 @@ This repo is v2. v1, the live scoreboard Kurt and the team use every day, is `De
 | Commit message | `Kurt 2026-10-08: what changed` | `feat(...)` / `fix(...)` |
 
 - **GitHub:** both repos are public. Pushes go out as the `groundstandard` account, logged in through `gh` on this
-  machine (git uses it as its credential helper). The account's 2FA is on Bobby's phone, set up 2026-10-09. If the
-  token stops working, run `gh auth login --web`; James enters the code at github.com/login/device in a browser
-  signed in as groundstandard.
+  machine. Each repo's own `.git/config` pins that login (a credential helper running
+  `gh auth token --user groundstandard`), because `gh` also holds another account (teDdyMucho, for the website
+  projects) and git otherwise uses whichever one is active. The account's 2FA is on Bobby's phone, set up
+  2026-10-09. If the token stops working, run `gh auth login --web`; James enters the code at
+  github.com/login/device in a browser signed in as groundstandard.
 - **Deploying:** commit, then push `main`. Vercel builds production from GitHub for both projects. No Vercel CLI
   deploys (James, 2026-10-09), so `Desktop\gsteam-deploy\` is no longer used. Check that the GitHub-triggered
   deployment is READY and the change is live. v1's repo has no `.vercelignore`, so a notes file committed there
