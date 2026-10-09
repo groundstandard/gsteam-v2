@@ -246,6 +246,75 @@ tr.gone td{color:var(--muted)}
 .rules td{white-space:normal;vertical-align:top}
 .rules td:first-child{white-space:nowrap;font-weight:600}
 .rules input{border:1px solid var(--line);border-radius:6px;padding:4px 6px;background:var(--surface-2)}
+
+/* ask Claude */
+#askBox .card{margin-bottom:16px}
+.ask-chips{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 12px}
+.ask-chips .chip{font-size:13px;text-align:left;white-space:normal}
+.ask-log{display:flex;flex-direction:column;gap:10px;max-height:460px;overflow:auto}
+.ask-log:empty{display:none}
+.ask-msg{border-radius:10px;padding:10px 12px;font-size:14px;max-width:900px}
+.ask-msg.user{background:var(--surface-2);align-self:flex-end;border:1px solid var(--line)}
+.ask-msg.assistant{background:color-mix(in srgb,var(--gold) 8%,var(--surface));border:1px solid color-mix(in srgb,var(--gold) 30%,transparent)}
+.ask-who{display:block;font:700 12px var(--display);letter-spacing:.04em;color:var(--muted);margin-bottom:2px;text-transform:uppercase}
+.ask-body{white-space:pre-wrap;line-height:1.5}
+.ask-form{display:flex;gap:10px;align-items:flex-end;margin-top:12px}
+.ask-form textarea{flex:1;border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:10px;resize:vertical;min-height:46px}
+.ask-actions{display:flex;flex-direction:column;gap:6px}
+/* top of mind */
+.tom-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.tom-list li button{width:100%;display:grid;grid-template-columns:28px 28px minmax(0,1fr) 150px;gap:12px;align-items:center;background:none;border:0;border-top:1px solid var(--line);padding:9px 0;text-align:left}
+.tom-list li:first-child button{border-top:0}
+.tom-list li button:hover .tom-name{color:var(--gold-ink)}
+.tom-rank{font:800 20px var(--display);color:var(--muted);text-align:center}
+.tom-main{display:flex;flex-direction:column;gap:4px;min-width:0}
+.tom-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tom-why{display:flex;flex-wrap:wrap;gap:4px}
+.tchip{font-size:12px;border-radius:999px;padding:1px 8px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted)}
+.tchip.red{color:#c2343f;border-color:#f3b7bb;background:#fdecee}
+.tchip.amber{color:#8a5600;border-color:#f1d49a;background:#fdf5e4}
+.tom-score{display:flex;align-items:center;gap:8px}
+.tom-score b{font:800 18px var(--display);min-width:28px;text-align:right}
+.tom-bar{flex:1;height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+.tom-bar span{display:block;height:100%;background:var(--gold);border-radius:4px}
+.tom-how{margin-top:10px;font-size:14px;color:var(--muted)}
+.tom-how summary{cursor:pointer;font-weight:600;color:var(--ink)}
+.tom-how ul{margin:6px 0 0;padding-left:20px}
+@media (max-width:860px){.tom-list li button{grid-template-columns:24px 28px minmax(0,1fr);}.tom-score{grid-column:3}}
+
+/* bottleneck, thin data, report */
+.mini-t tr.bn-hit td{background:#fdecee;font-weight:600}
+td.thin{color:var(--muted);font-style:italic}
+.report-drawer{width:min(820px,100%)}
+.rp-bar{display:flex;gap:8px;flex-wrap:wrap;padding:12px 20px 0}
+.report{background:#fff;color:#0d1b2a;border:1px solid var(--line);border-radius:10px;padding:20px 24px}
+.report header{display:flex;gap:14px;align-items:center;border-bottom:3px solid #F5A623;padding-bottom:12px;margin-bottom:6px}
+.rp-badge{width:44px;height:44px;border-radius:50%;background:#F5A623;display:grid;place-items:center;font:800 18px var(--display);flex:none}
+.report h1{margin:0;font:800 26px var(--display)}
+.report header p{margin:2px 0 0;color:#5b6b7c;font-size:14px}
+.report h2{font:700 18px var(--display);margin:16px 0 6px}
+.report table{width:100%;border-collapse:collapse;font-size:14px}
+.report th,.report td{padding:5px 8px;border-bottom:1px solid #e3e8ee;color:#0d1b2a;background:#fff;position:static}
+.report p,.report li{font-size:14px;line-height:1.5}
+.rp-up{color:#21612a !important;font-weight:600}.rp-down{color:#c2343f !important;font-weight:600}
+.rp-note{font-size:12px !important;color:#5b6b7c}
+.rp-narr{background:#fdf5e4;border-left:4px solid #F5A623;padding:10px 12px;border-radius:6px}
+.rp-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:640px){.rp-two{grid-template-columns:1fr}}
+
+/* table views */
+.tv-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:0 24px 10px}
+.tv-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tv-tabs .chip{font-size:13px;padding:5px 12px}
+.tv-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.col-pick{margin:0 24px 10px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.col-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px 14px;font-size:14px;margin-bottom:8px}
+.col-grid label{display:flex;gap:8px;align-items:center}
+.col-grid input{accent-color:var(--gold)}
+@media (max-width:860px){.tv-bar{padding:0 10px 8px}.col-pick{margin:0 10px 8px}}
+.tv-tabs .chip{background:var(--surface);border:1px solid var(--line)}
+.tv-tabs .chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.tv-tabs .chip[aria-pressed="true"] small{color:inherit !important;opacity:.7}
 </style>
 </head>
 <body>
@@ -295,7 +364,8 @@ tr.gone td{color:var(--muted)}
              rootCategory, rootReason, controllable:'yes'|'partial'|'no', contractTiming:'onboarding'|'midterm'|'renewal'|'monthly',
              warned:'yes'|'no'|'unsure', firstWarningOn, competitor, winBack:'yes'|'maybe'|'no', winBackOn,
              saves: [{date, offer, outcome:'saved'|'downgraded'|'lost', note}] (also on active clients),
-             sb: scoreboard snapshot or null, see README "Scoreboard data"}
+             sb: scoreboard snapshot or null, see README "Scoreboard data",
+             tests: [{id, area, start, end, change, metric, result:''|'worked'|'didnt'|'unclear', notes}]}
      Log    {id, clientId, kind:'note'|'call'|'contact'|'win'|'issue', text, at (ISO), authorId, authorName}
 
    Interface:
@@ -312,6 +382,10 @@ tr.gone td{color:var(--muted)}
      deleteLogo(id)                 -> Promise
      userNames(ids)                 -> Promise<{[id]: name}>
      watchSettings(cb)              -> unsubscribe fn; cb({rules, targets} | null) now and on every change
+     sample(turns, {onText, signal}) -> Promise<{text, truncated}>   OPTIONAL. Powers "Ask about your data" in Insights;
+                                    omit it and the panel is hidden. turns = [{role:'user'|'assistant', content}], first turn holds
+                                    the instructions + data. Call onText({text}) with the whole answer so far while streaming.
+                                    Reject {code:'cancelled'} on abort, or {code, message} on failure.
      saveSettings({rules, targets}) -> Promise
      signIn(email)                  -> Promise   (optional; magic-link fallback)
    Errors: throw {code, message}. Codes the UI understands:
@@ -344,14 +418,14 @@ function supabaseBackend(cfg){
     notice_on: nz(c.noticeOn), cancel_category: nz(c.cancelCategory), root_category: nz(c.rootCategory), root_reason: nz(c.rootReason),
     controllable: nz(c.controllable), contract_timing: nz(c.contractTiming), warned: nz(c.warned), first_warning_on: nz(c.firstWarningOn),
     competitor: nz(c.competitor), win_back: nz(c.winBack), win_back_on: nz(c.winBackOn), saves: c.saves || [],
-    sb: c.sb || null, ...(c.sb ? {scoreboard_id: c.sb.id} : {}), health_source: nz(c.healthSource),
+    sb: c.sb || null, ...(c.sb ? {scoreboard_id: c.sb.id} : {}), health_source: nz(c.healthSource), tests: c.tests || [],
     updated_at: new Date().toISOString()
   });
   const FIELD = {name:'name', serviceId:'service_id', status:'status', since:'since', cancelledOn:'cancelled_on', cancelReason:'cancel_reason',
     cancelNote:'cancel_note', health:'health', lastCall:'last_call', lastContact:'last_contact', price:'price', manager:'manager', location:'location',
     notes:'notes', logo:'logo_url', logoAssetId:'logo_path', referredBy:'referred_by', referredByOther:'referred_by_other', addons:'addons',
     noticeOn:'notice_on', cancelCategory:'cancel_category', rootCategory:'root_category', rootReason:'root_reason', controllable:'controllable',
-    contractTiming:'contract_timing', warned:'warned', firstWarningOn:'first_warning_on', competitor:'competitor', winBack:'win_back', winBackOn:'win_back_on', saves:'saves', sb:'sb', healthSource:'health_source'};
+    contractTiming:'contract_timing', warned:'warned', firstWarningOn:'first_warning_on', competitor:'competitor', winBack:'win_back', winBackOn:'win_back_on', saves:'saves', sb:'sb', healthSource:'health_source', tests:'tests'};
   const fromClientRow = r => ({
     id: r.id, name: r.name, serviceId: r.service_id || '', status: r.status, since: r.since || '', cancelledOn: r.cancelled_on || '',
     cancelReason: r.cancel_reason || '', cancelNote: r.cancel_note || '', health: r.health || '', lastCall: r.last_call || '',
@@ -360,7 +434,7 @@ function supabaseBackend(cfg){
     addons: r.addons || [], noticeOn: r.notice_on || '', cancelCategory: r.cancel_category || '', rootCategory: r.root_category || '',
     rootReason: r.root_reason || '', controllable: r.controllable || '', contractTiming: r.contract_timing || '', warned: r.warned || '',
     firstWarningOn: r.first_warning_on || '', competitor: r.competitor || '', winBack: r.win_back || '', winBackOn: r.win_back_on || '',
-    saves: r.saves || [], sb: r.sb || null, healthSource: r.health_source || '', updatedAt: r.updated_at
+    saves: r.saves || [], sb: r.sb || null, healthSource: r.health_source || '', tests: r.tests || [], updatedAt: r.updated_at
   });
   const fromPlanRow = r => ({id:r.id, name:r.name, color:r.color, term:r.term||0, cadence:r.cadence||0, standard:!!r.standard, blurb:r.blurb||''});
   const fromLogRow = r => ({id:r.id, clientId:r.client_id, kind:r.kind, text:r.text||'', at:r.at, authorId:r.author_id||'', authorName:r.author_name||''});
@@ -401,7 +475,7 @@ function supabaseBackend(cfg){
     async saveClient(c){ const { error } = await sb.from(T.clients).upsert(toClientRow(c)); fail(error); },
     async updateClient(id, fields){
       const row = {updated_at: new Date().toISOString()};
-      Object.entries(fields).forEach(([k,v]) => { if(FIELD[k]) row[FIELD[k]] = (k === 'sb') ? (v||null) : (k === 'addons' || k === 'saves') ? (v||[]) : (k === 'health' ? (v||'') : nz(v)); });
+      Object.entries(fields).forEach(([k,v]) => { if(FIELD[k]) row[FIELD[k]] = (k === 'sb') ? (v||null) : (k === 'addons' || k === 'saves' || k === 'tests') ? (v||[]) : (k === 'health' ? (v||'') : nz(v)); });
       const { error } = await sb.from(T.clients).update(row).eq('id', id); fail(error);
     },
     async deleteClient(id){ const { error } = await sb.from(T.clients).delete().eq('id', id); fail(error); }, // log rows cascade
@@ -633,13 +707,6 @@ function flagsFor(c){
   }
   if(c.health === 'red') f.push({level:'red', key:'health', text:'Marked at risk'});
   else if(c.health === 'yellow') f.push({level:'amber', key:'health', text:'Marked as watch'});
-  const cad = s && +s.cadence;
-  if(cad){
-    if(c.lastCall){ const n = days(c.lastCall, TODAY);
-      if(n > cad*RULES.callRed) f.push({level:'red', key:'call', text:`No strategy call in ${n} days`});
-      else if(n > Math.round(cad*RULES.callAmber)) f.push({level:'amber', key:'call', text:`Strategy call due (${n} days since last)`});
-    } else f.push({level:'info', key:'call', text:'No strategy call logged yet'});
-  }
   if(c.lastContact){ const n = days(c.lastContact, TODAY); if(n > RULES.contactAmber) f.push({level:'amber', key:'contact', text:`No contact in ${n} days`}); }
   return f;
 }
@@ -758,7 +825,7 @@ root.innerHTML = `
   <aside class="panel" id="panel" hidden aria-live="polite"></aside>
 </main>
 <div id="tableView" hidden style="flex:1;min-height:0;display:flex;flex-direction:column"></div>
-<div id="insightsView" class="insights" hidden></div>
+<div id="insightsView" class="insights" hidden><div id="askBox"></div><div id="insightsBody"></div></div>
 <div id="healthView" hidden style="flex:1;min-height:0;display:flex;flex-direction:column"></div>
 <div id="drawerWrap" hidden><div class="scrim" id="scrim"></div><section class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Manage clients"></section></div>
 <div class="toast" id="toast" role="status"></div>`;
@@ -812,6 +879,7 @@ function renderChrome(){
 }
 
 function renderAll(refit){
+  BENCH = null;
   renderHeader(); renderChrome();
   $('qlist').innerHTML = S.clients.map(c => `<option value="${esc(c.name)}">`).join('');
   if(selected && !byId(selected)) selected = null;
@@ -1082,14 +1150,13 @@ function showClientPanel(c){
   openPanel(`<div style="display:flex;gap:14px;align-items:center">${logoHTML(c)}<div><h2>${esc(c.name)}</h2>
       <span class="status ${gone?'off':'on'}">${gone?'Cancelled':'Active client'}</span></div></div>
     ${fl.length ? `<div class="flags">${fl.map(f=>`<div class="flag ${f.level}">${esc(f.text)}</div>`).join('')}</div>` : (gone ? '' : '<div class="flags"><div class="flag good">Nothing needs attention</div></div>')}
-    ${canWrite && !gone ? `<div class="quick"><button class="btn small" id="qCall">Log strategy call</button><button class="btn small" id="qContact">Log contact</button>
+    ${canWrite && !gone ? `<div class="quick"><button class="btn small" id="qContact">Log contact</button>
       <select class="btn small" id="qHealth" aria-label="Set health"><option value="">Health: not set</option>${['green','yellow','red'].map(k=>`<option value="${k}" ${c.health===k?'selected':''}>Health: ${HEALTH[k].label}</option>`).join('')}</select></div>` : ''}
     <dl>
       <dt>Plan</dt><dd><span class="svcpill"><span class="dot" style="background:${esc(s?s.color:'#ccc')}"></span>${esc(s?s.name:'No plan')}</span></dd>
       ${!gone?`<dt>Health</dt><dd><span class="hdot"><span class="dot" style="background:${h.color}"></span>${h.label}</span>${healthNote(c)?` <small style="color:var(--muted)">(${healthNote(c)})</small>`:''}${canWrite && c.healthSource==='manual' && c.sb && SB_HEALTH[c.sb.health] ? ` <button class="linkbtn" id="useSb">Use scoreboard (${esc(c.sb.health)})</button>` : ''}</dd>`:''}
       ${c.price?`<dt>Monthly price</dt><dd>${money(c.price)}/mo</dd>`:''}
       ${ren?`<dt>Next renewal</dt><dd>${esc(fmtDate(ren))} <small style="color:var(--muted)">(${s.term}-month term)</small></dd>`:''}
-      ${c.lastCall?`<dt>Last strategy call</dt><dd>${esc(fmtDate(c.lastCall))}</dd>`:''}
       ${c.lastContact?`<dt>Last contact</dt><dd>${esc(fmtDate(c.lastContact))}</dd>`:''}
       ${clientAddons(c).length?`<dt>Add-ons</dt><dd>${clientAddons(c).map(a=>esc(a.name)).join('<br>')}</dd>`:''}
       ${c.since?`<dt>Client since</dt><dd>${esc(fmtDate(c.since))}</dd>`:''}
@@ -1112,15 +1179,17 @@ function showClientPanel(c){
     </dl>
     ${c.notes?`<div class="p-notes">${esc(c.notes)}</div>`:''}
     ${sbHTML(c)}
+    ${bottleneckPanelHTML(c)}
+    ${testsPanelHTML(c)}
     ${gone && churnMissing(c).length ? `<div class="flags"><div class="flag amber">Churn details missing: ${esc(churnMissing(c).join(', '))}</div></div>` : ''}
-    ${canWrite?`<div class="quick"><button class="btn" id="pEdit">${gone && churnMissing(c).length ? 'Complete churn details' : 'Edit client'}</button>${!gone?'<button class="btn" id="pSave">Record a save attempt</button>':''}</div>
+    ${canWrite?`<div class="quick"><button class="btn" id="pEdit">${gone && churnMissing(c).length ? 'Complete churn details' : 'Edit client'}</button>${!gone?'<button class="btn" id="pSave">Record a save attempt</button>':''}${!gone && c.sb ? '<button class="btn" id="pReport">Monthly report</button>' : ''}</div>
       <div id="saveForm" hidden class="fieldset" style="padding:12px"><div class="two"><label class="field"><span>Offer made</span><select id="svOffer">${SAVE_OFFERS.map(o=>`<option>${esc(o)}</option>`).join('')}</select></label>
         <label class="field"><span>Outcome</span><select id="svOutcome"><option value="saved">Saved</option><option value="downgraded">Saved with a downgrade</option></select></label></div>
         <label class="field"><span>What was the risk?</span><input id="svNote" placeholder="e.g. threatened to cancel over lead quality"></label>
         <button class="btn small primary" id="svGo">Save attempt</button> <small style="color:var(--muted)">If they cancel anyway, record it in the cancellation form.</small></div>`:''}
     <div class="log"><h3>Activity</h3>
       ${canWrite?`<div class="log-form"><textarea id="logText" placeholder="What happened? Calls, wins, issues, next steps"></textarea>
-        <div class="row2"><select id="logKind" aria-label="Entry type">${Object.entries(LOG_KINDS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><button class="btn small primary" id="logAdd">Add entry</button></div></div>`:''}
+        <div class="row2"><select id="logKind" aria-label="Entry type">${Object.entries(LOG_KINDS).filter(([k])=>k!=='call').map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><button class="btn small primary" id="logAdd">Add entry</button></div></div>`:''}
       <div id="logList"><p class="empty">${B?'Loading activity…':'Activity is unavailable.'}</p></div></div>`);
   if($('pEdit')) $('pEdit').addEventListener('click', () => openDrawer('clients', c.id));
   if($('pSave')) $('pSave').addEventListener('click', () => { $('saveForm').hidden = !$('saveForm').hidden; });
@@ -1128,7 +1197,6 @@ function showClientPanel(c){
     const entry = {date:TODAY, offer:$('svOffer').value, outcome:$('svOutcome').value, note:$('svNote').value.trim()};
     if(await patchClient(c.id, {saves:(c.saves||[]).concat([entry])})){ addLog(c.id, 'win', `Save: ${entry.offer}, ${SAVE_OUTCOMES[entry.outcome].toLowerCase()}${entry.note?` (${entry.note})`:''}`); toast('Save attempt recorded'); }
   });
-  if($('qCall')) $('qCall').addEventListener('click', async () => { if(await patchClient(c.id, {lastCall:TODAY, lastContact:TODAY})){ await addLog(c.id,'call',''); toast('Strategy call logged for today'); } });
   if($('qContact')) $('qContact').addEventListener('click', async () => { if(await patchClient(c.id, {lastContact:TODAY})){ await addLog(c.id,'contact',''); toast('Contact logged for today'); } });
   if($('qHealth')) $('qHealth').addEventListener('change', async e => { const v = e.target.value; if(await patchClient(c.id, {health:v, healthSource: v ? 'manual' : ''})) addLog(c.id, 'note', `Health set to ${HEALTH[v].label} (manual override)`); });
   if($('useSb')) $('useSb').addEventListener('click', async () => { const v = SB_HEALTH[c.sb.health]; if(await patchClient(c.id, {health:v, healthSource:'scoreboard'})) addLog(c.id, 'note', `Health reset to the scoreboard (${HEALTH[v].label})`); });
@@ -1137,9 +1205,10 @@ function showClientPanel(c){
     if(!text && kind !== 'call' && kind !== 'contact') { $('logText').focus(); return toast('Write a note first.'); }
     if(await addLog(c.id, kind, text)){
       $('logText').value = '';
-      if(kind === 'call') patchClient(c.id, {lastCall:TODAY, lastContact:TODAY}); else if(kind === 'contact') patchClient(c.id, {lastContact:TODAY});
+      if(kind === 'contact') patchClient(c.id, {lastContact:TODAY});
     }
   });
+  wireClientExtras(c);
   watchLog(c.id);
 }
 
@@ -1150,7 +1219,7 @@ function showGroupPanel(key){
   openPanel(`<span class="svcpill"><span class="dot" style="background:${esc(hub.meta.color)}"></span>${({plan:'Plan',manager:'Account manager',state:'State',year:'Start year',health:'Health'})[ui.groupBy]}</span>
     <h2 style="margin-top:6px">${esc(hub.meta.name)}</h2>
     ${s&&s.blurb?`<p style="margin:0 0 4px">${esc(s.blurb)}</p>`:''}
-    ${s&&s.term?`<p style="margin:0 0 4px;color:var(--muted)">${s.term}-month contract${s.cadence?`, strategy call every ${s.cadence} days`:''}</p>`:''}
+    ${s&&s.term?`<p style="margin:0 0 4px;color:var(--muted)">${s.term}-month contract</p>`:''}
     <p style="margin:0 0 6px;color:var(--muted)">${act.length} active, ${list.length-act.length} cancelled, ${act.filter(needsAttention).length} need attention</p>
     <ul class="p-list">${list.map(c=>`<li><button data-go="${esc(c.id)}">${mini(c)}<span style="flex:1">${esc(c.name)}${isGone(c)?' <small style="color:var(--muted)">(cancelled)</small>':''}</span>${!isGone(c)&&attentionLevel(c)?`<span class="dot" style="background:${attentionLevel(c)===2?'#F85149':'#E3B341'}"></span>`:''}</button></li>`).join('')}</ul>`);
 }
@@ -1180,7 +1249,6 @@ const COLS = [
   {k:'attn', t:'Attention', v:c=>isGone(c)?-1:attentionLevel(c)},
   {k:'health', t:'Health', v:c=>({red:0,yellow:1,green:2})[c.health] ?? 3},
   {k:'renewal', t:'Next renewal', v:c=>nextRenewal(c)||'9999'},
-  {k:'lastCall', t:'Last call', v:c=>c.lastCall||''},
   {k:'since', t:'Client since', v:c=>c.since||''},
   {k:'tenure', t:'Tenure (mo)', v:c=>c.since?monthsBetween(c.since, isGone(c)&&c.cancelledOn?c.cancelledOn:TODAY):-1},
   {k:'price', t:'Price', v:c=>+c.price||0},
@@ -1188,23 +1256,78 @@ const COLS = [
   {k:'location', t:'Location', v:c=>(c.location||'').toLowerCase()},
   {k:'score', t:'Score', v:c=>c.sb&&c.sb.score!=null?c.sb.score:-1},
   {k:'leads', t:'Leads (logged)', v:c=>c.sb&&c.sb.lifetime?c.sb.lifetime.leads:-1},
-  {k:'close', t:'Close rate*', v:c=>c.sb&&c.sb.lifetime&&c.sb.lifetime.showed>0?c.sb.lifetime.closed/c.sb.lifetime.showed:-1},
-  {k:'spu', t:'Ad spend per sign-up*', v:c=>c.sb&&c.sb.lifetime&&c.sb.lifetime.closed>0?c.sb.lifetime.adSpend/c.sb.lifetime.closed:99999},
-  {k:'lconv', t:'% of leads converted*', v:c=>c.sb&&c.sb.lifetime&&c.sb.lifetime.leads>0?c.sb.lifetime.closed/c.sb.lifetime.leads:-1},
+  {k:'bneck', t:'Bottleneck', v:c=>{ const b = bottleneckOf(c); return b.status==='found' ? b.step.label : b.status==='clear' ? '~ none' : '~~ ' + b.status; }},
+  {k:'close', t:'Close rate*', v:c=>!enoughData(c)?-1:c.sb.lifetime.showed>0?c.sb.lifetime.closed/c.sb.lifetime.showed:-1},
+  {k:'spu', t:'Ad spend per sign-up*', v:c=>enoughData(c)&&c.sb.lifetime.closed>0?c.sb.lifetime.adSpend/c.sb.lifetime.closed:99999},
+  {k:'lconv', t:'% of leads converted*', v:c=>enoughData(c)&&c.sb.lifetime.leads>0?c.sb.lifetime.closed/c.sb.lifetime.leads:-1},
   {k:'cpl90', t:'Meta CPL 90d', v:c=>c.sb&&c.sb.meta90&&c.sb.meta90.cpl!=null?c.sb.meta90.cpl:9999},
   {k:'churn', t:'Churn reason', v:c=>isGone(c)?churnLabel(churnOf(c).cat, churnOf(c).reason):''},
   {k:'ctrl', t:'Controllable', v:c=>isGone(c)?(churnOf(c).ctrl||'z'):''},
+  {k:'cxon', t:'Cancelled on', v:c=>isGone(c)?(c.cancelledOn||''):''},
+  {k:'gaps', t:'Data gaps', v:c=>gapsOf(c).length},
   {k:'ref', t:'Referred by', v:c=>(byId(c.referredBy)?.name||c.referredByOther||'').toLowerCase()},
   {k:'refs', t:'Referrals', v:c=>referralsOf(c.id).length}
 ];
+/* ---------- table views ---------- */
+const BUILTIN_VIEWS = [
+  {id:'overview', name:'Overview', cols:['name','plan','health','score','price','renewal','manager'], who:'active', sort:['name',1]},
+  {id:'renewals', name:'Renewals & risk', cols:['name','health','score','attn','renewal','price','bneck'], who:'active', sort:['renewal',1]},
+  {id:'results', name:'Results', cols:['name','leads','close','lconv','spu','cpl90','bneck'], who:'active', sort:['bneck',1]},
+  {id:'revenue', name:'Revenue', cols:['name','price','plan','tenure','ref','refs'], who:'active', sort:['price',-1]},
+  {id:'churn', name:'Churn', cols:['name','cxon','churn','ctrl','tenure','price'], who:'cancelled', sort:['cxon',-1]},
+  {id:'gaps', name:'Data gaps', cols:['name','status','gaps','health','score','leads'], who:'gaps', sort:['gaps',-1]},
+  {id:'all', name:'All columns', cols:null, who:'toggle', sort:null}
+];
+const WHO_LABEL = {active:'Active clients', cancelled:'Cancelled clients', all:'All clients', gaps:'Active clients, and clients cancelled in the last 12 months, with missing data', toggle:'Uses the Cancelled checkbox'};
+let TEAM_VIEWS = [], colPickOpen = false, tableSortInit = false;
+const allViews = () => BUILTIN_VIEWS.concat(TEAM_VIEWS);
+const currentView = () => allViews().find(v => v.id === ui.tview) || BUILTIN_VIEWS[0];
+function visibleCols(v){
+  const keys = (ui.tcols && ui.tcols[v.id]) || v.cols;
+  if(!keys) return COLS;
+  const ks = keys.includes('name') ? keys : ['name'].concat(keys);
+  return ks.map(k => COLS.find(c => c.k === k)).filter(Boolean);
+}
+function viewWho(v, c){ return v.who === 'active' ? !isGone(c) : v.who === 'cancelled' ? isGone(c) : v.who === 'all' ? true : v.who === 'gaps' ? gapsOf(c).length > 0 : (ui.showCancelled || !isGone(c)); }
+function switchView(id){
+  ui.tview = id; saveUI(); colPickOpen = false; tableSel.clear();
+  const v = currentView(); if(v.sort){ sortKey = v.sort[0]; sortDir = v.sort[1]; }
+  renderTable();
+}
+function gapsOf(c){
+  const g = [];
+  if(isGone(c)){ if(!c.cancelledOn || c.cancelledOn < addMonths(TODAY, -12)) return g; const m = churnMissing(c); if(m.length) g.push('Churn: ' + m.join(', ')); return g; }
+  if(!c.health) g.push('No health');
+  if(!c.sb) g.push('Not in scoreboard');
+  else {
+    if(!c.sb.lifetime) g.push('No results logged');
+    else { if(!c.sb.latest) g.push('Last month not logged'); const p = dataProblems(c); if(p.length) g.push('Results look wrong'); else if(thinReason(c)) g.push('Thin data'); }
+    if(c.sb.score == null) g.push('No score');
+  }
+  if(!c.location) g.push('No location');
+  return g;
+}
+function exportViewCSV(rows, vc, cell, v){
+  const q = x => { const s = String(x ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
+  const tmp = document.createElement('div');
+  const txt = (c, k) => { tmp.innerHTML = cell(c, k); return tmp.textContent.trim(); };
+  const data = [vc.map(col => q(col.t)).join(',')].concat(rows.map(c => vc.map(col => q(txt(c, col.k))).join(','))).join('\n');
+  saveFile(`gs-${v.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')}-${TODAY}.csv`, data, 'text/csv;charset=utf-8');
+}
+
+function thinTd(c, val){ if(!val) return '<td></td>'; if(enoughData(c)) return `<td>${val}</td>`; const why = dataProblems(c).length && c.sb && c.sb.lifetime ? 'Results look wrong: ' + dataProblems(c).join(', ') : 'Not enough data: ' + thinReason(c); return `<td class="thin" title="${esc(why)}">${val}†</td>`; }
 function tableRows(){
   const q = query.toLowerCase();
   const col = COLS.find(x => x.k === sortKey) || COLS[0];
-  return S.clients.filter(c => (ui.showCancelled || !isGone(c)) && (!q || c.name.toLowerCase().includes(q) || (c.manager||'').toLowerCase().includes(q) || (c.location||'').toLowerCase().includes(q)))
+  const v = currentView();
+  return S.clients.filter(c => viewWho(v, c) && (!q || c.name.toLowerCase().includes(q) || (c.manager||'').toLowerCase().includes(q) || (c.location||'').toLowerCase().includes(q)))
     .sort((a,b) => { const x = col.v(a), y = col.v(b); return (x < y ? -1 : x > y ? 1 : a.name.localeCompare(b.name)) * sortDir; });
 }
 function renderTable(){
-  const rows = tableRows();
+  const cv = currentView();
+  if(!tableSortInit){ tableSortInit = true; if(cv.sort){ sortKey = cv.sort[0]; sortDir = cv.sort[1]; } }
+  const rows = tableRows(), vc = visibleCols(cv);
+  if(ui.view === 'table') $('showCancelled').closest('label').hidden = cv.who !== 'toggle';
   tableSel.forEach(id => { if(!byId(id)) tableSel.delete(id); });
   const allOn = rows.length && rows.every(c => tableSel.has(c.id));
   const cell = (c, k) => {
@@ -1216,18 +1339,20 @@ function renderTable(){
       case 'attn': { if(isGone(c)) return '<td></td>'; const f = flagsFor(c).filter(x=>x.level!=='info'); return `<td>${f.length?`<span class="${f.some(x=>x.level==='red')?'warn':'soon'}">${esc(f[0].text)}${f.length>1?` +${f.length-1}`:''}</span>`:'<span style="color:var(--muted)">On track</span>'}</td>`; }
       case 'health': { if(isGone(c)) return '<td></td>'; const h = HEALTH[c.health||'']; return `<td><span class="hdot"><span class="dot" style="background:${h.color}"></span>${h.label}</span></td>`; }
       case 'renewal': { const r = nextRenewal(c); if(!r) return '<td></td>'; const n = days(TODAY, r); return `<td class="${n<=30?'warn':n<=60?'soon':''}">${esc(fmtDate(r))}</td>`; }
-      case 'lastCall': return `<td>${esc(fmtDate(c.lastCall))}</td>`;
       case 'since': return `<td>${esc(fmtDate(c.since))}</td>`;
       case 'tenure': return `<td>${c.since?monthsBetween(c.since, isGone(c)&&c.cancelledOn?c.cancelledOn:TODAY):''}</td>`;
       case 'price': return `<td>${c.price?money(c.price):''}</td>`;
       case 'manager': return `<td>${esc(c.manager||'')}</td>`;
       case 'location': return `<td>${esc(c.location||'')}</td>`;
+      case 'cxon': return `<td>${isGone(c)?esc(fmtDate(c.cancelledOn)):''}</td>`;
+      case 'gaps': { const g = gapsOf(c); return `<td style="white-space:normal;min-width:220px">${g.length ? g.map(x => `<span class="tchip amber">${esc(x)}</span>`).join(' ') : '<span style="color:var(--muted)">None</span>'}</td>`; }
       case 'ref': { const r = byId(c.referredBy); return `<td>${r?`<button class="linkbtn" data-go="${esc(r.id)}">${esc(r.name)}</button>`:esc(c.referredByOther||'')}</td>`; }
       case 'score': return `<td>${c.sb&&c.sb.score!=null?`<span class="hdot"><span class="dot" style="background:${SB_COLOR[c.sb.health]}"></span>${c.sb.score}</span>`:''}</td>`;
       case 'leads': return `<td>${c.sb&&c.sb.lifetime?c.sb.lifetime.leads.toLocaleString('en-US'):''}</td>`;
-      case 'close': return `<td>${c.sb&&c.sb.lifetime?pct(c.sb.lifetime.closed,c.sb.lifetime.showed):''}</td>`;
-      case 'spu': return `<td>${c.sb&&c.sb.lifetime&&c.sb.lifetime.closed>0?'$'+(c.sb.lifetime.adSpend/c.sb.lifetime.closed).toFixed(2):''}</td>`;
-      case 'lconv': return `<td>${c.sb&&c.sb.lifetime&&c.sb.lifetime.leads>0?pct(c.sb.lifetime.closed,c.sb.lifetime.leads):''}</td>`;
+      case 'bneck': { if(isGone(c) || !c.sb) return '<td></td>'; const b = bottleneckOf(c); return `<td>${b.status==='found' ? `<span class="tchip red">${esc(b.step.label)}</span>` : b.status==='clear' ? '<span style="color:var(--muted)">None clear</span>' : b.status==='bad' ? '<span class="soon">Check data</span>' : '<span style="color:var(--muted)">Not enough data</span>'}</td>`; }
+      case 'close': return thinTd(c, c.sb&&c.sb.lifetime?pct(c.sb.lifetime.closed,c.sb.lifetime.showed):'');
+      case 'spu': return thinTd(c, c.sb&&c.sb.lifetime&&c.sb.lifetime.closed>0?'$'+(c.sb.lifetime.adSpend/c.sb.lifetime.closed).toFixed(2):'');
+      case 'lconv': return thinTd(c, c.sb&&c.sb.lifetime&&c.sb.lifetime.leads>0?pct(c.sb.lifetime.closed,c.sb.lifetime.leads):'');
       case 'cpl90': return `<td>${c.sb&&c.sb.meta90&&c.sb.meta90.cpl!=null?'$'+c.sb.meta90.cpl.toFixed(2):''}</td>`;
       case 'churn': { if(!isGone(c)) return '<td></td>'; const ch = churnOf(c); return `<td>${ch.cat?esc(churnLabel(ch.cat, ch.reason)):'<span class="soon">Not recorded</span>'}</td>`; }
       case 'ctrl': return `<td>${isGone(c)?esc(CTRL[churnOf(c).ctrl]||''):''}</td>`;
@@ -1236,29 +1361,50 @@ function renderTable(){
   };
   const managers = [...new Set(S.clients.map(c => c.manager).filter(Boolean))];
   $('tableView').innerHTML = `
-    <div class="toolbar" style="justify-content:space-between"><span style="color:var(--muted);font-size:14px">${rows.length} ${rows.length===1?'client':'clients'}${query?` matching "${esc(query)}"`:''}</span>
-      <button class="btn small" id="csvBtn">Export CSV</button></div>
+    <div class="tv-bar"><div class="tv-tabs" role="tablist" aria-label="Table views">${allViews().map(v => `<button class="chip" role="tab" data-tv="${esc(v.id)}" aria-pressed="${v.id===cv.id}" title="${esc(WHO_LABEL[v.who]||'')}">${esc(v.name)}${v.team?' <small style="color:var(--muted)">team</small>':''}</button>`).join('')}</div>
+      <div class="tv-actions"><span style="color:var(--muted);font-size:14px">${rows.length} ${rows.length===1?'client':'clients'}${query?` matching "${esc(query)}"`:''}${cv.who!=='toggle'?`, ${WHO_LABEL[cv.who].toLowerCase()}`:''}</span>
+        <button class="btn small" id="colBtn" aria-expanded="${colPickOpen}">Columns${ui.tcols && ui.tcols[cv.id] ? ' (edited)' : ''}</button>
+        ${canWrite ? '<button class="btn small" id="saveViewBtn">Save as team view</button>' : ''}${cv.team && canWrite ? '<button class="btn small danger" id="delViewBtn">Delete view</button>' : ''}
+        <button class="btn small" id="csvBtn">Export CSV</button></div></div>
+    <div class="col-pick" id="colPick" ${colPickOpen?'':'hidden'}><div class="col-grid">${COLS.map(col => `<label><input type="checkbox" data-col="${col.k}" ${vc.some(x=>x.k===col.k)?'checked':''} ${col.k==='name'?'disabled':''}> ${esc(col.t)}</label>`).join('')}</div>
+      <div class="formbar"><small style="color:var(--muted)">Column changes are saved for you only. Use "Save as team view" to share a layout.</small>${ui.tcols && ui.tcols[cv.id] ? '<button class="btn small" id="colReset">Reset to the view\'s columns</button>' : ''}</div></div>
     ${canWrite && tableSel.size ? `<div class="bulk"><b>${tableSel.size} selected</b>
       <select id="bPlan" aria-label="Set plan"><option value="">Set plan…</option>${S.services.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</select>
       <select id="bHealth" aria-label="Set health"><option value="-">Set health…</option>${['green','yellow','red',''].map(k=>`<option value="${k}">${HEALTH[k].label}</option>`).join('')}</select>
       <input id="bMgr" list="bMgrs" placeholder="Set manager" aria-label="Set account manager" style="width:130px"><datalist id="bMgrs">${managers.map(m=>`<option value="${esc(m)}">`).join('')}</datalist><button class="btn small" id="bMgrGo">Apply</button>
-      <button class="btn small" id="bCall">Log call today</button>
       <select id="bCancel" aria-label="Cancel with reason"><option value="">Cancel with reason…</option>${CHURN.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select>
       <button class="btn small" id="bActive">Reactivate</button>
       <button class="btn small" id="bClear">Clear selection</button></div>` : ''}
     <div class="tablewrap"><table><thead><tr>
       ${canWrite?`<th><input type="checkbox" id="selAll" aria-label="Select all" ${allOn?'checked':''}></th>`:''}
-      ${COLS.map(col=>`<th><button data-sort="${col.k}" ${sortKey===col.k?`aria-sort="${sortDir>0?'ascending':'descending'}"`:''}>${col.t}${sortKey===col.k?(sortDir>0?' ↑':' ↓'):''}</button></th>`).join('')}
+      ${vc.map(col=>`<th><button data-sort="${col.k}" ${sortKey===col.k?`aria-sort="${sortDir>0?'ascending':'descending'}"`:''}>${col.t}${sortKey===col.k?(sortDir>0?' ↑':' ↓'):''}</button></th>`).join('')}
     </tr></thead><tbody>
-      ${rows.map(c=>`<tr class="${isGone(c)?'gone':''}">${canWrite?`<td><input type="checkbox" data-sel="${esc(c.id)}" ${tableSel.has(c.id)?'checked':''} aria-label="Select ${esc(c.name)}"></td>`:''}${COLS.map(col=>cell(c,col.k)).join('')}</tr>`).join('')}
+      ${rows.map(c=>`<tr class="${isGone(c)?'gone':''}">${canWrite?`<td><input type="checkbox" data-sel="${esc(c.id)}" ${tableSel.has(c.id)?'checked':''} aria-label="Select ${esc(c.name)}"></td>`:''}${vc.map(col=>cell(c,col.k)).join('')}</tr>`).join('')}
     </tbody></table>${rows.length?'':'<p class="empty" style="padding:16px">No clients match.</p>'}</div>
-    <p class="empty" style="margin:-10px 24px 14px;font-size:12px">*Closed is total sign-ups from the MMS, including family members, walk-ins, referrals and reactivations, so it can be higher than showed. Treat showed-to-closed % as approximate.</p>`;
+    <p class="empty" style="margin:-10px 24px 14px;font-size:12px">*Closed is total sign-ups from the MMS, including family members, walk-ins, referrals and reactivations, so it can be higher than showed. Treat showed-to-closed % as approximate. † = not enough data yet (or the logged results look wrong), so the rate isn't reliable and isn't ranked. Hover for why.</p>`;
   const tv = $('tableView');
   tv.querySelectorAll('[data-sort]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.sort; if(sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = (k==='attn'||k==='refs'||k==='price'||k==='tenure') ? -1 : 1; } renderTable(); }));
   tv.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => selectClient(b.dataset.go, true)));
   tv.querySelectorAll('[data-sel]').forEach(b => b.addEventListener('change', () => { b.checked ? tableSel.add(b.dataset.sel) : tableSel.delete(b.dataset.sel); renderTable(); }));
   if($('selAll')) $('selAll').addEventListener('change', e => { rows.forEach(c => e.target.checked ? tableSel.add(c.id) : tableSel.delete(c.id)); renderTable(); });
-  $('csvBtn').addEventListener('click', () => exportCSV(rows));
+  $('csvBtn').addEventListener('click', () => cv.id === 'all' && !(ui.tcols && ui.tcols.all) ? exportCSV(rows) : exportViewCSV(rows, vc, cell, cv));
+  tv.querySelectorAll('[data-tv]').forEach(b => b.addEventListener('click', () => switchView(b.dataset.tv)));
+  $('colBtn').addEventListener('click', () => { colPickOpen = !colPickOpen; renderTable(); });
+  tv.querySelectorAll('[data-col]').forEach(i => i.addEventListener('change', () => {
+    const on = k => k === 'name' || (tv.querySelector(`[data-col="${k}"]`) || {}).checked;
+    const keys = vc.map(c => c.k).filter(on).concat(COLS.map(c => c.k).filter(k => on(k) && !vc.some(c => c.k === k)));
+    ui.tcols = Object.assign({}, ui.tcols, {[cv.id]: keys}); saveUI(); renderTable();
+  }));
+  if($('colReset')) $('colReset').addEventListener('click', () => { const t = Object.assign({}, ui.tcols); delete t[cv.id]; ui.tcols = t; saveUI(); renderTable(); });
+  if($('saveViewBtn')) $('saveViewBtn').addEventListener('click', async () => {
+    const name = (prompt('Name this view. Everyone on the team will see it.', cv.team ? cv.name : '') || '').trim(); if(!name) return;
+    const view = {id: 't' + uid(), name, cols: vc.map(c => c.k), who: cv.who === 'toggle' ? (ui.showCancelled ? 'all' : 'active') : cv.who, sort: [sortKey, sortDir], team: true};
+    TEAM_VIEWS = TEAM_VIEWS.concat([view]); await persistSettings(); ui.tview = view.id; saveUI(); renderTable();
+  });
+  if($('delViewBtn')) $('delViewBtn').addEventListener('click', async () => {
+    if(!confirm(`Delete the team view "${cv.name}" for everyone?`)) return;
+    TEAM_VIEWS = TEAM_VIEWS.filter(v => v.id !== cv.id); await persistSettings(); ui.tview = 'overview'; saveUI(); switchView('overview');
+  });
   if(!tableSel.size) return;
   const ids = [...tableSel];
   const bulk = async (fields, label, logKind) => {
@@ -1268,16 +1414,15 @@ function renderTable(){
   $('bPlan').addEventListener('change', e => { if(e.target.value) bulk({serviceId:e.target.value}, 'Plan updated'); });
   $('bHealth').addEventListener('change', e => { if(e.target.value !== '-') bulk({health:e.target.value, healthSource: e.target.value ? 'manual' : ''}, 'Health updated'); });
   $('bMgrGo').addEventListener('click', () => bulk({manager:$('bMgr').value.trim()}, 'Manager updated'));
-  $('bCall').addEventListener('click', () => bulk({lastCall:TODAY, lastContact:TODAY}, 'Call logged', 'call'));
   $('bCancel').addEventListener('change', e => { const r = e.target.value; if(!r) return; if(!confirm(`Mark ${ids.length} ${ids.length===1?'client':'clients'} as cancelled today (${catName(r)})? You can add the specific reason and root cause afterwards.`)){ e.target.value=''; return; } bulk(c => ({status:'cancelled', cancelledOn:TODAY, cancelCategory:r, cancelReason:'', contractTiming:suggestTiming(c, TODAY)}), 'Marked cancelled'); });
   $('bActive').addEventListener('click', () => bulk({status:'active', cancelledOn:'', noticeOn:'', cancelCategory:'', cancelReason:'', cancelNote:'', rootCategory:'', rootReason:'', controllable:'', contractTiming:'', warned:'', firstWarningOn:'', competitor:'', winBack:'', winBackOn:''}, 'Reactivated'));
   $('bClear').addEventListener('click', () => { tableSel.clear(); renderTable(); });
 }
 async function exportCSV(rows){
-  const head = ['Client','Plan','Status','Health','Needs attention','Next renewal','Last strategy call','Last contact','Client since','Cancelled on','Notice given','Stated category','Stated reason','In their words','Root cause category','Root cause reason','Controllable','Contract timing','Saw it coming','First warning signs','Competitor','Win-back','Win-back check-in','Save attempts','Tenure (months)','Monthly price','Account manager','Location','Referred by','Referrals made','Add-ons','Notes','Scoreboard ID','Scoreboard score','Scoreboard health','Weekly call','Scoreboard retainer','Months logged','Leads (logged)','Booked','Showed','Closed','Ad spend per sign-up','% of leads converted','Ad spend (logged)','Meta spend 90d','Meta leads 90d','Meta CPL 90d'].filter(h => h !== 'Cancel reason');
+  const head = ['Client','Plan','Status','Health','Needs attention','Next renewal','Last contact','Client since','Cancelled on','Notice given','Stated category','Stated reason','In their words','Root cause category','Root cause reason','Controllable','Contract timing','Saw it coming','First warning signs','Competitor','Win-back','Win-back check-in','Save attempts','Tenure (months)','Monthly price','Account manager','Location','Referred by','Referrals made','Add-ons','Notes','Scoreboard ID','Scoreboard score','Scoreboard health','Weekly call','Scoreboard retainer','Months logged','Leads (logged)','Booked','Showed','Closed','Ad spend per sign-up','% of leads converted','Ad spend (logged)','Meta spend 90d','Meta leads 90d','Meta CPL 90d'].filter(h => h !== 'Cancel reason');
   const q = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
   const lines = [head.join(',')].concat(rows.map(c => [c.name, svcById(c.serviceId)?.name||'', isGone(c)?'Cancelled':'Active', isGone(c)?'':HEALTH[c.health||''].label,
-    flagsFor(c).filter(f=>f.level!=='info').map(f=>f.text).join('; '), nextRenewal(c)||'', c.lastCall||'', c.lastContact||'', c.since||'', c.cancelledOn||'', c.noticeOn||'', ...(()=>{ const ch = churnOf(c), g = isGone(c); return g ? [catName(ch.cat), ch.reason, c.cancelNote||'', c.rootCategory?catName(ch.root):'', c.rootCategory?ch.rootReason:'', CTRL[ch.ctrl]||'', TIMING[c.contractTiming]||'', ({yes:'Yes',no:'No',unsure:'Unsure'})[c.warned]||'', c.firstWarningOn||'', c.competitor||'', WINBACK[c.winBack]||'', c.winBackOn||''] : ['','','','','','','','','','','','']; })(),
+    flagsFor(c).filter(f=>f.level!=='info').map(f=>f.text).join('; '), nextRenewal(c)||'', c.lastContact||'', c.since||'', c.cancelledOn||'', c.noticeOn||'', ...(()=>{ const ch = churnOf(c), g = isGone(c); return g ? [catName(ch.cat), ch.reason, c.cancelNote||'', c.rootCategory?catName(ch.root):'', c.rootCategory?ch.rootReason:'', CTRL[ch.ctrl]||'', TIMING[c.contractTiming]||'', ({yes:'Yes',no:'No',unsure:'Unsure'})[c.warned]||'', c.firstWarningOn||'', c.competitor||'', WINBACK[c.winBack]||'', c.winBackOn||''] : ['','','','','','','','','','','','']; })(),
     (c.saves||[]).map(s=>`${s.date} ${s.offer} (${SAVE_OUTCOMES[s.outcome]||s.outcome})`).join('; '),
     c.since?monthsBetween(c.since, isGone(c)&&c.cancelledOn?c.cancelledOn:TODAY):'', c.price||'', c.manager||'', c.location||'', byId(c.referredBy)?.name||c.referredByOther||'',
     referralsOf(c.id).length||'', clientAddons(c).map(a=>a.name).join('; '), c.notes||'',
@@ -1555,8 +1700,7 @@ function renderClientForm(){
     </fieldset>
     <fieldset class="fieldset" id="hBox"><legend>Health and contact</legend>
       <div class="field"><span>Health</span><div class="seg">${['green','yellow','red',''].map(k=>`<label><input type="radio" name="hl" value="${k}" ${(c.health||'')===k?'checked':''}>${HEALTH[k].label}</label>`).join('')}</div></div>
-      <div class="two"><label class="field"><span>Last strategy call</span><input type="date" id="fCall" value="${esc(c.lastCall||'')}"></label>
-        <label class="field"><span>Last contact</span><input type="date" id="fContact" value="${esc(c.lastContact||'')}"></label></div></fieldset>
+      <label class="field"><span>Last contact</span><input type="date" id="fContact" value="${esc(c.lastContact||'')}"></label></fieldset>
     <div class="field"><span>Add-ons</span><div id="fAdd"></div></div>
     <div class="two"><label class="field"><span>Client since</span><input type="date" id="fSince" value="${esc(c.since||'')}"></label>
       <label class="field"><span>Account manager</span><input id="fMgr" value="${esc(c.manager||'')}" list="mgrs"><datalist id="mgrs">${managers.map(m=>`<option value="${esc(m)}">`).join('')}</datalist></label></div>
@@ -1624,7 +1768,7 @@ function renderClientForm(){
     const rec = Object.assign(c, {
       name, serviceId:$('fSvc').value, status, price: +$('fPrice').value || 0,
       cancelledOn: status==='cancelled' ? $('fCx').value : '', cancelNote: status==='cancelled' ? $('fCxNote').value.trim() : '', saves, ...churnFields,
-      health: inner.querySelector('[name=hl]:checked')?.value || '', healthSource: (()=>{ const v = inner.querySelector('[name=hl]:checked')?.value || ''; return v === (c.health||'') ? (c.healthSource||'') : (v ? 'manual' : ''); })(), lastCall:$('fCall').value, lastContact:$('fContact').value,
+      health: inner.querySelector('[name=hl]:checked')?.value || '', healthSource: (()=>{ const v = inner.querySelector('[name=hl]:checked')?.value || ''; return v === (c.health||'') ? (c.healthSource||'') : (v ? 'manual' : ''); })(), lastContact:$('fContact').value,
       since:$('fSince').value, manager:$('fMgr').value.trim(), location:$('fLoc').value.trim(), notes:$('fNotes').value.trim(), logo, logoAssetId,
       referredBy: (refv && refv !== '__other') ? refv : '', referredByOther: refv === '__other' ? $('fRefOther').value.trim() : '',
       addons: [...addons].filter(id => { const a = ADDONS.find(x => x.id === id); return sv && a && a.ok(sv); })
@@ -1674,14 +1818,14 @@ function processLogo(file){
 
 function renderPlans(){
   const inner = $('dInner');
-  inner.innerHTML = `<p class="d-warn" style="margin-top:0">Term sets each client's renewal date. Call cadence (days between strategy calls) drives the overdue-call alerts; leave it blank for plans without scheduled calls.</p>
-    <div class="row" style="font-size:12px;color:var(--muted);border:0;padding-bottom:0"><span style="width:36px"></span><span style="flex:1">Name</span><span style="width:64px">Term (mo)</span><span style="width:64px">Call every (days)</span><span style="width:60px"></span></div>
+  inner.innerHTML = `<p class="d-warn" style="margin-top:0">Term sets each client's renewal date.</p>
+    <div class="row" style="font-size:12px;color:var(--muted);border:0;padding-bottom:0"><span style="width:36px"></span><span style="flex:1">Name</span><span style="width:64px">Term (mo)</span><span style="width:60px"></span></div>
     ${S.services.map(s => { const n = S.clients.filter(c => c.serviceId === s.id).length;
-      return `<div class="row svc-row" data-id="${esc(s.id)}"><input type="color" value="${esc(s.color)}" aria-label="Color for ${esc(s.name)}"><input type="text" value="${esc(s.name)}" aria-label="Plan name" style="flex:1"><input type="number" data-k="term" value="${esc(s.term||'')}" aria-label="Contract months" style="width:64px"><input type="number" data-k="cadence" value="${esc(s.cadence||'')}" aria-label="Days between strategy calls" style="width:64px"><button class="btn small danger" data-del ${n?`title="${n} clients on this plan"`:''}>Delete</button></div>`; }).join('')}
+      return `<div class="row svc-row" data-id="${esc(s.id)}"><input type="color" value="${esc(s.color)}" aria-label="Color for ${esc(s.name)}"><input type="text" value="${esc(s.name)}" aria-label="Plan name" style="flex:1"><input type="number" data-k="term" value="${esc(s.term||'')}" aria-label="Contract months" style="width:64px"><button class="btn small danger" data-del ${n?`title="${n} clients on this plan"`:''}>Delete</button></div>`; }).join('')}
     <div class="formbar" style="margin-top:14px"><button class="btn" id="addS">Add plan</button><button class="btn primary" id="saveS">Save plans</button></div>`;
   const commit = () => inner.querySelectorAll('.svc-row').forEach(r => { const s = svcById(r.dataset.id); if(!s) return;
     s.name = r.querySelector('input[type=text]').value.trim() || s.name; s.color = r.querySelector('input[type=color]').value;
-    s.term = +r.querySelector('[data-k=term]').value || 0; s.cadence = +r.querySelector('[data-k=cadence]').value || 0; });
+    s.term = +r.querySelector('[data-k=term]').value || 0; });
   inner.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
     const id = b.closest('.row').dataset.id, n = S.clients.filter(c => c.serviceId === id).length;
     if(n) return toast(`Move the ${n} ${n===1?'client':'clients'} on this plan first.`, 3400);
@@ -1693,19 +1837,20 @@ function renderPlans(){
 
 
 /* ================= settings: alert thresholds + scorecard targets ================= */
-const RULE_DEFAULTS = {renewRed:30, renewAmber:60, renewInfo:90, callAmber:1.5, callRed:2, contactAmber:30, earlyChurnDays:180};
+const RULE_DEFAULTS = {renewRed:30, renewAmber:60, renewInfo:90, callAmber:1.5, callRed:2, contactAmber:30, earlyChurnDays:180, minMonths:3, minLeads:100, minMetaLeads:15};
 const RULE_INFO = [
   {k:'renewRed', label:'Renewal: urgent within', unit:'days', why:'Red flag. Book a renewal conversation now.'},
   {k:'renewAmber', label:'Renewal: needs attention within', unit:'days', why:'Amber flag. Plan the renewal pitch and fix any open issues.'},
   {k:'renewInfo', label:'Renewal: on the radar within', unit:'days', why:'Shown in lists, not counted as needing attention.'},
-  {k:'callAmber', label:'Strategy call due after', unit:'× the plan\'s call cadence', why:'Amber flag. With weekly calls (7 days), 1.5 means 11 days.'},
-  {k:'callRed', label:'Strategy call overdue after', unit:'× the plan\'s call cadence', why:'Red flag. With weekly calls, 2 means 14 days.'},
   {k:'contactAmber', label:'No contact after', unit:'days', why:'Amber flag, based on the last contact date.'},
-  {k:'earlyChurnDays', label:'Count as early churn when they leave within', unit:'days of starting', why:'Used in the early-churn KPI. Early churn usually points to onboarding or expectation problems.'}
+  {k:'earlyChurnDays', label:'Count as early churn when they leave within', unit:'days of starting', why:'Used in the early-churn KPI. Early churn usually points to onboarding or expectation problems.'},
+  {k:'minMonths', label:'Enough data: months logged', unit:'months', why:'Rates and bottlenecks need at least this many logged months. Fewer are marked † and not ranked.'},
+  {k:'minLeads', label:'Enough data: leads logged', unit:'leads', why:'Rates need at least this many leads in total. Small samples swing a lot by chance.'},
+  {k:'minMetaLeads', label:'Enough data: Meta leads (90 days)', unit:'leads', why:'Cost-per-lead rankings need at least this many Meta leads.'},
 ];
 let RULES = Object.assign({}, RULE_DEFAULTS), TARGETS = {}, settingsLoaded = false;
-function applySettings(s){ RULES = Object.assign({}, RULE_DEFAULTS, (s && s.rules) || {}); TARGETS = Object.assign({}, (s && s.targets) || {}); settingsLoaded = true; }
-async function persistSettings(){ try { await SETTINGS_IO.save({rules: RULES, targets: TARGETS}); toast('Saved'); } catch(e){ writeError(e); } }
+function applySettings(s){ RULES = Object.assign({}, RULE_DEFAULTS, (s && s.rules) || {}); TARGETS = Object.assign({}, (s && s.targets) || {}); TEAM_VIEWS = ((s && s.views) || []).map(v => Object.assign({}, v, {team:true})); settingsLoaded = true; }
+async function persistSettings(){ try { await SETTINGS_IO.save({rules: RULES, targets: TARGETS, views: TEAM_VIEWS.map(v => ({id:v.id, name:v.name, cols:v.cols, who:v.who, sort:v.sort}))}); toast('Saved'); } catch(e){ writeError(e); } }
 
 /* ================= book-level numbers ================= */
 const priceOf = c => +c.price || 0;
@@ -1768,6 +1913,48 @@ function scorecardHTML(B){
         ${editingTargets ? `<label class="kt">Target (${k.dir==='min'?'at least':'at most'}${k.unit?' %':''}) <input type="number" step="any" data-tgt="${k.k}" value="${esc(TARGETS[k.k]??'')}"></label>` : (TARGETS[k.k]!==undefined && TARGETS[k.k]!=='' ? `<span class="ks">Target: ${k.dir==='min'?'≥':'≤'} ${k.unit==='%'?TARGETS[k.k]+'%':(k.k==='active'?TARGETS[k.k]:money(+TARGETS[k.k]))}</span>` : '')}</div>`; }).join('')}</div></section>`;
 }
 
+/* ================= top of mind ================= */
+/* Points: risk + timing + stakes. Transparent on purpose so the team can argue with it. */
+function topOfMind(B){
+  const avg = B.arpa || 1;
+  const rows = B.active.map(c => {
+    const pts = [], add = (n, label, tone) => { if(n > 0) pts.push({n: Math.round(n), label, tone}); };
+    const sb = c.sb || {};
+    if(c.health === 'red') add(40, 'At risk' + (sb.score != null ? ` (score ${sb.score})` : ''), 'red');
+    else if(c.health === 'yellow') add(20, 'Watch' + (sb.score != null ? ` (score ${sb.score})` : ''), 'amber');
+    else if(!c.health) add(10, 'No health score', 'muted');
+    if(c.health === 'red' && sb.score != null) add(Math.max(0, 60 - sb.score) * 0.5, 'Low score', 'red');
+    const r = nextRenewal(c);
+    if(r){ const d = days(TODAY, r); if(d <= RULES.renewRed) add(30, `Renews in ${d} days`, 'red'); else if(d <= RULES.renewAmber) add(20, `Renews in ${d} days`, 'amber'); else if(d <= RULES.renewInfo) add(10, `Renews in ${d} days`, 'muted'); }
+    const p = priceOf(c);
+    if(p) add(Math.min(2.5, p / avg) * 12, `${money(p)}/mo` + (p >= avg * 1.5 ? ` (${(p/avg).toFixed(1)}× avg)` : ''), p >= avg * 1.5 ? 'amber' : 'muted');
+    const refs = referralsOf(c.id).filter(x => !isGone(x)).length;
+    if(refs) add(Math.min(20, refs * 5), `Referred ${refs} active ${refs === 1 ? 'client' : 'clients'}`, refs >= 3 ? 'amber' : 'muted');
+    if(c.since && days(c.since, TODAY) <= 120) add(10, `New client (${Math.max(1, monthsBetween(c.since, TODAY))} mo)`, 'amber');
+    if(c.lastContact && days(c.lastContact, TODAY) > RULES.contactAmber) add(10, `No contact in ${days(c.lastContact, TODAY)} days`, 'amber');
+    if(c.sb && !c.sb.latest) add(5, 'No results logged last month', 'muted');
+    return {c, total: pts.reduce((t,x) => t + x.n, 0), pts: pts.sort((a,b) => b.n - a.n)};
+  });
+  return rows.sort((a,b) => b.total - a.total || priceOf(b.c) - priceOf(a.c)).slice(0, 10);
+}
+function topOfMindHTML(B){
+  const top = topOfMind(B);
+  if(!top.length) return '';
+  const max = top[0].total || 1;
+  return `<section class="card wide tom"><div class="tier-head"><div><h2>Top of mind</h2><p class="sub">The 10 active accounts to keep an eye on right now, ranked by risk, timing and how much is at stake. Click one to open it.</p></div></div>
+    <ol class="tom-list">${top.map((x,i) => `<li><button data-go="${esc(x.c.id)}"><span class="tom-rank">${i+1}</span>${mini(x.c)}
+      <span class="tom-main"><span class="tom-name">${esc(x.c.name)}</span><span class="tom-why">${x.pts.map(p => `<span class="tchip ${p.tone}">${esc(p.label)}</span>`).join('')}</span></span>
+      <span class="tom-score" title="${x.pts.map(p => `${p.label}: ${p.n}`).join('\n')}"><span class="tom-bar"><span style="width:${Math.round(x.total/max*100)}%"></span></span><b>${x.total}</b></span></button></li>`).join('')}</ol>
+    <details class="tom-how"><summary>How the ranking works</summary>
+      <p>Each active account gets points, and the 10 highest are shown. Hover a score to see its breakdown.</p>
+      <ul><li><b>Health:</b> At risk 40, Watch 20, no health score 10. At-risk accounts get up to about 20 more the lower their scoreboard score is below 60.</li>
+      <li><b>Renewal:</b> within ${RULES.renewRed} days 30, within ${RULES.renewAmber} days 20, within ${RULES.renewInfo} days 10 (same windows as the Health rules page).</li>
+      <li><b>Revenue:</b> 12 points × the account's price compared with the average (${money(B.arpa)}), capped at 30.</li>
+      <li><b>Referral network:</b> 5 per active client they referred, capped at 20. Losing them can cost more than one account.</li>
+      <li><b>New client:</b> 10 in the first 120 days, when early churn is most likely.</li>
+      <li><b>No contact:</b> 10 after ${RULES.contactAmber} days without contact. <b>No results logged last month:</b> 5, because you're flying blind.</li></ul></details></section>`;
+}
+
 /* ================= insights, tiered ================= */
 function tierHead(n, title, when, why){ return `<div class="tier"><span class="tn">${n}</span><div><h2>${esc(title)}</h2><p>${esc(when)}. ${esc(why)}</p></div></div>`; }
 function renderInsights(){
@@ -1793,7 +1980,6 @@ function renderInsights(){
       <ul class="ilist">
         <li><button data-view="table"><span class="nm2">Results not logged for last month</span><span class="why">${noResults.length} active</span><span class="dot" style="background:${noResults.length?'#E3B341':'#3FB950'}"></span></button></li>
         <li><button data-view="table"><span class="nm2">Cancellations in 12 months missing churn details</span><span class="why">${missChurn.length}</span><span class="dot" style="background:${missChurn.length?'#E3B341':'#3FB950'}"></span></button></li>
-        <li><button data-view="table"><span class="nm2">Active clients with no strategy call logged</span><span class="why">${B.active.filter(c=>!c.lastCall).length}</span><span class="dot" style="background:${B.active.some(c=>!c.lastCall)?'#E3B341':'#3FB950'}"></span></button></li>
         <li><button data-view="table"><span class="nm2">Active clients with no health</span><span class="why">${B.active.filter(c=>!c.health).length}</span><span class="dot" style="background:${B.active.some(c=>!c.health)?'#E3B341':'#3FB950'}"></span></button></li>
       </ul>
       ${wbDue.length ? `<h3 style="font:700 16px var(--display);margin:12px 0 4px">Win-back check-ins due</h3><ul class="ilist">${wbDue.map(c => li(c, fmtDate(c.winBackOn), '#3FB950')).join('')}</ul>` : ''}</section>`;
@@ -1831,20 +2017,22 @@ function renderInsights(){
       ${Object.values(B.mgr).some(v => v.n > 30) ? '<p class="empty"><span class="soon">One manager carries more than 30 clients on weekly calls.</span> That is a capacity and single-point-of-failure risk.</p>' : ''}</section>`;
 
   // ---- tier 3: client results
-  const ranked = B.sbA.filter(c => c.sb.lifetime && c.sb.lifetime.leads >= 50);
+  const ranked = B.sbA.filter(enoughData);
   const closeR = c => c.sb.lifetime.showed > 0 ? c.sb.lifetime.closed / c.sb.lifetime.showed : 0;
   const worstClose = ranked.slice().sort((a,b) => closeR(a) - closeR(b)).slice(0,6);
-  const worstCpl = B.sbA.filter(c => c.sb.meta90 && c.sb.meta90.cpl != null && c.sb.meta90.leads >= 5).sort((a,b) => b.sb.meta90.cpl - a.sb.meta90.cpl).slice(0,6);
+  const worstCpl = B.sbA.filter(c => c.sb.meta90 && c.sb.meta90.cpl != null && c.sb.meta90.leads >= RULES.minMetaLeads).sort((a,b) => b.sb.meta90.cpl - a.sb.meta90.cpl).slice(0,6);
   const t3 = `
     <section class="card"><h2>Funnel, all clients</h2><p class="sub">Logged results from the scoreboard, all months, active clients.</p>
       <div class="stats"><div class="stat"><b>${B.T.leads.toLocaleString('en-US')}</b><span>Leads</span></div><div class="stat"><b>${pct(B.T.booked,B.T.leads)}</b><span>Booked</span></div><div class="stat"><b>${pct(B.T.showed,B.T.booked)}</b><span>Showed</span></div><div class="stat"><b>${pct(B.T.closed,B.T.showed)}</b><span>Closed*</span></div></div>
       <div class="stats"><div class="stat"><b>${money(B.T.spend)}</b><span>Ad spend</span></div><div class="stat"><b>${B.T.leads?'$'+(B.T.spend/B.T.leads).toFixed(2):'–'}</b><span>Per lead</span></div><div class="stat"><b>${B.T.closed?money(B.T.spend/B.T.closed):'–'}</b><span>Ad spend per new member</span></div></div>
       <p class="empty" style="font-size:12px">*Closed is total sign-ups from the MMS, including family members, walk-ins, referrals and reactivations, so it can be higher than showed. Treat showed-to-closed % as approximate.</p></section>
-    <section class="card"><h2>Weakest close rates*</h2><p class="sub">Showed to closed, clients with 50+ logged leads. A low rate usually points to a sales-process or follow-up problem at the gym.</p>
+    <section class="card"><h2>Weakest close rates*</h2><p class="sub">Showed to closed, clients with enough data (${RULES.minMonths}+ months and ${RULES.minLeads}+ leads logged). A low rate usually points to a sales-process or follow-up problem at the gym.</p>
       <ul class="ilist">${worstClose.map(c => li(c, `${pct(c.sb.lifetime.closed, c.sb.lifetime.showed)}* of ${c.sb.lifetime.showed} showed`)).join('') || '<li class="empty">Not enough data.</li>'}</ul>
       <p class="empty" style="font-size:12px">*Closed is total sign-ups from the MMS, including family members, walk-ins, referrals and reactivations, so it can be higher than showed. Treat showed-to-closed % as approximate.</p></section>
-    <section class="card"><h2>Highest cost per lead</h2><p class="sub">Meta ads, last 90 days, 5+ leads. Candidates for new creative or targeting.</p>
+    <section class="card"><h2>Highest cost per lead</h2><p class="sub">Meta ads, last 90 days, ${RULES.minMetaLeads}+ leads. Candidates for new creative or targeting.</p>
       <ul class="ilist">${worstCpl.map(c => li(c, `$${c.sb.meta90.cpl.toFixed(2)} (${c.sb.meta90.leads} leads)`)).join('') || '<li class="empty">Not enough data.</li>'}</ul></section>
+    ${bottleneckInsightsHTML(B)}
+    ${testsInsightsHTML(B)}
     ${sbInsights(B.active)}`;
 
   // ---- tier 4: why we win and lose
@@ -1860,7 +2048,9 @@ function renderInsights(){
     <section class="card"><h2>Ask for a referral</h2><p class="sub">Active 6+ months, not watch or at risk, no referrals yet.</p>
       ${ask.length ? `<ul class="ilist">${ask.map(c => li(c, tenureText(c.since), c.health==='green'?'#3FB950':'')).join('')}</ul>` : '<p class="empty">No one fits right now. With most clients at risk, this list stays short.</p>'}</section>`;
 
-  $('insightsView').innerHTML = `<div class="ins-grid">
+  renderAskShell();
+  $('insightsBody').innerHTML = `<div class="ins-grid">
+    ${topOfMindHTML(B)}
     ${scorecardHTML(B)}
     ${tierHead(1, 'Act this week', 'Check daily or weekly', 'Clients and revenue that need someone to do something now.')}
     ${t1}
@@ -1922,7 +2112,7 @@ function renderHealthView(){
           return `<tr><td>${esc(r.label)}</td><td>${canWrite ? `<input type="number" step="any" min="0" data-rule="${r.k}" value="${RULES[r.k]}" style="width:70px">` : RULES[r.k]} ${esc(r.unit)}${RULES[r.k] !== RULE_DEFAULTS[r.k] ? ` <small style="color:var(--muted)">(default ${RULE_DEFAULTS[r.k]})</small>` : ''}</td><td>${level}</td><td>${rf ? ruleCount(rf[0], rf[1]) : ''}</td><td>${esc(r.why)}</td></tr>`; }).join('')}
       </tbody></table></div>
       ${canWrite ? '<div class="formbar" style="margin-top:12px"><button class="btn primary" id="rulesSave">Save rules</button><button class="btn" id="rulesReset">Reset to defaults</button></div>' : ''}
-      <p class="empty">Call alerts only start once a strategy call has been logged for that client. Clients with none logged get a blue "no call logged yet" note instead.</p></section>
+</section>
     <section class="card"><h2>Manual overrides</h2><p class="sub">Clients whose health was set by hand instead of the scoreboard.</p>
       ${overrides.length ? `<ul class="ilist">${overrides.map(c => `<li><button data-go="${esc(c.id)}">${mini(c)}<span class="nm2">${esc(c.name)}</span><span class="why">${HEALTH[c.health||''].label}${c.sb&&c.sb.health?`, scoreboard says ${esc(c.sb.health)}`:''}</span></button></li>`).join('')}</ul>` : '<p class="empty">None. Every health status follows the scoreboard.</p>'}</section>
     <section class="card"><h2>Questions for Angelo</h2><p class="sub">Needed to decide whether to tweak the score itself.</p>
@@ -1939,13 +2129,341 @@ function renderHealthView(){
   if($('rulesSave')) $('rulesSave').addEventListener('click', async () => {
     hv.querySelectorAll('[data-rule]').forEach(i => { const v = +i.value; if(!isNaN(v) && v >= 0) RULES[i.dataset.rule] = v; });
     if(RULES.renewRed > RULES.renewAmber || RULES.renewAmber > RULES.renewInfo) return toast('Renewal days must go urgent ≤ attention ≤ radar.');
-    if(RULES.callAmber > RULES.callRed) return toast('"Call due" must be less than "call overdue".');
     await persistSettings(); renderAll(false); renderHealthView();
   });
   if($('rulesReset')) $('rulesReset').addEventListener('click', async () => { RULES = Object.assign({}, RULE_DEFAULTS); await persistSettings(); renderAll(false); renderHealthView(); });
 }
 
 const SETTINGS_IO = { save: s => B.saveSettings(clean(s)) };
+
+
+/* ================= ask Claude about the data ================= */
+let askSampler = null, askTurns = [], askCtl = null, askBusy = false, askBlocked = false;
+const ASK_SUGGESTIONS = [
+  'Who should Kurt call first this week, and why?',
+  'Which renewals in the next 60 days are at risk, and how much monthly revenue do they represent?',
+  'Which active clients have the highest ad spend per sign-up?',
+  'What patterns do you see in why clients cancelled this year?',
+  'Which clients are healthy and good candidates to ask for a referral?',
+  'Where is our data incomplete enough to make these numbers unreliable?'
+];
+const ASK_RULES = `You are the data analyst for Ground Standard (GS), a marketing agency whose clients are martial arts gyms. Answer the user's questions using ONLY the JSON data provided. Today is {TODAY}.
+
+What the fields mean:
+- status: "active" or "cancelled". A cancelled client's cancelledOn can be in the future when they are finishing out their contract.
+- price: the client's monthly retainer in USD. MRR = sum of active clients' prices.
+- plan and nextRenewal: contracts renew in blocks of the plan's term from the start date (since).
+- health: green = Healthy, yellow = Watch, red = At risk. It comes from the scoreboard score unless healthSource is "manual" (a person overrode it).
+- flags: the client's current red or amber alerts (renewals coming up, health, no recent contact).
+- scoreboard: a snapshot from GS Team Scoreboard read on 2026-10-08. score is 0-100; band is on track / watch / at risk; the score's formula is not known.
+- scoreboard.allMonths and aug2026: monthly results logged by the team. "closed" is TOTAL sign-ups from the gym's membership system, including family members, walk-ins, referrals and reactivations, so closed can exceed showed. Whenever you use closed (close rate, % of leads converted, ad spend per sign-up), mark it with an asterisk and note it is approximate. Results are logged about 10 days after each month ends; many months are missing; August 2026 is the latest. months = how many months were logged.
+- meta90: Meta ad spend, leads and cost per lead over the last 90 days (as of the snapshot).
+- Cancelled clients: saidCategory/saidReason are what the client said, rootCause is the team's assessment, controllable, theirWords, winBack. Empty means not recorded.
+- summary holds book-level numbers already calculated by the app (churn rates are fractions per month).
+
+How to answer:
+- Lead with the direct answer, then the supporting numbers and client names.
+- Keep it under about 200 words unless the user asks for more.
+- Plain text only. Use short lines and "- " lists. No tables, no markdown headings, no bold.
+- If the data can't answer the question, or is incomplete enough to mislead, say exactly what is missing.
+- Never invent clients, numbers or reasons. Do arithmetic carefully and show the key figures.`;
+
+function askDataset(){
+  const B = book();
+  const clients = S.clients.map(c => {
+    const sb = c.sb || {}, L = sb.lifetime, A = sb.latest, M = sb.meta90;
+    const o = {name:c.name, status:c.status, plan:svcById(c.serviceId)?.name || '', price:priceOf(c), since:c.since || '',
+      health:c.health || '', healthSource:c.healthSource || '', manager:c.manager || '', location:c.location || '',
+      nextRenewal:nextRenewal(c) || '', flags:flagsFor(c).filter(f => f.level !== 'info').map(f => f.text),
+      referredBy:byId(c.referredBy)?.name || c.referredByOther || '', referralsMade:referralsOf(c.id).length,
+      addons:clientAddons(c).map(a => a.name), lastContact:c.lastContact || ''};
+    if(isGone(c)){ const ch = churnOf(c); Object.assign(o, {cancelledOn:c.cancelledOn || '', noticeOn:c.noticeOn || '', saidCategory:ch.cat ? catName(ch.cat) : '', saidReason:ch.reason || '',
+      rootCause:c.rootCategory ? catName(ch.root) + (ch.rootReason ? ': ' + ch.rootReason : '') : '', controllable:CTRL[ch.ctrl] || '', theirWords:c.cancelNote || '', winBack:c.winBack || ''}); }
+    if(c.saves && c.saves.length) o.saveAttempts = c.saves;
+    if(c.notes) o.notes = c.notes;
+    if(!isGone(c) && c.sb){ const bn = bottleneckOf(c); o.bottleneck = bn.status === 'found' ? {step:bn.step.label, value:bn.step.v, typical:bn.step.m} : bn.status; o.enoughData = enoughData(c); }
+    if(c.tests && c.tests.length) o.tests = c.tests;
+    if(sb.id) o.scoreboard = {score:sb.score ?? null, band:sb.health || '', weeklyCall:sb.callDay ? sb.callDay + ' ' + sb.callTime : '',
+      allMonths:L ? {months:L.months, leads:L.leads, booked:L.booked, showed:L.showed, closed:L.closed, adSpend:L.adSpend, avgGymRevenue:L.avgGymRevenue} : null,
+      aug2026:A ? {leads:A.leads, booked:A.booked, showed:A.showed, closed:A.closed, adSpend:A.adSpend} : null,
+      meta90:M ? {spend:M.spend, leads:M.leads, costPerLead:M.cpl} : null};
+    return o;
+  });
+  const summary = {activeClients:B.active.length, cancelledClients:B.gone.length, mrr:B.mrr, avgPricePerClient:Math.round(B.arpa),
+    netNewMrrLast90Days:B.netNewMrr, monthlyClientChurn12moAvg:B.churnRate, monthlyRevenueChurn12moAvg:B.revChurnRate,
+    revenueAtRiskMonthly:B.riskMrr, clientsNeedingAttention:B.active.filter(needsAttention).length};
+  return {summary, plans:S.services.map(s => ({name:s.name, termMonths:s.term})), alertRules:RULES, scorecardTargets:TARGETS, clients};
+}
+
+const ASK_ERRORS = {
+  not_granted:'Claude access was declined for this page. Reload the page to be asked again.',
+  rate_limited:'Too many questions at once. Wait a moment, then ask again.',
+  prompt_too_large:'The data plus this conversation is too large. Click "New conversation" and ask again.',
+  session_expired:'Your session expired. Reload the page.',
+  sampling_disabled:'Asking Claude is turned off for your account or organization.',
+  capability_disabled:'Asking Claude is turned off for this page.',
+  refused:'Claude declined to answer that. Try rephrasing.',
+  empty_completion:'Claude returned an empty answer. Try asking again.'
+};
+
+function renderAskShell(){
+  const box = $('askBox'); if(!box) return;
+  if(!askSampler){ box.innerHTML = ''; return; }
+  if(box.dataset.ready) return;
+  box.dataset.ready = '1';
+  box.innerHTML = `<section class="card wide ask"><div class="tier-head"><div><h2>Ask about your data</h2>
+      <p class="sub">Ask Claude anything about your clients, revenue, churn, results or renewals. Each question sends the Grand Cast's current data to Claude using your own Claude account. Answers can be wrong, so check anything you act on.</p></div>
+      <button class="btn small" id="askClear" hidden>New conversation</button></div>
+    <div class="ask-chips">${ASK_SUGGESTIONS.map((q,i) => `<button class="chip" data-ask="${i}">${esc(q)}</button>`).join('')}</div>
+    <div class="ask-log" id="askLog" aria-live="polite"></div>
+    <div class="ask-form"><textarea id="askInput" rows="2" placeholder="e.g. Which at-risk clients pay us the most, and when do they renew?"></textarea>
+      <div class="ask-actions"><button class="btn primary" id="askGo">Ask</button><button class="btn" id="askStop" hidden>Stop</button></div></div>
+    <p class="empty" id="askNote" style="margin:6px 0 0"></p></section>`;
+  box.querySelectorAll('[data-ask]').forEach(b => b.addEventListener('click', () => { $('askInput').value = ASK_SUGGESTIONS[+b.dataset.ask]; askNow(); }));
+  $('askGo').addEventListener('click', askNow);
+  $('askInput').addEventListener('keydown', e => { if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); askNow(); } });
+  $('askStop').addEventListener('click', () => askCtl && askCtl.abort());
+  $('askClear').addEventListener('click', () => { if(askBusy) return; askTurns = []; $('askLog').innerHTML = ''; $('askClear').hidden = true; $('askNote').textContent = ''; $('askInput').focus(); });
+}
+
+function askBubble(role, text){
+  const d = document.createElement('div'); d.className = 'ask-msg ' + role;
+  const who = document.createElement('span'); who.className = 'ask-who'; who.textContent = role === 'user' ? 'You' : 'Claude';
+  const body = document.createElement('div'); body.className = 'ask-body'; body.textContent = text;
+  d.append(who, body); $('askLog').appendChild(d); d.scrollIntoView({block:'nearest'});
+  return body;
+}
+
+async function askNow(){
+  if(askBusy || !askSampler) return;
+  const q = $('askInput').value.trim(); if(!q){ $('askInput').focus(); return; }
+  if(!S.clientsLoaded || !S.clients.length){ $('askNote').textContent = 'Client data is still loading.'; return; }
+  askBusy = true; $('askGo').disabled = true; $('askStop').hidden = false; $('askNote').textContent = ''; $('askInput').value = '';
+  askBubble('user', q);
+  const out = askBubble('assistant', 'Thinking…');
+  askTurns.push({role:'user', content:q});
+  const recent = askTurns.slice(-10);
+  if(recent[0].role !== 'user') recent.shift();
+  const preamble = ASK_RULES.replace('{TODAY}', TODAY) + '\n\nDATA (JSON):\n' + JSON.stringify(askDataset());
+  askCtl = new AbortController();
+  try {
+    const { text, truncated } = await askSampler([{role:'user', content:preamble}, ...recent], {
+      cache:false, signal:askCtl.signal, onText:({text}) => { out.textContent = text; }
+    });
+    out.textContent = text;
+    askTurns.push({role:'assistant', content:text});
+    if(truncated) $('askNote').textContent = 'That answer was cut short. Ask a narrower question for the rest.';
+  } catch(e){
+    askTurns.pop();
+    if(e && e.code === 'cancelled'){ out.textContent = (e.text || '') + (e.text ? '\n\n(stopped)' : 'Stopped.'); }
+    else {
+      out.textContent = e && e.text ? e.text : '';
+      $('askNote').textContent = (e && ASK_ERRORS[e.code]) || 'Something went wrong reaching Claude. Try again in a moment.';
+      if(!out.textContent) out.parentElement.remove();
+      if(e && ['not_granted','sampling_disabled','capability_disabled'].includes(e.code)) askBlocked = true;
+    }
+  } finally {
+    askBusy = false; askCtl = null; $('askStop').hidden = true;
+    $('askGo').disabled = askBlocked;
+    $('askClear').hidden = !askTurns.length;
+  }
+}
+
+
+/* ================= 2. enough data? (small-sample guard) ================= */
+const median = a => { const s = a.filter(x => x != null && isFinite(x)).sort((x,y) => x - y); if(!s.length) return null; const m = Math.floor(s.length/2); return s.length % 2 ? s[m] : (s[m-1] + s[m]) / 2; };
+function dataProblems(c){
+  const L = c.sb && c.sb.lifetime; if(!L) return ['no results logged'];
+  const p = [];
+  if(L.showed < 0 || L.booked < 0 || L.leads < 0) p.push('negative numbers logged');
+  if(L.booked > L.leads) p.push('more booked than leads');
+  if(L.showed > L.booked) p.push('more showed than booked');
+  return p;
+}
+function thinReason(c){
+  const L = c.sb && c.sb.lifetime;
+  if(!L) return 'No results logged';
+  const r = [];
+  if(L.months < RULES.minMonths) r.push(`${L.months} ${L.months===1?'month':'months'} logged (need ${RULES.minMonths})`);
+  if(L.leads < RULES.minLeads) r.push(`${L.leads} leads (need ${RULES.minLeads})`);
+  return r.join(', ');
+}
+const enoughData = c => !!(c.sb && c.sb.lifetime) && !thinReason(c) && !dataProblems(c).length;
+
+/* ================= 1. bottleneck finder ================= */
+const STEPS = [
+  {k:'flow', label:'Lead flow', what:'leads per month', rate:L => L.leads / Math.max(1, L.months), fmt:v => Math.round(v) + '/mo',
+   fix:'Not enough leads coming in. Look at budget, the offer, and creative fatigue, and check cost per lead against similar gyms.'},
+  {k:'book', label:'Booking', what:'leads that book', rate:L => L.leads > 0 ? L.booked / L.leads : null, fmt:v => Math.round(v*100) + '%',
+   fix:'Leads are not turning into appointments. Check speed-to-lead, the concierge follow-up sequence, and how easy it is to book.'},
+  {k:'show', label:'Show rate', what:'appointments that show', rate:L => L.booked > 0 ? L.showed / L.booked : null, fmt:v => Math.round(v*100) + '%',
+   fix:'People book but do not come in. Tighten reminders and confirmation calls, and shorten the time between booking and the visit.'},
+  {k:'close', label:'Closing*', what:'shows that sign up*', rate:L => L.showed > 0 ? L.closed / L.showed : null, fmt:v => Math.round(v*100) + '%',
+   fix:'Visitors are not joining. Coach the gym on the intro class, the sales conversation and the membership offer.'}
+];
+let BENCH = null;
+function benchmarks(){
+  const pool = S.clients.filter(c => !isGone(c) && enoughData(c));
+  const b = {n: pool.length};
+  STEPS.forEach(s => b[s.k] = median(pool.map(c => s.rate(c.sb.lifetime))));
+  return b;
+}
+function bottleneckOf(c){
+  if(!c.sb || !c.sb.lifetime) return {status:'none'};
+  const probs = dataProblems(c); if(probs.length) return {status:'bad', why:probs.join(', ')};
+  const thin = thinReason(c); if(thin) return {status:'thin', why:thin};
+  const B = BENCH || (BENCH = benchmarks());
+  if(B.n < 5) return {status:'thin', why:'Fewer than 5 clients with enough data to compare against'};
+  const L = c.sb.lifetime;
+  const steps = STEPS.map(s => { const v = s.rate(L), m = B[s.k]; return Object.assign({}, s, {v, m, ratio: (v != null && m) ? v / m : null}); }).filter(s => s.ratio != null);
+  const worst = steps.slice().sort((a,b) => a.ratio - b.ratio)[0];
+  if(!worst || worst.ratio >= 0.85) return {status:'clear', steps};
+  return {status:'found', step:worst, steps};
+}
+
+function bottleneckPanelHTML(c){
+  if(isGone(c) || !c.sb) return '';
+  const b = bottleneckOf(c);
+  if(b.status === 'none') return '';
+  const head = '<h3>Biggest bottleneck</h3>';
+  if(b.status === 'bad') return `<div class="log">${head}<p class="empty">Can't tell: the logged results look wrong (${esc(b.why)}). Fix them in the scoreboard first.</p></div>`;
+  if(b.status === 'thin') return `<div class="log">${head}<p class="empty">Not enough data yet: ${esc(b.why)}. Rates this early swing a lot by chance.</p></div>`;
+  const rows = b.steps.map(s => `<tr${b.step && s.k === b.step.k ? ' class="bn-hit"' : ''}><td>${esc(s.label)}</td><td>${s.fmt(s.v)}</td><td>${s.fmt(s.m)}</td><td>${Math.round(s.ratio*100)}%</td></tr>`).join('');
+  return `<div class="log">${head}
+    ${b.status === 'found' ? `<p style="margin:0 0 6px"><span class="tchip red">${esc(b.step.label)}</span> ${esc(b.step.what)} is ${b.step.fmt(b.step.v)} against a typical ${b.step.fmt(b.step.m)}.</p><p style="margin:0 0 8px;font-size:14px">${esc(b.step.fix)}</p>` : '<p style="margin:0 0 8px;font-size:14px">No clear bottleneck: every step is within 15% of typical or better.</p>'}
+    <table class="mini-t"><thead><tr><th>Step</th><th>This gym</th><th>Typical</th><th>vs typical</th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="empty" style="margin:4px 0 0;font-size:12px">Typical = the median of ${(BENCH||{}).n} active clients with enough data. All logged months. *Closed includes every sign-up from the MMS.</p></div>`;
+}
+
+/* ================= 4. test log ================= */
+const TEST_AREAS = ['Ad offer','Ad creative','Landing page','Concierge script','Follow-up sequence','Booking flow','Pricing or membership offer','Other'];
+const TEST_RESULTS = {worked:'Worked', didnt:"Didn't work", unclear:'Inconclusive'};
+function testsPanelHTML(c){
+  if(isGone(c)) return '';
+  const tests = (c.tests || []).slice().sort((a,b) => (b.start||'').localeCompare(a.start||''));
+  return `<div class="log"><h3>Tests</h3>
+    ${tests.length ? tests.map(t => `<div class="entry"><div class="meta"><span class="kind ${t.result==='worked'?'win':t.result==='didnt'?'issue':''}">${esc(t.result ? TEST_RESULTS[t.result] : 'Running')}</span><span>${esc(t.area)}</span><span>${esc(fmtDate(t.start))}${t.end?' to '+esc(fmtDate(t.end)):''}</span></div>
+      <p><b>${esc(t.change)}</b>${t.metric?`<br><small style="color:var(--muted)">Watching: ${esc(t.metric)}</small>`:''}${t.notes?`<br>${esc(t.notes)}`:''}</p>
+      ${canWrite && !t.result ? `<div class="quick" style="margin:4px 0 0">${Object.entries(TEST_RESULTS).map(([k,v]) => `<button class="btn small" data-tres="${esc(t.id)}" data-r="${k}">${v}</button>`).join('')}</div>` : ''}</div>`).join('') : '<p class="empty">No tests logged. Record changes like a new offer or script, so you can tell later whether they worked.</p>'}
+    ${canWrite ? `<button class="btn small" id="tAddBtn" style="margin-top:6px">Log a test</button>
+      <div id="tForm" hidden class="fieldset" style="padding:12px;margin-top:8px">
+        <div class="two"><label class="field"><span>Area</span><select id="tArea">${TEST_AREAS.map(a=>`<option>${esc(a)}</option>`).join('')}</select></label>
+          <label class="field"><span>Started</span><input type="date" id="tStart" value="${TODAY}"></label></div>
+        <label class="field"><span>What changed</span><input id="tChange" placeholder="e.g. Switched to a free-week offer"></label>
+        <label class="field"><span>What should improve</span><input id="tMetric" placeholder="e.g. Booking rate, cost per lead"></label>
+        <button class="btn small primary" id="tSave">Save test</button></div>` : ''}</div>`;
+}
+function wireClientExtras(c){
+  if($('tAddBtn')) $('tAddBtn').addEventListener('click', () => { $('tForm').hidden = !$('tForm').hidden; if(!$('tForm').hidden) $('tChange').focus(); });
+  if($('tSave')) $('tSave').addEventListener('click', async () => {
+    const change = $('tChange').value.trim(); if(!change){ $('tChange').focus(); return toast('Describe what changed.'); }
+    const t = {id: uid(), area:$('tArea').value, start:$('tStart').value || TODAY, change, metric:$('tMetric').value.trim(), result:'', end:''};
+    if(await patchClient(c.id, {tests:(c.tests||[]).concat([t])})){ addLog(c.id, 'note', `Test started: ${t.area}, ${t.change}`); toast('Test logged'); }
+  });
+  $('panel').querySelectorAll('[data-tres]').forEach(b => b.addEventListener('click', async () => {
+    const notes = prompt('Any notes on the result? (optional)') || '';
+    const tests = (c.tests||[]).map(t => t.id === b.dataset.tres ? Object.assign({}, t, {result:b.dataset.r, end:TODAY, notes}) : t);
+    const t = tests.find(x => x.id === b.dataset.tres);
+    if(await patchClient(c.id, {tests})){ addLog(c.id, b.dataset.r === 'worked' ? 'win' : 'note', `Test result (${TEST_RESULTS[b.dataset.r]}): ${t.change}${notes?` (${notes})`:''}`); toast('Result saved'); }
+  }));
+  if($('pReport')) $('pReport').addEventListener('click', () => openReport(c));
+}
+function testsInsightsHTML(B){
+  const all = []; B.all.forEach(c => (c.tests||[]).forEach(t => all.push(Object.assign({c}, t))));
+  const running = all.filter(t => !t.result).sort((a,b) => (a.start||'').localeCompare(b.start||''));
+  const done = all.filter(t => t.result);
+  const byArea = {}; done.forEach(t => { const a = byArea[t.area] = byArea[t.area] || {n:0, worked:0}; a.n++; if(t.result === 'worked') a.worked++; });
+  return `<section class="card"><h2>Tests</h2><p class="sub">Changes being tried across clients, and which kinds work.</p>
+    <div class="stats"><div class="stat"><b>${running.length}</b><span>Running</span></div><div class="stat"><b>${done.length}</b><span>Finished</span></div><div class="stat"><b>${done.length ? Math.round(100*done.filter(t=>t.result==='worked').length/done.length)+'%' : '–'}</b><span>Worked</span></div></div>
+    ${running.length ? `<ul class="ilist">${running.slice(0,8).map(t => `<li><button data-go="${esc(t.c.id)}">${mini(t.c)}<span class="nm2">${esc(t.c.name)}: ${esc(t.change)}</span><span class="why">${esc(t.area)}, ${days(t.start, TODAY)}d</span></button></li>`).join('')}</ul>` : '<p class="empty">No tests running. Log one from a client\'s panel.</p>'}
+    ${Object.keys(byArea).length ? `<table><thead><tr><th>Area</th><th>Finished</th><th>Worked</th></tr></thead><tbody>${Object.entries(byArea).map(([k,v]) => `<tr><td>${esc(k)}</td><td>${v.n}</td><td>${v.worked}</td></tr>`).join('')}</tbody></table>` : ''}</section>`;
+}
+function bottleneckInsightsHTML(B){
+  BENCH = benchmarks();
+  const res = B.active.filter(c => c.sb).map(c => ({c, b: bottleneckOf(c)}));
+  const found = res.filter(x => x.b.status === 'found');
+  const counts = {}; found.forEach(x => counts[x.b.step.label] = (counts[x.b.step.label]||0) + 1);
+  const thin = res.filter(x => x.b.status === 'thin' || x.b.status === 'none').length, bad = res.filter(x => x.b.status === 'bad');
+  return `<section class="card wide"><h2>Bottlenecks</h2><p class="sub">Each client's weakest funnel step compared with the typical client (median of ${BENCH.n} with enough data). Fix the bottleneck first. Improving other steps won't move results much.</p>
+    <div class="stats">${STEPS.map(s => `<div class="stat"><b>${counts[s.label]||0}</b><span>${esc(s.label)}</span></div>`).join('')}<div class="stat"><b>${res.filter(x=>x.b.status==='clear').length}</b><span>No clear bottleneck</span></div><div class="stat"><b>${thin}</b><span>Not enough data</span></div></div>
+    <p class="empty" style="margin:0 0 8px">Typical rates: ${STEPS.map(s => `${esc(s.label)} ${BENCH[s.k]!=null?s.fmt(BENCH[s.k]):'–'}`).join(', ')}.</p>
+    ${found.length ? `<ul class="ilist">${found.sort((a,b) => a.b.step.ratio - b.b.step.ratio).map(x => `<li><button data-go="${esc(x.c.id)}">${mini(x.c)}<span class="nm2">${esc(x.c.name)}</span><span class="why">${esc(x.b.step.label)}: ${x.b.step.fmt(x.b.step.v)} vs ${x.b.step.fmt(x.b.step.m)}</span></button></li>`).join('')}</ul>` : ''}
+    ${bad.length ? `<p class="empty">Skipped because the logged results look wrong: ${bad.map(x => esc(x.c.name)).join(', ')}.</p>` : ''}
+    <p class="empty" style="font-size:12px">*Closed is total sign-ups from the MMS, including family members, walk-ins, referrals and reactivations.</p></section>`;
+}
+
+/* ================= 3. monthly client report ================= */
+function reportData(c){
+  const sb = c.sb || {}, L = sb.lifetime, A = sb.latest, b = bottleneckOf(c);
+  const per = L ? {leads:L.leads/L.months, booked:L.booked/L.months, showed:L.showed/L.months, closed:L.closed/L.months, adSpend:L.adSpend/L.months} : null;
+  const rate = (n, d) => d > 0 ? n / d : null;
+  const metrics = [];
+  if(A && per){
+    const m = (label, cur, avg, higherBetter, fmt) => metrics.push({label, cur, avg, higherBetter, fmt, change: (avg && cur != null) ? (cur - avg) / avg : null});
+    const n0 = v => Math.round(v).toLocaleString('en-US'), p0 = v => Math.round(v*100) + '%', d2 = v => '$' + v.toFixed(2);
+    m('Leads', A.leads, per.leads, true, n0); m('Booked', A.booked, per.booked, true, n0); m('Showed', A.showed, per.showed, true, n0); m('Closed*', A.closed, per.closed, true, n0);
+    m('Booking rate', rate(A.booked, A.leads), rate(L.booked, L.leads), true, p0); m('Show rate', rate(A.showed, A.booked), rate(L.showed, L.booked), true, p0); m('Close rate*', rate(A.closed, A.showed), rate(L.closed, L.showed), true, p0);
+    m('Cost per lead', rate(A.adSpend, A.leads), rate(L.adSpend, L.leads), false, d2); m('Ad spend per sign-up*', rate(A.adSpend, A.closed), rate(L.adSpend, L.closed), false, d2);
+  }
+  const good = metrics.filter(x => x.change != null && (x.higherBetter ? x.change >= 0.1 : x.change <= -0.1));
+  const bad = metrics.filter(x => x.change != null && (x.higherBetter ? x.change <= -0.1 : x.change >= 0.1));
+  const tests = (c.tests||[]).filter(t => !t.result || (t.end && days(t.end, TODAY) <= 45));
+  return {c, L, A, per, metrics, good, bad, b, tests, enough: enoughData(c), thin: thinReason(c)};
+}
+function reportHTML(d, narrative){
+  const c = d.c, s = svcById(c.serviceId);
+  const chg = x => x.change == null ? '' : `${x.change >= 0 ? '+' : '−'}${Math.abs(Math.round(x.change*100))}%`;
+  return `<article class="report" id="reportDoc">
+    <header><div class="rp-badge">GS</div><div><h1>${esc(c.name)}</h1><p>Monthly results, ${d.A ? 'August 2026' : 'latest logged results'}. Prepared by Ground Standard.</p></div></header>
+    ${narrative ? `<section><h2>Summary</h2><p class="rp-narr">${esc(narrative)}</p></section>` : ''}
+    ${d.A ? `<section><h2>This month vs. your average month</h2>
+      <table><thead><tr><th></th><th>August</th><th>Average month</th><th>Change</th></tr></thead><tbody>
+      ${d.metrics.map(x => `<tr><td>${esc(x.label)}</td><td>${x.cur!=null?x.fmt(x.cur):'–'}</td><td>${x.avg!=null?x.fmt(x.avg):'–'}</td><td class="${d.good.includes(x)?'rp-up':d.bad.includes(x)?'rp-down':''}">${chg(x)}</td></tr>`).join('')}
+      </tbody></table><p class="rp-note">Average month = all ${d.L.months} logged months. Changes under 10% are treated as normal variation.</p></section>
+      <section class="rp-two"><div><h2>What improved</h2>${d.good.length ? `<ul>${d.good.map(x => `<li>${esc(x.label)}: ${x.fmt(x.cur)} (${chg(x)})</li>`).join('')}</ul>` : '<p>Nothing moved more than 10% in the right direction.</p>'}</div>
+        <div><h2>What slipped</h2>${d.bad.length ? `<ul>${d.bad.map(x => `<li>${esc(x.label)}: ${x.fmt(x.cur)} (${chg(x)})</li>`).join('')}</ul>` : '<p>Nothing slipped more than 10%.</p>'}</div></section>`
+    : `<section><h2>Results</h2><p>${d.L ? `No results are logged for August yet. Across ${d.L.months} logged months: ${d.L.leads.toLocaleString('en-US')} leads, ${d.L.booked} booked, ${Math.max(0,d.L.showed)} showed and ${d.L.closed} closed*, on ${money(d.L.adSpend)} of ad spend.` : 'No results have been logged for this client yet.'}</p></section>`}
+    <section><h2>The one thing to fix</h2>${d.b.status === 'found' ? `<p><b>${esc(d.b.step.label)}.</b> ${esc(d.b.step.what)} is ${d.b.step.fmt(d.b.step.v)}, against a typical ${d.b.step.fmt(d.b.step.m)} across GS clients.</p><p>${esc(d.b.step.fix)}</p>` : d.b.status === 'clear' ? '<p>No single step stands out: every part of the funnel is close to typical or better. The focus is volume and consistency.</p>' : `<p>Not enough reliable data yet to name one (${esc(d.b.why || 'no results logged')}).</p>`}</section>
+    <section><h2>Return on ad spend</h2>${d.L && d.L.closed > 0 ? `<p>Across all logged months, every ${money(d.L.adSpend / d.L.closed)} of ad spend has produced one new sign-up*. That is ${Math.round(d.L.closed / d.L.adSpend * 1000)} sign-ups per $1,000.${d.L.avgGymRevenue ? ` The gym reports about ${money(d.L.avgGymRevenue)} in monthly revenue on average.` : ''}</p>` : '<p>Not enough logged results to calculate yet.</p>'}${d.thin ? `<p class="rp-note">Early numbers: ${esc(d.thin)}. Expect these to move as more months come in.</p>` : ''}</section>
+    ${d.tests.length ? `<section><h2>What we're testing</h2><ul>${d.tests.map(t => `<li>${esc(t.change)} (${esc(t.area)}, ${t.result ? esc(TEST_RESULTS[t.result]).toLowerCase() : 'running since ' + esc(fmtDate(t.start))})</li>`).join('')}</ul></section>` : ''}
+    <p class="rp-note">*Closed counts every new member from the gym's membership system, including family members, walk-ins, referrals and reactivations, so close rate and cost per sign-up are approximate.</p>
+  </article>`;
+}
+function reportText(d, narrative){
+  const el = document.createElement('div'); el.innerHTML = reportHTML(d, narrative);
+  return el.innerText.replace(/\n{3,}/g, '\n\n');
+}
+let reportNarr = '';
+function openReport(c){
+  const d = reportData(c); reportNarr = '';
+  let wrap = $('reportWrap');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id = 'reportWrap'; document.body.appendChild(wrap); }
+  const draw = () => {
+    wrap.innerHTML = `<div class="scrim" id="rpScrim"></div><section class="drawer report-drawer" role="dialog" aria-modal="true" aria-label="Monthly report">
+      <div class="d-head"><h2>Monthly report</h2><button class="btn small" id="rpClose">Close</button></div>
+      <div class="rp-bar">${askSampler ? '<button class="btn small primary" id="rpDraft">Draft a summary with Claude</button>' : ''}<button class="btn small" id="rpCopy">Copy as text</button><button class="btn small" id="rpDl">Download</button></div>
+      <div class="d-body">${reportHTML(d, reportNarr)}</div></section>`;
+    $('rpClose').onclick = $('rpScrim').onclick = () => { wrap.innerHTML = ''; };
+    $('rpCopy').onclick = async () => { try { await navigator.clipboard.writeText(reportText(d, reportNarr)); toast('Report copied'); } catch(e){ toast('Copy failed. Select the text and copy it instead.'); } };
+    $('rpDl').onclick = () => saveFile(`${c.name.replace(/[^\w]+/g,'-')}-report-${TODAY}.html`, `<!doctype html><meta charset="utf-8"><title>${esc(c.name)} report</title><style>${REPORT_CSS}</style>${reportHTML(d, reportNarr)}`, 'text/html');
+    if($('rpDraft')) $('rpDraft').onclick = async () => {
+      const btn = $('rpDraft'); btn.disabled = true; btn.textContent = 'Writing…';
+      const facts = {client:c.name, period:d.A ? 'August 2026' : 'all logged months', metricsVsAverage:d.metrics.map(x => ({metric:x.label, thisMonth:x.cur, averageMonth:x.avg, change:x.change})),
+        improved:d.good.map(x=>x.label), slipped:d.bad.map(x=>x.label), bottleneck:d.b.status==='found' ? {step:d.b.step.label, value:d.b.step.v, typical:d.b.step.m, fix:d.b.step.fix} : d.b.status,
+        lifetime:d.L, tests:d.tests.map(t => ({change:t.change, area:t.area, result:t.result||'running'})), dataCaveat:d.thin || ''};
+      try {
+        const { text } = await askSampler(`Write a short summary (3 to 5 sentences, plain text, no lists or headings) for the top of a monthly marketing results report that Ground Standard sends to a martial arts gym owner. Be warm and direct: say what went well, what needs work, and the one thing to focus on next month. Use only the facts below and keep numbers exact. "Closed" counts every new member including family members, walk-ins, referrals and reactivations. If the data is thin, say so briefly.\n\nFACTS:\n${JSON.stringify(facts)}`, {cache:false});
+        reportNarr = text.trim(); draw();
+      } catch(e){ btn.disabled = false; btn.textContent = 'Draft a summary with Claude'; toast(ASK_ERRORS[e && e.code] || 'Claude could not write the summary. Try again.'); }
+    };
+  };
+  draw();
+}
+function saveFile(filename, data, type){
+  if(typeof downloads !== 'undefined' && downloads){ downloads.save({filename, data}).then(() => toast('Saved')).catch(e => { if(e && e.code !== 'cancelled' && e.code !== 'declined') toast('Could not save the file.'); }); return; }
+  const url = URL.createObjectURL(new Blob([data], {type})); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); toast('Downloaded');
+}
+const REPORT_CSS = `body{font-family:Barlow,'Segoe UI',Arial,sans-serif;color:#0d1b2a;max-width:760px;margin:24px auto;padding:0 16px}.report header{display:flex;gap:14px;align-items:center;border-bottom:3px solid #F5A623;padding-bottom:12px;margin-bottom:12px}.rp-badge{width:44px;height:44px;border-radius:50%;background:#F5A623;display:grid;place-items:center;font-weight:800}.report h1{margin:0;font-size:26px}.report h2{font-size:17px;margin:16px 0 6px}.report table{border-collapse:collapse;width:100%;font-size:14px}.report th,.report td{text-align:left;padding:5px 8px;border-bottom:1px solid #d6dde6}.rp-up{color:#21612a;font-weight:600}.rp-down{color:#c2343f;font-weight:600}.rp-note{font-size:12px;color:#5b6b7c}.rp-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}`;
 
 /* ================= boot ================= */
 setView(ui.view);
@@ -1955,6 +2473,7 @@ renderAll(true);
     B = createBackend(window.GRAND_CAST_CONFIG || {});
     const info = await B.init();
     canWrite = !!info.canWrite; myId = info.userId || null; needsSignIn = !!info.needsSignIn;
+    askSampler = typeof B.sample === 'function' ? B.sample : null;
   } catch(e){ console.error(e); B = null; loadError = 'Could not connect to the database. Check GRAND_CAST_CONFIG at the top of this file.'; renderChrome(); return; }
   if(needsSignIn){ renderAll(false); return; }
   let first = true;

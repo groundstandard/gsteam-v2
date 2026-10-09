@@ -184,6 +184,9 @@ scoreboard at **/grand-cast/**, on the scoreboard's own Supabase project and sig
 - Insights scorecard and Health rules (Kurt's fifth handoff, Oct 9, `handoff-5\`): one more table, `gc_settings`
   (migration 005), for alert thresholds and scorecard targets. The handoff opened it to every signed-in user; ours
   uses `gc_can_use()` like the other Grand Cast tables. No data changed in that handoff.
+- Test log (Kurt's seventh handoff, Oct 10, `handoff-7\`): `tests` jsonb on `gc_clients` (migration 006). The page's
+  "Ask about your data" panel stays hidden: it needs a `sample` method in the adapter backed by a server route to the
+  Anthropic API, which has not been built.
 
 ## Working on v1 and v2 together (from 2026-10-08)
 
