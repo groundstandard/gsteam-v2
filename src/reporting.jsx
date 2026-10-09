@@ -54,17 +54,44 @@ function rptWindow(period) {
 
 // ── Small shared pieces ───────────────────────────────────────────────────
 
+// The page around every reporting section: room at the sides, and at the bottom for the phone's floating
+// tab bar, which otherwise covers the last rows.
+const RPT_PAGE = { padding: '12px 16px 112px', minWidth: 0 };
+
+// Filters in an even grid: two to a row on a phone, side by side on a wider screen.
 function RptControls({ theme, children }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+    <div style={{
+      display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+      gap: 8, marginBottom: 12, maxWidth: 720,
+    }}>
       {children}
     </div>
   );
 }
 
+// Headline numbers: two to a row on a phone, stretched across the row when there is room.
+function RptStats({ children }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8, marginBottom: 16 }}>
+      {children}
+    </div>
+  );
+}
+
+// The section's name and the window it covers, the same on every reporting screen.
+function RptHeader({ theme, label, children }) {
+  return (
+    <>
+      <SectionLabel theme={theme}>{label}</SectionLabel>
+      <div style={{ fontSize: 12, color: theme.inkMuted, marginTop: 4, marginBottom: 12 }}>{children}</div>
+    </>
+  );
+}
+
 function rptSelectStyle(theme) {
   return {
-    appearance: 'none', padding: '8px 28px 8px 12px',
+    appearance: 'none', padding: '9px 28px 9px 12px', width: '100%', minWidth: 0,
     background: theme.surface, color: theme.ink,
     border: `1px solid ${theme.rule}`, borderRadius: 8,
     fontSize: 13, fontFamily: 'inherit', outline: 'none', cursor: 'pointer',
@@ -162,7 +189,7 @@ function RptStat({ theme, label, value, sub, muted, trend, delta, deltaLabel, up
 
   return (
     <div style={{
-      flex: '1 1 130px', minWidth: 130,
+      minWidth: 0,
       background: theme.surface, border: `1px solid ${theme.rule}`,
       borderRadius: theme.radius || 10, padding: '12px 14px',
     }}>
@@ -246,39 +273,70 @@ function useNarrow(breakpoint = 720) {
 }
 
 function RptCardRow({ theme, columns, title, get, strong }) {
+  const text = columns.filter(c => c.align !== 'right');
+  const nums = columns.filter(c => c.align === 'right');
+  const sub = text.map(c => ({ c, v: get(c) })).filter(x => x.v != null && x.v !== '' && x.v !== '—');
   return (
     <div style={{
-      border: `1px solid ${theme.rule}`, borderRadius: theme.radius || 10,
+      border: `1px solid ${theme.rule}`, borderRadius: theme.radius || 10, minWidth: 0,
       background: strong ? (theme.bgElev || theme.surface) : theme.surface, padding: '12px 14px',
     }}>
-      <div style={{ fontSize: 14, fontWeight: 700, color: theme.ink, marginBottom: 8 }}>{title}</div>
-      <div style={{ display: 'grid', gap: 5 }}>
-        {columns.map(c => {
-          const value = get(c);
-          if (value == null || value === '') return null;
-          return (
-            <div key={c.key} style={{
-              display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12,
-            }}>
-              <span style={{
-                fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase',
-                color: theme.inkMuted,
-              }}>{c.label}</span>
-              <span style={{
-                fontSize: 13, textAlign: 'right', fontWeight: strong ? 700 : 400,
-                fontVariantNumeric: c.align === 'right' ? 'tabular-nums' : 'normal',
-                color: !strong && c.muted ? theme.inkMuted : theme.ink,
-              }}>{value}</span>
-            </div>
-          );
-        })}
-      </div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: theme.ink, overflowWrap: 'anywhere' }}>{title}</div>
+      {sub.length ? (
+        <div style={{ fontSize: 12, color: theme.inkMuted, marginTop: 3, overflowWrap: 'anywhere' }}>
+          {sub.map((x, i) => <React.Fragment key={x.c.key}>{i ? ' · ' : ''}{x.v}</React.Fragment>)}
+        </div>
+      ) : null}
+      {nums.length ? (
+        <div style={{
+          // Three across, or two by two when there are four, so a row never ends with one stray number.
+          display: 'grid', gridTemplateColumns: `repeat(${nums.length <= 3 ? nums.length : (nums.length === 4 ? 2 : 3)}, minmax(0, 1fr))`,
+          gap: '10px 12px', marginTop: 10,
+        }}>
+          {nums.map(c => {
+            const value = get(c);
+            return (
+              <div key={c.key} style={{ minWidth: 0 }}>
+                <div style={{
+                  fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase',
+                  color: theme.inkMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>{c.label}</div>
+                <div style={{
+                  fontSize: 14, marginTop: 2, fontWeight: strong ? 700 : 600, fontVariantNumeric: 'tabular-nums',
+                  color: theme.ink, overflowWrap: 'anywhere',
+                }}>{value == null || value === '' ? '—' : value}</div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }
 
+// Width of the element itself, not the window: inside the desktop sidebar layout, or the phone-sized
+// frame on a tablet, the space a table gets is far narrower than the window.
+function useRptWidth(ref) {
+  const [w, setW] = React.useState(null);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(entries => setW(entries[0].contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return w;
+}
+
 function RptTable({ theme, columns, rows, footer, empty }) {
-  const narrow = useNarrow();
+  const ref = React.useRef(null);
+  const width = useRptWidth(ref);
+  const windowNarrow = useNarrow();
+  const narrow = width == null ? windowNarrow : width < 640;
+  return <div ref={ref} style={{ minWidth: 0 }}>{rptTableBody({ theme, columns, rows, footer, empty, narrow })}</div>;
+}
+
+function rptTableBody({ theme, columns, rows, footer, empty, narrow }) {
   if (!rows.length) {
     return <div style={{ fontSize: 13, color: theme.inkMuted, padding: '16px 4px' }}>{empty}</div>;
   }
@@ -418,12 +476,11 @@ function LeadsSection({ state, theme, navigate }) {
   const stage = (l) => l.signedAt ? 'Signed' : l.showedAt ? 'Showed' : l.bookedAt ? 'Booked' : l.lostAt ? 'Lost' : 'New';
 
   return (
-    <div style={{ padding: 16 }}>
-      <SectionLabel theme={theme}>Leads</SectionLabel>
-      <div style={{ fontSize: 12, color: theme.inkMuted, marginTop: 4, marginBottom: 12 }}>
+    <div style={RPT_PAGE}>
+      <RptHeader theme={theme} label="Leads">
         {win.label}
         {rows === null ? ' · loading…' : ` · ${leads.length} lead${leads.length === 1 ? '' : 's'}`}
-      </div>
+      </RptHeader>
 
       <RptSyncNote theme={theme} runs={runs} source="ghl" label="GoHighLevel sync" />
 
@@ -440,7 +497,7 @@ function LeadsSection({ state, theme, navigate }) {
         <div style={{ fontSize: 13, color: '#C6483C', marginBottom: 12 }}>Could not load leads: {error}</div>
       ) : null}
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+      <RptStats>
         <RptStat theme={theme} label="Leads"  value={rows === null ? '—' : leads.length} muted={!leads.length}
                  trend={rptSeries(leads, l => l.createdAt, win)} />
         <RptStat theme={theme} label="Booked" value={rows === null ? '—' : booked} sub={pct(booked)} muted={!booked}
@@ -449,7 +506,7 @@ function LeadsSection({ state, theme, navigate }) {
                  trend={rptSeries(leads.filter(l => l.showedAt), l => l.showedAt, win)} />
         <RptStat theme={theme} label="Signed" value={rows === null ? '—' : signed} sub={pct(signed)} muted={!signed}
                  trend={rptSeries(leads.filter(l => l.signedAt), l => l.signedAt, win)} />
-      </div>
+      </RptStats>
 
       {rows !== null && !leads.length ? (
         <RptNotConnected
@@ -621,12 +678,11 @@ function AdsSection({ state, theme, navigate }) {
   const num = (n) => Number(n || 0).toLocaleString();
 
   return (
-    <div style={{ padding: 16 }}>
-      <SectionLabel theme={theme}>Ad management</SectionLabel>
-      <div style={{ fontSize: 12, color: theme.inkMuted, marginTop: 4, marginBottom: 12 }}>
+    <div style={RPT_PAGE}>
+      <RptHeader theme={theme} label="Ad management">
         {win.label}
         {data === null ? ' · loading…' : ` · ${rows.length} ${level === 'adset' ? 'ad set' : 'campaign'}${rows.length === 1 ? '' : 's'}`}
-      </div>
+      </RptHeader>
 
       <RptSyncNote
         theme={theme} runs={runs}
@@ -656,14 +712,14 @@ function AdsSection({ state, theme, navigate }) {
         <div style={{ fontSize: 13, color: '#C6483C', marginBottom: 12 }}>Could not load ad metrics: {error}</div>
       ) : null}
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+      <RptStats>
         <RptStat theme={theme} label="Spend" value={data === null ? '—' : CABT_fmtMoney(total.spend)} muted={!total.spend}
                  trend={rptSeries(d.rows.filter(r => belongs(r.refId)), r => r.day, win, r => Number(r.spend || 0))} />
         <RptStat theme={theme} label="Leads" value={data === null ? '—' : num(total.leads)} muted={!total.leads}
                  trend={rptSeries(d.rows.filter(r => belongs(r.refId)), r => r.day, win, r => Number(r.leads || 0))} />
         <RptStat theme={theme} label="Cost / lead" value={totalCpl == null ? '—' : CABT_fmtMoney(totalCpl)} muted={totalCpl == null} />
         <RptStat theme={theme} label="CTR" value={totalCtr == null ? '—' : `${totalCtr.toFixed(2)}%`} sub={totalCtr == null ? null : `${num(total.clicks)} clicks`} muted={totalCtr == null} />
-      </div>
+      </RptStats>
 
       {data !== null && !rows.length ? (
         <RptNotConnected
@@ -800,16 +856,16 @@ function WebSection({ state, theme, navigate }) {
   const share = function (n) { return sourceTotal ? Math.round((n / sourceTotal) * 100) + '%' : '-'; };
 
   return (
-    <div>
+    <div style={RPT_PAGE}>
+      <RptHeader theme={theme} label="Website">{win.label}</RptHeader>
       <RptControls theme={theme}>
         <RptSelect theme={theme} value={period} onChange={setPeriod} options={RPT_PERIODS} ariaLabel="Period" />
         <RptSelect theme={theme} value={clientId} onChange={setClient} options={clientOptions} ariaLabel="Client" />
-        <span style={{ fontSize: 12, color: theme.inkMuted }}>{win.label}</span>
       </RptControls>
 
       {error ? <div style={{ fontSize: 12, color: '#C6483C', marginBottom: 10 }}>{error}</div> : null}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+      <RptStats>
         <RptStat theme={theme} label="Sessions" value={total.sessions.toLocaleString()}
                  trend={rptSeries(d.rows, r => r.day, win, r => Number(r.sessions || 0))} />
         <RptStat theme={theme} label="People" value={total.users.toLocaleString()}
@@ -820,7 +876,7 @@ function WebSection({ state, theme, navigate }) {
                  trend={rptSeries(d.rows, r => r.day, win, r => Number(r.mapViews || 0))} />
         <RptStat theme={theme} label="Calls" value={total.calls.toLocaleString()} sub="from the listing" />
         <RptStat theme={theme} label="Directions" value={total.directions.toLocaleString()} sub="from the listing" />
-      </div>
+      </RptStats>
 
       <h3 style={{ fontSize: 13, fontWeight: 700, color: theme.ink, margin: '18px 0 8px' }}>
         Where they came from
@@ -934,16 +990,16 @@ function SocialSection({ state, theme, navigate }) {
   const ig = platforms.instagram || { followers: 0, reach: 0 };
 
   return (
-    <div>
+    <div style={RPT_PAGE}>
+      <RptHeader theme={theme} label="Social">{win.label}</RptHeader>
       <RptControls theme={theme}>
         <RptSelect theme={theme} value={period} onChange={setPeriod} options={RPT_PERIODS} ariaLabel="Period" />
         <RptSelect theme={theme} value={clientId} onChange={setClient} options={clientOptions} ariaLabel="Client" />
-        <span style={{ fontSize: 12, color: theme.inkMuted }}>{win.label}</span>
       </RptControls>
 
       {error ? <div style={{ fontSize: 12, color: '#C6483C', marginBottom: 10 }}>{error}</div> : null}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+      <RptStats>
         <RptStat theme={theme} label="Facebook followers" value={fb.followers.toLocaleString()}
                  delta={fb.growth} deltaLabel={`over ${win.label.toLowerCase()}`}
                  trend={rptSeries(rows.filter(r => r.platform === 'facebook'), r => r.day, win, r => Number(r.followers || 0))} />
@@ -954,7 +1010,7 @@ function SocialSection({ state, theme, navigate }) {
                  trend={rptSeries(rows.filter(r => r.platform === 'instagram'), r => r.day, win, r => Number(r.followers || 0))} />
         <RptStat theme={theme} label="Instagram reach" value={ig.reach.toLocaleString()}
                  trend={rptSeries(rows.filter(r => r.platform === 'instagram'), r => r.day, win, r => Number(r.reach || 0))} />
-      </div>
+      </RptStats>
 
       <RptTable
         theme={theme}
