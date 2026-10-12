@@ -643,6 +643,9 @@ html[data-skin] .center circle:first-child{fill:var(--accent)}
 .fresh li{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
 .fresh .nm2{min-width:240px;flex:0 0 auto}
 .fresh .why{text-align:left;flex:1}
+
+.gp-tag{font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--board-ink,#fff);background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:0 8px}
+html[data-skin="ti"] .gp-tag{background:rgba(0,0,0,.08);border-color:rgba(0,0,0,.25)}
 </style>
 </head>
 <body>
@@ -746,14 +749,14 @@ function supabaseBackend(cfg){
     notice_on: nz(c.noticeOn), cancel_category: nz(c.cancelCategory), root_category: nz(c.rootCategory), root_reason: nz(c.rootReason),
     controllable: nz(c.controllable), contract_timing: nz(c.contractTiming), warned: nz(c.warned), first_warning_on: nz(c.firstWarningOn),
     competitor: nz(c.competitor), win_back: nz(c.winBack), win_back_on: nz(c.winBackOn), saves: c.saves || [],
-    sb: c.sb || null, ...(c.sb ? {scoreboard_id: c.sb.id} : {}), health_source: nz(c.healthSource), tests: c.tests || [], calls: c.calls || [], short_name: nz(c.shortName),
+    sb: c.sb || null, ...(c.sb ? {scoreboard_id: c.sb.id} : {}), health_source: nz(c.healthSource), tests: c.tests || [], calls: c.calls || [], short_name: nz(c.shortName), segment: nz(c.segment),
     updated_at: new Date().toISOString()
   });
   const FIELD = {name:'name', serviceId:'service_id', status:'status', since:'since', cancelledOn:'cancelled_on', cancelReason:'cancel_reason',
     cancelNote:'cancel_note', health:'health', lastCall:'last_call', lastContact:'last_contact', price:'price', manager:'manager', location:'location',
     notes:'notes', logo:'logo_url', logoAssetId:'logo_path', referredBy:'referred_by', referredByOther:'referred_by_other', addons:'addons',
     noticeOn:'notice_on', cancelCategory:'cancel_category', rootCategory:'root_category', rootReason:'root_reason', controllable:'controllable',
-    contractTiming:'contract_timing', warned:'warned', firstWarningOn:'first_warning_on', competitor:'competitor', winBack:'win_back', winBackOn:'win_back_on', saves:'saves', sb:'sb', healthSource:'health_source', tests:'tests', calls:'calls', shortName:'short_name'};
+    contractTiming:'contract_timing', warned:'warned', firstWarningOn:'first_warning_on', competitor:'competitor', winBack:'win_back', winBackOn:'win_back_on', saves:'saves', sb:'sb', healthSource:'health_source', tests:'tests', calls:'calls', shortName:'short_name', segment:'segment'};
   const fromClientRow = r => ({
     id: r.id, name: r.name, serviceId: r.service_id || '', status: r.status, since: r.since || '', cancelledOn: r.cancelled_on || '',
     cancelReason: r.cancel_reason || '', cancelNote: r.cancel_note || '', health: r.health || '', lastCall: r.last_call || '',
@@ -762,7 +765,7 @@ function supabaseBackend(cfg){
     addons: r.addons || [], noticeOn: r.notice_on || '', cancelCategory: r.cancel_category || '', rootCategory: r.root_category || '',
     rootReason: r.root_reason || '', controllable: r.controllable || '', contractTiming: r.contract_timing || '', warned: r.warned || '',
     firstWarningOn: r.first_warning_on || '', competitor: r.competitor || '', winBack: r.win_back || '', winBackOn: r.win_back_on || '',
-    saves: r.saves || [], sb: r.sb || null, healthSource: r.health_source || '', tests: r.tests || [], calls: r.calls || [], shortName: r.short_name || '', updatedAt: r.updated_at
+    saves: r.saves || [], sb: r.sb || null, healthSource: r.health_source || '', tests: r.tests || [], calls: r.calls || [], shortName: r.short_name || '', segment: r.segment || '', updatedAt: r.updated_at
   });
   const fromPlanRow = r => ({id:r.id, name:r.name, color:r.color, term:r.term||0, cadence:r.cadence||0, standard:!!r.standard, blurb:r.blurb||''});
   const fromLogRow = r => ({id:r.id, clientId:r.client_id, kind:r.kind, text:r.text||'', at:r.at, authorId:r.author_id||'', authorName:r.author_name||''});
@@ -937,6 +940,8 @@ const HEALTH = {
 const LOG_KINDS = {note:'Note', call:'Strategy call', contact:'Contact', win:'Win', issue:'Issue'};
 const PALETTE = ['#F5A623','#2A9D8F','#7C5CBF','#3A7BD5','#F4722B','#E63946','#4CAF50','#D16BA5','#5BC0EB','#9BC53D'];
 const REF = '#7FD1FF';
+/* READ-ONLY: the Grand Cast is a view of the scoreboard and Otter. Manual data entry is switched off. */
+const MANUAL_EDITS = true; // GS Team Scoreboard: on until the live scoreboard is read from our own tables
 /* ---- scoreboard (read from GS Team Scoreboard; stored on each client as c.sb) ---- */
 const SB_COLOR = {'on track':'#3FB950', 'watch':'#E3B341', 'at risk':'#F85149'};
 const SB_HEALTH = {'on track':'green', 'watch':'yellow', 'at risk':'red'};
@@ -993,7 +998,11 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Math.random().toString(36).slice(2,10);
 const svcById = id => S.services.find(s => s.id === id);
-const byId = id => S.clients.find(c => c.id === id);
+const byId = id => S.clients.find(c => c.id === id) || (S.hidden || []).find(c => c.id === id);
+const NON_MA = 'non-ma';
+const SEGMENTS = {'':'Martial arts gym', 'na':'Non-martial-arts, shown (left out of gym averages)', 'non-ma':'Non-martial-arts, hidden', 'diy':'DIY package, metrics not tracked (hidden)'};
+const isHiddenSeg = c => !!(c && (c.segment === 'non-ma' || c.segment === 'diy'));
+const inGymStats = c => !(c && c.segment);
 const money = n => '$' + Math.round(n).toLocaleString('en-US');
 const SHORT_OVERRIDES = {'Jean Jacques Machado Brazilian Jiu Jitsu Fresno':'JJM Fresno','Gracie Jiu Jitsu East San Jose':'Gracie San Jose','Jiu-Jitsu Hub':'JJ Hub','Jiu-Jitsu Modern':'JJ Modern','Gracie Farmington Valley Brazilian Jiu Jitsu':'Gracie Farmington','10th Planet Orlando (The Hive MMA)':'10th Planet Orlando'};
 function shortName(c){
@@ -1257,12 +1266,12 @@ function setView(v){
 }
 
 function renderChrome(){
-  $('editBtn').hidden = !canWrite;
+  $('editBtn').hidden = !(canWrite && MANUAL_EDITS);
   const n = $('notice');
   if(loadError){ n.hidden = false; n.textContent = loadError; }
   else if(needsSignIn){ n.hidden = false; n.innerHTML = `Sign in to see and edit clients. <input id="siEmail" type="email" placeholder="you@company.com" style="margin:0 6px;padding:5px 8px;border:1px solid var(--line);border-radius:6px"><button class="btn small" id="siGo">Email me a sign-in link</button>`;
     $('siGo').onclick = async () => { const em = $('siEmail').value.trim(); if(!em) return; try { await B.signIn(em); toast('Check your email for the sign-in link.', 5000); } catch(e){ toast('Sign-in failed: ' + (e.message||'try again')); } }; }
-  else if(S.clientsLoaded && !S.clients.length){ n.hidden = false; n.textContent = canWrite ? 'No clients yet. Use Manage clients to add your first one.' : 'No clients have been added yet.'; }
+  else if(S.clientsLoaded && !S.clients.length){ n.hidden = false; n.textContent = 'No clients yet.'; }
   else n.hidden = true;
 }
 
@@ -1454,7 +1463,7 @@ function renderGrid(){
     return `<button class="gp${gone?' gone':''}${selected===c.id?' sel':''}${related.has(c.id)?' rel':''}${dim?' dim':''}" data-id="${esc(c.id)}" aria-label="${esc(c.name)}${gone?', cancelled':''}">
       <span class="gp-ring" style="--ring:${esc(col)}" title="${esc(c.name)}">${c.logo?`<img src="${esc(c.logo)}" alt="">`:(() => { const sn = shortName(c), lw = Math.max(...sn.split(' ').map(w => w.length)), fs = lw >= 11 ? 11 : lw >= 9 ? 12.5 : sn.length <= 8 ? 15 : 13.5; return `<span class="gp-short" style="font-size:${fs}px">${esc(sn)}</span>`; })()}
         ${attn && ui.colorBy !== 'attention' ? `<span class="gp-badge" style="background:${attn===2?'#F85149':'#E3B341'}">!</span>` : ''}${ad && !gone ? `<span class="gp-badge gp-ad">+${ad}</span>` : ''}</span>
-      ${c.logo ? `<span class="gp-name">${esc(shortName(c))}</span>` : ''}<span class="gp-sub" title="${esc(c.name)}: ${esc(sub)}">${esc(sub)}</span></button>`;
+      ${c.logo ? `<span class="gp-name">${esc(shortName(c))}</span>` : ''}${c.segment === 'na' ? '<span class="gp-tag">Non-martial-arts</span>' : ''}<span class="gp-sub" title="${esc(c.name)}: ${esc(sub)}">${esc(sub)}</span></button>`;
   };
   g.innerHTML = `<svg class="gp-lines" id="gpLines" aria-hidden="true"></svg>` + L.hubs.map(h => {
     const items = (byKey[h.key] || []).slice().sort((a,b) => (a.st==='cancelled') - (b.st==='cancelled') || (asOf ? 0 : attentionLevel(b.c) - attentionLevel(a.c)) || a.c.name.localeCompare(b.c.name));
@@ -1593,14 +1602,14 @@ function showClientPanel(c){
   const r = byId(c.referredBy), rs = referralsOf(c.id), fl = flagsFor(c), ren = nextRenewal(c);
   const h = HEALTH[c.health||''] || HEALTH[''];
   openPanel(`<div style="display:flex;gap:14px;align-items:center">${logoHTML(c)}<div><h2>${esc(c.name)}</h2>
-      <span class="status ${gone?'off':'on'}">${gone?'Cancelled':'Active client'}</span>${c.sb && c.sb.contact ? ` <small style="color:var(--muted)">Contact: ${esc(c.sb.contact)}</small>` : ''}</div></div>
+      <span class="status ${gone?'off':'on'}">${gone?'Cancelled':'Active client'}</span>${c.segment === 'na' ? ' <span class="tchip">Non-martial-arts</span>' : ''}${c.sb && c.sb.contact ? ` <small style="color:var(--muted)">Contact: ${esc(c.sb.contact)}</small>` : ''}</div></div>
     ${panelSummaryHTML(c)}
     ${fl.length ? `<div class="flags">${fl.map(f=>`<div class="flag ${f.level}">${esc(f.text)}</div>`).join('')}</div>` : (gone ? '' : '<div class="flags"><div class="flag good">Nothing needs attention</div></div>')}
-    ${canWrite && !gone ? `<div class="quick"><button class="btn small" id="qContact">Log contact</button>
+    ${canWrite && MANUAL_EDITS && !gone ? `<div class="quick"><button class="btn small" id="qContact">Log contact</button>
       <select class="btn small" id="qHealth" aria-label="Set health"><option value="">Health: not set</option>${['green','yellow','red'].map(k=>`<option value="${k}" ${c.health===k?'selected':''}>Health: ${HEALTH[k].label}</option>`).join('')}</select></div>` : ''}
     <dl>
       <dt>Plan</dt><dd><span class="svcpill"><span class="dot" style="background:${esc(s?s.color:'#ccc')}"></span>${esc(s?s.name:'No plan')}</span></dd>
-      ${!gone?`<dt>Health</dt><dd><span class="hdot"><span class="dot" style="background:${h.color}"></span>${h.label}</span>${healthNote(c)?` <small style="color:var(--muted)">(${healthNote(c)})</small>`:''}${canWrite && c.healthSource==='manual' && c.sb && SB_HEALTH[c.sb.health] ? ` <button class="linkbtn" id="useSb">Use scoreboard (${esc(c.sb.health)})</button>` : ''}</dd>`:''}
+      ${!gone?`<dt>Health</dt><dd><span class="hdot"><span class="dot" style="background:${h.color}"></span>${h.label}</span>${healthNote(c)?` <small style="color:var(--muted)">(${healthNote(c)})</small>`:''}${canWrite && MANUAL_EDITS && c.healthSource==='manual' && c.sb && SB_HEALTH[c.sb.health] ? ` <button class="linkbtn" id="useSb">Use scoreboard (${esc(c.sb.health)})</button>` : ''}</dd>`:''}
       ${c.price?`<dt>Monthly price</dt><dd>${money(c.price)}/mo</dd>`:''}
       ${ren?`<dt>Next renewal</dt><dd>${esc(fmtDate(ren))} <small style="color:var(--muted)">(${s.term}-month term)</small></dd>`:''}
       ${c.lastContact?`<dt>Last contact</dt><dd>${esc(fmtDate(c.lastContact))}</dd>`:''}
@@ -1629,16 +1638,8 @@ function showClientPanel(c){
     ${bottleneckPanelHTML(c)}
     ${callsPanelHTML(c)}
     ${testsPanelHTML(c)}
-    ${gone && churnMissing(c).length ? `<div class="flags"><div class="flag amber">Churn details missing: ${esc(churnMissing(c).join(', '))}</div></div>` : ''}
-    ${canWrite?`<div class="quick"><button class="btn" id="pEdit">${gone && churnMissing(c).length ? 'Complete churn details' : 'Edit client'}</button>${!gone?'<button class="btn" id="pSave">Record a save attempt</button>':''}${!gone && c.sb ? '<button class="btn" id="pReport">Monthly report</button>' : ''}</div>
-      <div id="saveForm" hidden class="fieldset" style="padding:12px"><div class="two"><label class="field"><span>Offer made</span><select id="svOffer">${SAVE_OFFERS.map(o=>`<option>${esc(o)}</option>`).join('')}</select></label>
-        <label class="field"><span>Outcome</span><select id="svOutcome"><option value="saved">Saved</option><option value="downgraded">Saved with a downgrade</option></select></label></div>
-        <label class="field"><span>What was the risk?</span><input id="svNote" placeholder="e.g. threatened to cancel over lead quality"></label>
-        <button class="btn small primary" id="svGo">Save attempt</button> <small style="color:var(--muted)">If they cancel anyway, record it in the cancellation form.</small></div>`:''}
-    <div class="log"><h3>Activity</h3>
-      ${canWrite?`<div class="log-form"><textarea id="logText" placeholder="What happened? Calls, wins, issues, next steps"></textarea>
-        <div class="row2"><select id="logKind" aria-label="Entry type">${Object.entries(LOG_KINDS).filter(([k])=>k!=='call').map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><button class="btn small primary" id="logAdd">Add entry</button></div></div>`:''}
-      <div id="logList"><p class="empty">${B?'Loading activity…':'Activity is unavailable.'}</p></div></div>`);
+    ${!gone && c.sb ? '<div class="quick"><button class="btn" id="pReport">Monthly report</button></div>' : ''}
+`);
   if($('pEdit')) $('pEdit').addEventListener('click', () => openDrawer('clients', c.id));
   if($('pSave')) $('pSave').addEventListener('click', () => { $('saveForm').hidden = !$('saveForm').hidden; });
   if($('svGo')) $('svGo').addEventListener('click', async () => {
@@ -1657,7 +1658,6 @@ function showClientPanel(c){
     }
   });
   wireClientExtras(c);
-  watchLog(c.id);
   if(!isGone(c)) loadMonthly(c);
 }
 
@@ -1713,6 +1713,7 @@ const COLS = [
   {k:'churn', t:'Churn reason', v:c=>isGone(c)?churnLabel(churnOf(c).cat, churnOf(c).reason):''},
   {k:'ctrl', t:'Controllable', v:c=>isGone(c)?(churnOf(c).ctrl||'z'):''},
   {k:'lastcall', t:'Last call', v:c=>{ const x = latestCall(c); return x ? x.date : ''; }},
+  {k:'segment', t:'Type', v:c=>c.segment||''},
   {k:'cxon', t:'Cancelled on', v:c=>isGone(c)?(c.cancelledOn||''):''},
   {k:'gaps', t:'Data gaps', v:c=>gapsOf(c).length},
   {k:'ref', t:'Referred by', v:c=>(byId(c.referredBy)?.name||c.referredByOther||'').toLowerCase()},
@@ -1726,9 +1727,10 @@ const BUILTIN_VIEWS = [
   {id:'revenue', name:'Revenue', cols:['name','price','plan','tenure','ref','refs'], who:'active', sort:['price',-1]},
   {id:'churn', name:'Churn', cols:['name','cxon','churn','ctrl','tenure','price'], who:'cancelled', sort:['cxon',-1]},
   {id:'gaps', name:'Data gaps', cols:['name','status','gaps','health','score','leads'], who:'gaps', sort:['gaps',-1]},
-  {id:'all', name:'All columns', cols:null, who:'toggle', sort:null}
+  {id:'all', name:'All columns', cols:null, who:'toggle', sort:null},
+  {id:'nonma', name:'Hidden accounts', cols:['name','segment','status','price','since','manager'], who:'hidden', sort:['name',1]}
 ];
-const WHO_LABEL = {active:'Active clients', cancelled:'Cancelled clients', all:'All clients', gaps:'Active clients, and clients cancelled in the last 12 months, with missing data', toggle:'Uses the Show setting'};
+const WHO_LABEL = {active:'Active clients', cancelled:'Cancelled clients', all:'All clients', gaps:'Active clients with scoreboard data missing', hidden:'Non-martial-arts and DIY accounts (hidden from the map, Insights and metrics)', toggle:'Uses the Show setting'};
 let TEAM_VIEWS = [], colPickOpen = false, tableSortInit = false;
 const allViews = () => BUILTIN_VIEWS.concat(TEAM_VIEWS);
 const currentView = () => allViews().find(v => v.id === ui.tview) || BUILTIN_VIEWS[0];
@@ -1746,7 +1748,7 @@ function switchView(id){
 }
 function gapsOf(c){
   const g = [];
-  if(isGone(c)){ if(!c.cancelledOn || c.cancelledOn < addMonths(TODAY, -12)) return g; const m = churnMissing(c); if(m.length) g.push('Churn: ' + m.join(', ')); return g; }
+  if(isGone(c)) return g;
   if(!c.health) g.push('No health');
   if(!c.sb) g.push('Not in scoreboard');
   else {
@@ -1754,7 +1756,6 @@ function gapsOf(c){
     else { if(!c.sb.latest) g.push('Last month not logged'); const p = dataProblems(c); if(p.length) g.push('Results look wrong'); else if(thinReason(c)) g.push('Thin data'); }
     if(c.sb.score == null) g.push('No score');
   }
-  if(!c.location) g.push('No location');
   return g;
 }
 function exportViewCSV(rows, vc, cell, v){
@@ -1770,7 +1771,7 @@ function tableRows(){
   const q = query.toLowerCase();
   const col = COLS.find(x => x.k === sortKey) || COLS[0];
   const v = currentView(), tf = tfOf(v);
-  return S.clients.filter(c => viewWho(v, c) && passFilters(c, tf) && (!q || c.name.toLowerCase().includes(q) || (c.manager||'').toLowerCase().includes(q) || (c.location||'').toLowerCase().includes(q)))
+  return (v.who === 'hidden' ? (S.hidden || []) : S.clients).filter(c => (v.who === 'hidden' || viewWho(v, c)) && passFilters(c, tf) && (!q || c.name.toLowerCase().includes(q) || (c.manager||'').toLowerCase().includes(q) || (c.location||'').toLowerCase().includes(q)))
     .sort((a,b) => { const x = col.v(a), y = col.v(b); return (x < y ? -1 : x > y ? 1 : a.name.localeCompare(b.name)) * sortDir; });
 }
 function renderTable(){
@@ -1795,12 +1796,13 @@ function renderTable(){
       case 'manager': return `<td>${esc(c.manager||'')}</td>`;
       case 'location': return `<td>${esc(c.location||'')}</td>`;
       case 'lastcall': { const x = latestCall(c); if(!x) return '<td></td>'; return `<td>${esc(fmtDate(x.date))}${x.risk && CALL_RISK[x.risk] && x.risk !== 'low' ? ` <span class="tchip ${CALL_RISK[x.risk].tone}">${CALL_RISK[x.risk].label}</span>` : ''}</td>`; }
+      case 'segment': return `<td>${esc(c.segment === 'diy' ? 'DIY package' : c.segment === NON_MA ? 'Non-martial-arts (hidden)' : c.segment === 'na' ? 'Non-martial-arts' : 'Gym')}</td>`;
       case 'cxon': return `<td>${isGone(c)?esc(fmtDate(c.cancelledOn)):''}</td>`;
       case 'gaps': { const g = gapsOf(c); return `<td style="white-space:normal;min-width:220px">${g.length ? g.map(x => `<span class="tchip amber">${esc(x)}</span>`).join(' ') : '<span style="color:var(--muted)">None</span>'}</td>`; }
       case 'ref': { const r = byId(c.referredBy); return `<td>${r?`<button class="linkbtn" data-go="${esc(r.id)}">${esc(r.name)}</button>`:esc(c.referredByOther||'')}</td>`; }
       case 'score': return `<td>${c.sb&&c.sb.score!=null?`<span class="hdot"><span class="dot" style="background:${SB_COLOR[c.sb.health]}"></span>${c.sb.score}</span>`:''}</td>`;
       case 'leads': return `<td>${c.sb&&c.sb.lifetime?c.sb.lifetime.leads.toLocaleString('en-US'):''}</td>`;
-      case 'bneck': { if(isGone(c) || !c.sb) return '<td></td>'; const b = bottleneckOf(c); return `<td>${b.status==='found' ? `<span class="tchip red">${esc(b.step.label)}</span>` : b.status==='clear' ? '<span style="color:var(--muted)">None clear</span>' : b.status==='bad' ? '<span class="soon">Check data</span>' : '<span style="color:var(--muted)">Not enough data</span>'}</td>`; }
+      case 'bneck': { if(isGone(c) || !c.sb) return '<td></td>'; const b = bottleneckOf(c); return `<td>${b.status==='found' ? `<span class="tchip red">${esc(b.step.label)}</span>` : b.status==='clear' ? '<span style="color:var(--muted)">None clear</span>' : b.status==='na' ? '<span style="color:var(--muted)">Not compared</span>' : b.status==='bad' ? '<span class="soon">Check data</span>' : '<span style="color:var(--muted)">Not enough data</span>'}</td>`; }
       case 'close': return thinTd(c, c.sb&&c.sb.lifetime?pct(c.sb.lifetime.closed,c.sb.lifetime.showed):'');
       case 'spu': return thinTd(c, c.sb&&c.sb.lifetime&&c.sb.lifetime.closed>0?'$'+(c.sb.lifetime.adSpend/c.sb.lifetime.closed).toFixed(2):'');
       case 'lconv': return thinTd(c, c.sb&&c.sb.lifetime&&c.sb.lifetime.leads>0?pct(c.sb.lifetime.closed,c.sb.lifetime.leads):'');
@@ -1820,7 +1822,7 @@ function renderTable(){
     ${filterBarHTML(cv)}
     <div class="col-pick" id="colPick" ${colPickOpen?'':'hidden'}><div class="col-grid">${COLS.map(col => `<label><input type="checkbox" data-col="${col.k}" ${vc.some(x=>x.k===col.k)?'checked':''} ${col.k==='name'?'disabled':''}> ${esc(col.t)}</label>`).join('')}</div>
       <div class="formbar"><small style="color:var(--muted)">Column changes are saved for you only. Use "Save as team view" to share a layout.</small>${ui.tcols && ui.tcols[cv.id] ? '<button class="btn small" id="colReset">Reset to the view\'s columns</button>' : ''}</div></div>
-    ${canWrite && tableSel.size ? `<div class="bulk"><b>${tableSel.size} selected</b>
+    ${canWrite && MANUAL_EDITS && tableSel.size ? `<div class="bulk"><b>${tableSel.size} selected</b>
       <select id="bPlan" aria-label="Set plan"><option value="">Set plan…</option>${S.services.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</select>
       <select id="bHealth" aria-label="Set health"><option value="-">Set health…</option>${['green','yellow','red',''].map(k=>`<option value="${k}">${HEALTH[k].label}</option>`).join('')}</select>
       <input id="bMgr" list="bMgrs" placeholder="Set manager" aria-label="Set account manager" style="width:130px"><datalist id="bMgrs">${managers.map(m=>`<option value="${esc(m)}">`).join('')}</datalist><button class="btn small" id="bMgrGo">Apply</button>
@@ -1828,10 +1830,10 @@ function renderTable(){
       <button class="btn small" id="bActive">Reactivate</button>
       <button class="btn small" id="bClear">Clear selection</button></div>` : ''}
     <div class="tablewrap"><table><thead><tr>
-      ${canWrite?`<th><input type="checkbox" id="selAll" aria-label="Select all" ${allOn?'checked':''}></th>`:''}
+      ${canWrite && MANUAL_EDITS?`<th><input type="checkbox" id="selAll" aria-label="Select all" ${allOn?'checked':''}></th>`:''}
       ${vc.map(col=>`<th><button data-sort="${col.k}" ${sortKey===col.k?`aria-sort="${sortDir>0?'ascending':'descending'}"`:''}>${col.t}${sortKey===col.k?(sortDir>0?' ↑':' ↓'):''}</button></th>`).join('')}
     </tr></thead><tbody>
-      ${rows.map(c=>`<tr class="${isGone(c)?'gone':''}">${canWrite?`<td><input type="checkbox" data-sel="${esc(c.id)}" ${tableSel.has(c.id)?'checked':''} aria-label="Select ${esc(c.name)}"></td>`:''}${vc.map(col=>cell(c,col.k)).join('')}</tr>`).join('')}
+      ${rows.map(c=>`<tr class="${isGone(c)?'gone':''}">${canWrite && MANUAL_EDITS?`<td><input type="checkbox" data-sel="${esc(c.id)}" ${tableSel.has(c.id)?'checked':''} aria-label="Select ${esc(c.name)}"></td>`:''}${vc.map(col=>cell(c,col.k)).join('')}</tr>`).join('')}
     </tbody></table>${rows.length?'':'<p class="empty" style="padding:16px">No clients match.</p>'}</div>
     <p class="empty" style="margin:-10px 24px 14px;font-size:12px">*Closed is total sign-ups from the MMS, including family members, walk-ins, referrals and reactivations, so it can be higher than showed. Treat showed-to-closed % as approximate. † = not enough data yet (or the logged results look wrong), so the rate isn't reliable and isn't ranked. Hover for why.</p>`;
   const tv = $('tableView');
@@ -2044,30 +2046,8 @@ function churnInsights(all, active, gone){
       <div class="stat"><b>${recent.length}</b><span>Cancelled in 12 months</span></div>
       <div class="stat"><b>${money(lostRev)}</b><span>Monthly revenue lost (priced clients)</span></div>
       <div class="stat"><b>${tenures.length ? avgT.toFixed(1) : '–'}</b><span>Avg months before cancelling</span></div>
-      <div class="stat"><b>${withCtrl.length ? pctTxt(ctrlN, withCtrl.length) : '–'}</b><span>Controllable${partN?` (+${pctTxt(partN, withCtrl.length)} partly)`:''}</span></div>
-      <div class="stat"><b>${invol}</b><span>Involuntary (payment)</span></div>
     </div>
-    ${missing.length ? `<p class="empty"><span class="soon">${missing.length} of ${gone.length} cancellations are missing details.</span> Complete them so these reports are accurate:</p><ul class="ilist">${missing.slice(0,10).map(c => li(c, esc(churnMissing(c).join(', ')), '#E3B341')).join('')}</ul>${missing.length > 10 ? `<p class="empty">and ${missing.length - 10} more.</p>` : ''}` : (gone.length ? '<p class="empty">Every cancellation has complete churn details.</p>' : '')}
-  </section>
-  <section class="card"><h2>Why they leave</h2><p class="sub">${side === 'root' ? 'Root cause, as assessed by the account manager.' : 'What the client said.'}</p>
-    <div class="seg" style="margin-bottom:12px;max-width:280px"><label><input type="radio" name="chSide" value="stated" ${side==='stated'?'checked':''}>What they said</label><label><input type="radio" name="chSide" value="root" ${side==='root'?'checked':''}>Root cause</label></div>
-    ${catRows.length ? bars(catRows) : '<p class="empty">No data yet.</p>'}
-    ${specRows.length ? `<h3 style="font:700 16px var(--display);margin:14px 0 6px">Top specific reasons</h3>${bars(specRows, '#5BC0EB')}` : ''}
-  </section>
-  <section class="card"><h2>Said vs. root cause</h2><p class="sub">Cancellations where the real reason differed from what the client told you.</p>
-    <div class="stats"><div class="stat"><b>${mism.length}</b><span>Mismatched</span></div><div class="stat"><b>${gone.filter(c=>c.rootCategory).length}</b><span>Assessed so far</span></div></div>
-    ${mism.length ? `<ul class="ilist">${mism.map(c => { const ch = churnOf(c); return li(c, `said ${esc(catName(ch.cat))}, really ${esc(catName(ch.root))}`); }).join('')}</ul>` : '<p class="empty">No mismatches recorded.</p>'}
-  </section>
-  <section class="card"><h2>Save attempts</h2><p class="sub">Offers made to clients at risk of cancelling, and what worked.</p>
-    <div class="stats"><div class="stat"><b>${saves.length}</b><span>Attempts</span></div><div class="stat"><b>${pctTxt(saved.length, saves.length)}</b><span>Save rate</span></div><div class="stat"><b>${noAttempt}</b><span>Lost with no save attempt (12 mo)</span></div></div>
-    ${Object.keys(byOffer).length ? `<table><thead><tr><th>Offer</th><th>Tried</th><th>Saved</th><th>Rate</th></tr></thead><tbody>${Object.entries(byOffer).sort((a,b)=>b[1].n-a[1].n).map(([o,v]) => `<tr><td>${esc(o)}</td><td>${v.n}</td><td>${v.ok}</td><td>${pctTxt(v.ok, v.n)}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">No save attempts recorded yet. Use "Record a save attempt" on an at-risk client.</p>'}
-  </section>
-  <section class="card"><h2>Early warning and timing</h2><p class="sub">Did the team see it coming, and when in the contract do clients leave?</p>
-    <div class="stats"><div class="stat"><b>${pctTxt(warnedYes.length, warnedPool.length)}</b><span>Saw it coming</span></div><div class="stat"><b>${lead.length ? Math.round(lead.reduce((a,b)=>a+b,0)/lead.length) : '–'}</b><span>Avg days of warning</span></div></div>
-    ${timingRows.length ? bars(timingRows, '#7C5CBF') : '<p class="empty">No contract timing recorded yet.</p>'}
-  </section>
-  <section class="card"><h2>Win-back list</h2><p class="sub">Former clients open to returning, by check-in date.</p>
-    ${wb.length ? `<ul class="ilist">${wb.map(c => { const due = c.winBackOn && c.winBackOn <= addMonths(TODAY, 0) ; return li(c, `${WINBACK[c.winBack]}${c.winBackOn?`, ${esc(fmtDate(c.winBackOn))}`:''}`, due ? '#F85149' : (c.winBack==='yes'?'#3FB950':'#E3B341')); }).join('')}</ul>` : '<p class="empty">No one marked for win-back yet.</p>'}
+    ${''}
   </section>
   <section class="card wide"><h2>Churn by segment</h2><p class="sub">All clients ever on the roster.</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px">
@@ -2085,7 +2065,7 @@ function churnInsights(all, active, gone){
 
 /* ================= drawer ================= */
 let dTab = 'clients', editing = null, dQuery = '';
-function openDrawer(tab, clientId){ if(!canWrite) return; dTab = tab; editing = clientId || null; $('drawerWrap').hidden = false; renderDrawer(); }
+function openDrawer(tab, clientId){ if(!canWrite || !MANUAL_EDITS) return; dTab = tab; editing = clientId || null; $('drawerWrap').hidden = false; renderDrawer(); }
 function closeDrawer(){ $('drawerWrap').hidden = true; editing = null; $('editBtn').focus(); }
 $('scrim').addEventListener('click', closeDrawer);
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && !$('drawerWrap').hidden) closeDrawer(); });
@@ -2100,11 +2080,11 @@ function renderDrawer(){
 }
 function renderClientList(){
   const q = dQuery.toLowerCase();
-  const list = S.clients.filter(c => !q || c.name.toLowerCase().includes(q)).sort((a,b) => isGone(a) - isGone(b) || a.name.localeCompare(b.name));
+  const list = S.clients.concat(S.hidden || []).filter(c => !q || c.name.toLowerCase().includes(q)).sort((a,b) => isHiddenSeg(a) - isHiddenSeg(b) || isGone(a) - isGone(b) || a.name.localeCompare(b.name));
   const noReason = S.clients.filter(c => churnMissing(c).length).length;
   $('dInner').innerHTML = `<div style="display:flex;gap:8px;margin-bottom:8px"><input class="search" id="dq" placeholder="Search clients" value="${esc(dQuery)}"><button class="btn primary" id="addC" style="white-space:nowrap">Add client</button></div>
     ${noReason ? `<p class="d-warn">${noReason} cancelled ${noReason===1?'client is':'clients are'} missing churn details. Look for "details needed" below.</p>` : ''}
-    ${list.map(c => { const s = svcById(c.serviceId); return `<div class="row">${mini(c)}<div class="grow"><b>${esc(c.name)}</b><small>${esc(s?s.name:'No plan')}${isGone(c)?`, cancelled${churnMissing(c).length?' (details needed)':''}`:''}</small></div><button class="btn small" data-e="${esc(c.id)}">Edit</button></div>`; }).join('')
+    ${list.map(c => { const s = svcById(c.serviceId); return `<div class="row">${mini(c)}<div class="grow"><b>${esc(c.name)}</b><small>${isHiddenSeg(c) ? esc(SEGMENTS[c.segment]) + ', ' : ''}${esc(s?s.name:'No plan')}${isGone(c)?`, cancelled${churnMissing(c).length?' (details needed)':''}`:''}</small></div><button class="btn small" data-e="${esc(c.id)}">Edit</button></div>`; }).join('')
       || `<p class="empty">${S.clients.length ? 'No clients match that search.' : 'No clients yet. Add your first one.'}</p>`}`;
   const qi = $('dq'); qi.addEventListener('input', () => { dQuery = qi.value; const p = qi.selectionStart; renderClientList(); const n = $('dq'); n.focus(); n.setSelectionRange(p,p); });
   $('addC').addEventListener('click', () => { if(!S.services.length){ toast('Add a plan first.'); dTab = 'plans'; return renderDrawer(); } editing = 'new'; renderDrawer(); });
@@ -2156,6 +2136,7 @@ function renderClientForm(){
     <fieldset class="fieldset" id="hBox"><legend>Health and contact</legend>
       <div class="field"><span>Health</span><div class="seg">${['green','yellow','red',''].map(k=>`<label><input type="radio" name="hl" value="${k}" ${(c.health||'')===k?'checked':''}>${HEALTH[k].label}</label>`).join('')}</div></div>
       <label class="field"><span>Last contact</span><input type="date" id="fContact" value="${esc(c.lastContact||'')}"></label></fieldset>
+    <label class="field"><span>Account type</span><select id="fSeg">${Object.entries(SEGMENTS).map(([k,v]) => `<option value="${k}" ${(c.segment||'')===k?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
     <div class="field"><span>Add-ons</span><div id="fAdd"></div></div>
     <div class="two"><label class="field"><span>Client since</span><input type="date" id="fSince" value="${esc(c.since||'')}"></label>
       <label class="field"><span>Account manager</span><input id="fMgr" value="${esc(c.manager||'')}" list="mgrs"><datalist id="mgrs">${managers.map(m=>`<option value="${esc(m)}">`).join('')}</datalist></label></div>
@@ -2221,7 +2202,7 @@ function renderClientForm(){
     } : {noticeOn:'', cancelCategory:'', cancelReason:'', competitor:'', rootCategory:'', rootReason:'', controllable:'', contractTiming:'', warned:'', firstWarningOn:'', winBack:'', winBackOn:''};
     const sv = svcById($('fSvc').value), refv = $('fRef').value;
     const rec = Object.assign(c, {
-      name, shortName:$('fShort').value.trim(), serviceId:$('fSvc').value, status, price: +$('fPrice').value || 0,
+      name, segment: $('fSeg').value, shortName:$('fShort').value.trim(), serviceId:$('fSvc').value, status, price: +$('fPrice').value || 0,
       cancelledOn: status==='cancelled' ? $('fCx').value : '', cancelNote: status==='cancelled' ? $('fCxNote').value.trim() : '', saves, ...churnFields,
       health: inner.querySelector('[name=hl]:checked')?.value || '', healthSource: (()=>{ const v = inner.querySelector('[name=hl]:checked')?.value || ''; return v === (c.health||'') ? (c.healthSource||'') : (v ? 'manual' : ''); })(), lastContact:$('fContact').value,
       since:$('fSince').value, manager:$('fMgr').value.trim(), location:$('fLoc').value.trim(), notes:$('fNotes').value.trim(), logo, logoAssetId,
@@ -2336,7 +2317,7 @@ function book(){
   const riskMrr = atRisk.reduce((t,c) => t + priceOf(c), 0), watchMrr = watch.reduce((t,c) => t + priceOf(c), 0);
   const ren = active.map(c => ({c, d: nextRenewal(c)})).filter(x => x.d && days(TODAY, x.d) <= RULES.renewInfo);
   const renMrr = ren.reduce((t,x) => t + priceOf(x.c), 0);
-  const sbA = active.filter(c => c.sb), logged = sbA.filter(c => c.sb.latest);
+  const sbA = active.filter(c => c.sb && inGymStats(c)), logged = sbA.filter(c => c.sb.latest);
   const T = sbA.filter(c => c.sb.lifetime).reduce((t,c) => { const L = c.sb.lifetime; t.leads+=L.leads; t.booked+=L.booked; t.showed+=Math.max(0,L.showed); t.closed+=L.closed; t.spend+=L.adSpend; return t; }, {leads:0,booked:0,showed:0,closed:0,spend:0});
   const y1 = addMonths(TODAY, -12), new12 = all.filter(c => c.since && c.since > y1 && c.since <= TODAY);
   const mgr = {}; active.forEach(c => { const k = c.manager || 'Unassigned'; mgr[k] = mgr[k] || {n:0, mrr:0, risk:0}; mgr[k].n++; mgr[k].mrr += priceOf(c); if(c.health === 'red') mgr[k].risk++; });
@@ -2348,7 +2329,7 @@ function book(){
 /* ================= scorecard ================= */
 const KPIS = [
   {k:'active', label:'Active clients', dir:'min', fmt:v=>String(v), v:B=>B.active.length, sub:B=>`${B.active.length - B.clients90ago >= 0 ? '+' : ''}${B.active.length - B.clients90ago} vs 90 days ago`},
-  {k:'mrr', label:'Monthly recurring revenue', dir:'min', fmt:v=>money(v), v:B=>B.mrr, sub:B=>`${money(B.arpa)} average per client`},
+  {k:'mrr', label:'Monthly recurring revenue', dir:'min', fmt:v=>money(v), v:B=>B.mrr, sub:B=>{ const h = (S.hidden||[]).filter(c => !isGone(c)); const hm = h.reduce((t,c)=>t+(+c.price||0),0); return `${money(B.arpa)} average per client${h.length ? `. Excludes ${h.length} hidden ${h.length===1?'account':'accounts'}, non-martial-arts and DIY (${money(hm)}/mo)` : ''}`; }},
   {k:'netNew', label:'Net new MRR, last 90 days', dir:'min', fmt:v=>(v<0?'−':'+')+money(Math.abs(v)), v:B=>B.netNewMrr, sub:B=>`${B.newC.length} new, ${B.lostC.length} lost`},
   {k:'churn', label:'Monthly client churn', dir:'max', unit:'%', fmt:v=>v==null?'–':(v*100).toFixed(1)+'%', v:B=>B.churnRate, sub:B=>`12-month average. Revenue churn ${B.revChurnRate==null?'–':(B.revChurnRate*100).toFixed(1)+'%'}`},
   {k:'risk', label:'Revenue at risk', dir:'max', unit:'%', fmt:v=>v==null?'–':Math.round(v*100)+'%', v:B=>B.mrr?B.riskMrr/B.mrr:null, sub:B=>`${money(B.riskMrr)}/mo across ${B.atRisk.length} at-risk clients`},
@@ -2490,11 +2471,10 @@ function renderInsights(){
     <section class="card"><h2>Highest cost per lead</h2><p class="sub">Meta ads, last 90 days, ${RULES.minMetaLeads}+ leads. Candidates for new creative or targeting.</p>
       <ul class="ilist">${worstCpl.map(c => li(c, `$${c.sb.meta90.cpl.toFixed(2)} (${c.sb.meta90.leads} leads)`)).join('') || '<li class="empty">Not enough data.</li>'}</ul></section>
     <section class="card"><h2>Member change since first logged month</h2><p class="sub">From each gym's own monthly member counts, first logged month to latest. Loads as clients are opened (live from the scoreboard).</p>
-      ${(() => { const g = B.active.map(c => ({c, g: membersGained(c)})).filter(x => x.g).sort((a,b) => b.g.diff - a.g.diff);
+      ${(() => { const g = B.active.filter(inGymStats).map(c => ({c, g: membersGained(c)})).filter(x => x.g).sort((a,b) => b.g.diff - a.g.diff);
         return g.length ? `<div class="stats"><div class="stat"><b>${g.reduce((t,x)=>t+x.g.diff,0) >= 0 ? '+' : ''}${g.reduce((t,x)=>t+x.g.diff,0)}</b><span>Net members across ${g.length} ${g.length===1?'gym':'gyms'}</span></div></div><ul class="ilist">${g.slice(0,8).map(x => `<li><button data-go="${esc(x.c.id)}">${mini(x.c)}<span class="nm2">${esc(x.c.name)}</span><span class="why">${x.g.diff >= 0 ? '+' : ''}${x.g.diff} (${x.g.from.studentsStart} → ${x.g.to.studentsStart})</span></button></li>`).join('')}</ul>` : '<p class="empty">No member history loaded yet. Open a client to load it, or log starting members in the scoreboard.</p>'; })()}</section>
     ${bottleneckInsightsHTML(B)}
-    ${testsInsightsHTML(B)}
-    ${sbInsights(B.active)}`;
+    ${sbInsights(B.active.filter(inGymStats))}`;
 
   // ---- tier 4: why we win and lose
   const refCounts = {}; B.all.forEach(c => { if(c.referredBy && byId(c.referredBy)) refCounts[c.referredBy] = (refCounts[c.referredBy]||0) + 1; });
@@ -2643,7 +2623,7 @@ function askDataset(){
       health:c.health || '', healthSource:c.healthSource || '', manager:c.manager || '', location:c.location || '',
       nextRenewal:nextRenewal(c) || '', flags:flagsFor(c).filter(f => f.level !== 'info').map(f => f.text),
       referredBy:byId(c.referredBy)?.name || c.referredByOther || '', referralsMade:referralsOf(c.id).length,
-      addons:clientAddons(c).map(a => a.name), lastContact:c.lastContact || ''};
+      addons:clientAddons(c).map(a => a.name), lastContact:c.lastContact || '', type: c.segment === 'na' ? 'non-martial-arts business (exclude from gym averages and comparisons)' : 'martial arts gym'};
     if(isGone(c)){ const ch = churnOf(c); Object.assign(o, {cancelledOn:c.cancelledOn || '', noticeOn:c.noticeOn || '', saidCategory:ch.cat ? catName(ch.cat) : '', saidReason:ch.reason || '',
       rootCause:c.rootCategory ? catName(ch.root) + (ch.rootReason ? ': ' + ch.rootReason : '') : '', controllable:CTRL[ch.ctrl] || '', theirWords:c.cancelNote || '', winBack:c.winBack || ''}); }
     if(c.saves && c.saves.length) o.saveAttempts = c.saves;
@@ -2771,12 +2751,13 @@ const STEPS = [
 ];
 let BENCH = null;
 function benchmarks(){
-  const pool = S.clients.filter(c => !isGone(c) && enoughData(c));
+  const pool = S.clients.filter(c => !isGone(c) && inGymStats(c) && enoughData(c));
   const b = {n: pool.length};
   STEPS.forEach(s => b[s.k] = median(pool.map(c => s.rate(c.sb.lifetime))));
   return b;
 }
 function bottleneckOf(c){
+  if(!inGymStats(c)) return {status:'na'};
   if(!c.sb || !c.sb.lifetime) return {status:'none'};
   const probs = dataProblems(c); if(probs.length) return {status:'bad', why:probs.join(', ')};
   const thin = thinReason(c); if(thin) return {status:'thin', why:thin};
@@ -2792,6 +2773,7 @@ function bottleneckOf(c){
 function bottleneckPanelHTML(c){
   if(isGone(c) || !c.sb) return '';
   const b = bottleneckOf(c);
+  if(b.status === 'na') return `<div class="log"><h3>Biggest bottleneck</h3><p class="empty">Not compared: this is a non-martial-arts business, so it's left out of gym averages and benchmarks.</p></div>`;
   if(b.status === 'none') return '';
   const head = '<h3>Biggest bottleneck</h3>';
   if(b.status === 'bad') return `<div class="log">${head}<p class="empty">Can't tell: the logged results look wrong (${esc(b.why)}). Fix them in the scoreboard first.</p></div>`;
@@ -2807,7 +2789,7 @@ function bottleneckPanelHTML(c){
 const TEST_AREAS = ['Ad offer','Ad creative','Landing page','Concierge script','Follow-up sequence','Booking flow','Pricing or membership offer','Other'];
 const TEST_RESULTS = {worked:'Worked', didnt:"Didn't work", unclear:'Inconclusive'};
 function testsPanelHTML(c){
-  if(isGone(c)) return '';
+  if(isGone(c) || !MANUAL_EDITS) return '';
   const tests = (c.tests || []).slice().sort((a,b) => (b.start||'').localeCompare(a.start||''));
   return `<div class="log"><h3>Tests</h3>
     ${tests.length ? tests.map(t => `<div class="entry"><div class="meta"><span class="kind ${t.result==='worked'?'win':t.result==='didnt'?'issue':''}">${esc(t.result ? TEST_RESULTS[t.result] : 'Running')}</span><span>${esc(t.area)}</span><span>${esc(fmtDate(t.start))}${t.end?' to '+esc(fmtDate(t.end)):''}</span></div>
@@ -2848,7 +2830,7 @@ function testsInsightsHTML(B){
 }
 function bottleneckInsightsHTML(B){
   BENCH = benchmarks();
-  const res = B.active.filter(c => c.sb).map(c => ({c, b: bottleneckOf(c)}));
+  const res = B.active.filter(c => c.sb && inGymStats(c)).map(c => ({c, b: bottleneckOf(c)}));
   const found = res.filter(x => x.b.status === 'found');
   const counts = {}; found.forEach(x => counts[x.b.step.label] = (counts[x.b.step.label]||0) + 1);
   const thin = res.filter(x => x.b.status === 'thin' || x.b.status === 'none').length, bad = res.filter(x => x.b.status === 'bad');
@@ -3221,8 +3203,9 @@ function startSbLive(){
 let sbSaveT = null;
 function applySbLive(skipRender){
   if(!S.clients.length) return;
-  const byName = new Map(S.clients.map(c => [c.name.toLowerCase(), c]));
-  const byId2 = new Map(S.clients.filter(c => c.sb && c.sb.id).map(c => [c.sb.id, c]));
+  const pool = S.clients.concat(S.hidden || []);
+  const byName = new Map(pool.map(c => [c.name.toLowerCase(), c]));
+  const byId2 = new Map(pool.filter(c => c.sb && c.sb.id).map(c => [c.sb.id, c]));
   const changed = new Map();
   const touch = (c, patch) => { const cur = c.sb || {}; const diff = Object.keys(patch).some(k => cur[k] !== patch[k]); if(!diff) return; c.sb = Object.assign({}, cur, patch); changed.set(c.id, c); };
   (SB_LIVE.board || []).forEach(r => {
@@ -3324,7 +3307,6 @@ function freshnessHTML(B){
       ${row(loggedLast >= active.length * 0.8 ? true : loggedLast >= active.length * 0.4 ? null : false, 'Monthly results', `${loggedLast} of ${active.length} active clients have ${esc(parse(lm + '-01').toLocaleDateString(undefined,{month:'long'}))} logged${lastMonth ? `; latest month anywhere: ${esc(parse(lastMonth + '-01').toLocaleDateString(undefined,{month:'long',year:'numeric'}))}` : ''}`)}
       ${row(adsStale ? false : true, 'Ad spend and cost per lead', `Meta and Google sync last ran ${esc(fmtDate(adsAt))}${adsStale ? ` (${days(adsAt, TODAY)} days ago, stale)` : ''}`)}
       ${row(OTTER_META && OTTER_META.syncedAtMs && Date.now() - OTTER_META.syncedAtMs < 8*86400000 ? true : null, 'Call summaries (Otter)', OTTER_META && OTTER_META.syncedAt ? `Last synced ${esc(fmtDate(OTTER_META.syncedAt))}` : 'Not synced yet')}
-      ${row(missChurn ? false : true, 'Churn details', missChurn ? `${missChurn} cancellations from the last 12 months are missing details` : 'Complete')}
       ${scMismatch.length ? row(false, 'Scoreboard vs. Grand Cast', `Scoreboard shows a cancel date for ${scMismatch.map(c => esc(c.name)).join(', ')}, still active here`) : ''}
       ${SB_LIVE.unmatched.length ? row(null, 'In the scoreboard, not here', esc(SB_LIVE.unmatched.join(', '))) : ''}
       ${(OTTER_META && OTTER_META.unmatched || []).length ? row(null, 'On calls, not a client here', esc(OTTER_META.unmatched.map(u => u.title.replace(/^Strategy \| /,'')).filter((v,i,a) => a.indexOf(v) === i).join(', '))) : ''}
@@ -3368,7 +3350,7 @@ renderAll(true);
   let first = true;
   B.watchSettings(s => { applySettings(s); renderAll(false); if(ui.view === 'health') renderHealthView(); });
   B.watchPlans(list => { S.services = clean(list); S.plansLoaded = true; renderAll(false); });
-  B.watchClients(list => { S.clients = clean(list); if(SB_LIVE.board || SB_LIVE.roster) applySbLive(true); S.clientsLoaded = true; renderAll(first); first = false; });
+  B.watchClients(list => { const allC = clean(list); S.hidden = allC.filter(isHiddenSeg); S.clients = allC.filter(c => !isHiddenSeg(c)); if(SB_LIVE.board || SB_LIVE.roster) applySbLive(true); S.clientsLoaded = true; renderAll(first); first = false; });
 })();
 })();
 </script>

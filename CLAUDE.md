@@ -116,6 +116,14 @@ Setup and the Claude config block are in [mcp/README.md](mcp/README.md). Checked
 `node check.js`: reads live, writes as a dry run with every column verified against the real
 table, so the audit and retention-notification triggers never fire on a real client's row.
 
+**It reads v2, not the live data.** The hosted connector is the `mcp` edge function on v2
+(`obfekzpumitnybxfgnol.supabase.co/functions/v1/mcp`), and that is what Kurt's claude.ai "GS Scoreboard" connector
+points at. The team enters data on v1, so on 2026-10-13 the connector saw 22/12/0 metric rows for Jul/Aug/Sep against
+v1's 38/38/38. Moving it to v1 means the sign-in tables (migrations `20260916_003`, `004`) and the function on v1, and
+Kurt reconnecting. The Supabase CLI on this machine is logged into another account, so deploying a function to
+either project needs an access token from the account that owns them. `list_clients` does not return
+`cancel_reason`, which is why Kurt's Claude reported every cancel reason as empty.
+
 ## Scripts
 
 Run from the project root. All three take connection strings as arguments; none of them hold
@@ -195,6 +203,11 @@ scoreboard at **/grand-cast/**, on the scoreboard's own Supabase project and sig
   `short_name` on `gc_clients` (migration 008). Its live scoreboard reads the GS Scoreboard connector on claude.ai and
   needs `B.mcp` here, so on the scoreboard `sb` stays the Oct 8 snapshot until `watchClients` builds it from our own
   tables, as the handoff's README suggests.
+- Account types and read-only (Kurt's eleventh handoff, Oct 13, 1:26 AM, `handoff-11\`): `segment` on `gc_clients`
+  (migration 009). Its data, two accounts labelled not martial arts and three hidden ones added back, is in
+  `work\gc_handoff11_changes.sql`. The handoff makes the page read-only (`MANUAL_EDITS = false`); the adapter keeps
+  editing on, because here the page has neither the live scoreboard nor Otter, and read-only would freeze it on the
+  Oct 8 snapshot with no way to correct it. Turn it off once `watchClients` builds `sb` from our tables.
 
 ## Working on v1 and v2 together (from 2026-10-08)
 
