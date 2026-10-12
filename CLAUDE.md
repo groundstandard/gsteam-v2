@@ -189,7 +189,12 @@ scoreboard at **/grand-cast/**, on the scoreboard's own Supabase project and sig
   Anthropic API, which has not been built.
 - Otter call summaries (Kurt's eighth handoff, Oct 12, `handoff-8\`): `calls` jsonb on `gc_clients` (migration 007) and a
   Call summaries tab. The handoff carries no call data: the calls Kurt synced from his chat are not in it, and the live
-  page has none until a sync writes them.
+  page has none until a sync writes them. Handoff-9 adds a rolling Otter sync that runs only where the adapter offers
+  `B.otter` and `B.sample`, which ours does not.
+- Liquid Glass look, themes, map grid, This week and Monthly review (Kurt's tenth handoff, Oct 12, `handoff-10\`):
+  `short_name` on `gc_clients` (migration 008). Its live scoreboard reads the GS Scoreboard connector on claude.ai and
+  needs `B.mcp` here, so on the scoreboard `sb` stays the Oct 8 snapshot until `watchClients` builds it from our own
+  tables, as the handoff's README suggests.
 
 ## Working on v1 and v2 together (from 2026-10-08)
 
