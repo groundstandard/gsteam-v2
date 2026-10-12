@@ -333,6 +333,8 @@ td.thin{color:var(--muted);font-style:italic}
 .cs-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:6px}
 .cs-h{margin:6px 0 2px;font:700 14px var(--display);letter-spacing:.03em;color:var(--muted);text-transform:uppercase}
 .views{flex-wrap:wrap}
+
+.cs-sync{margin:6px 0 10px;font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -887,7 +889,7 @@ function setView(v){
   if(v === 'table') renderTable();
   if(v === 'insights') renderInsights();
   if(v === 'health') renderHealthView();
-  if(v === 'calls') renderCallsView();
+  if(v === 'calls'){ renderCallsView(); maybeAutoSync(); }
 }
 
 function renderChrome(){
@@ -2570,10 +2572,11 @@ function callDigest(list, week){
 function renderCallsView(){
   const el = $('callsView'); if(!el) return;
   const calls = allCalls();
-  const weeks = [...new Set(calls.map(x => weekOf(x.date)))].sort().reverse();
-  if(!callUI.week || (callUI.week !== 'all' && !weeks.includes(callUI.week))) callUI.week = weeks[0] || 'all';
+  const cut = (() => { const d = parse(TODAY); d.setDate(d.getDate() - CALL_WINDOW_DAYS); return iso(d); })();
+  const weeks = [...new Set(calls.filter(x => x.date >= cut).map(x => weekOf(x.date)))].sort().reverse();
+  if(!callUI.week || (callUI.week !== 'all' && callUI.week !== 'rolling' && !weeks.includes(callUI.week))) callUI.week = 'rolling';
   const q = callUI.q.toLowerCase();
-  const inWeek = calls.filter(x => callUI.week === 'all' || weekOf(x.date) === callUI.week);
+  const inWeek = calls.filter(x => callUI.week === 'all' || (callUI.week === 'rolling' ? x.date >= cut : weekOf(x.date) === callUI.week));
   const shown = inWeek.filter(x =>
     (callUI.risk === 'all' || (callUI.risk === 'flagged' ? (x.risk === 'high' || x.risk === 'medium') : callUI.risk === 'nosummary' ? !x.summary : x.risk === callUI.risk)) &&
     (callUI.mood === 'all' || x.mood === callUI.mood) &&
@@ -2593,15 +2596,16 @@ function renderCallsView(){
     </article>`;
   el.innerHTML = `<div class="insights">
     <section class="card wide"><div class="tier-head"><div><h2>Call summaries</h2><p class="sub">Weekly strategy calls from Otter.ai${OTTER_META && OTTER_META.syncedAt ? `, last synced ${esc(fmtDate(OTTER_META.syncedAt))}` : ''}. Summaries and risk ratings are AI-generated, so open the recording before acting on anything important.</p></div>
-      ${calls.length ? '<button class="btn small" id="csDigest">Copy weekly digest</button>' : ''}</div>
+      <div class="quick" style="margin:0">${mcpNs && canWrite ? `<button class="btn small" id="csSync" ${syncing?'disabled':''}>${syncing?'Syncing…':'Sync now'}</button>` : ''}${calls.length ? '<button class="btn small" id="csDigest">Copy weekly digest</button>' : ''}</div></div>
+      <p class="cs-sync">${mcpNs && canWrite ? `<span class="dot" style="background:${syncing?'#E3B341':'#3FB950'}"></span> Live: rolling 4 weeks from Otter, refreshed automatically when this tab is opened (every 6 hours at most)${OTTER_META && OTTER_META.syncedAtMs ? `, last ${esc(new Date(OTTER_META.syncedAtMs).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))}` : ''}.` : `<span class="dot" style="background:#7D8A99"></span> Showing the last sync. Live syncing runs for editors who have Otter.ai connected.`}${syncMsg ? ` <b>${esc(syncMsg)}</b>` : ''}</p>
       ${calls.length ? `<div class="cs-filters">
-        <label class="sel">Week <select id="csWeek">${weeks.map(w => `<option value="${w}" ${callUI.week===w?'selected':''}>Week of ${esc(fmtDate(w))}</option>`).join('')}<option value="all" ${callUI.week==='all'?'selected':''}>All weeks</option></select></label>
+        <label class="sel">Week <select id="csWeek"><option value="rolling" ${callUI.week==='rolling'?'selected':''}>Last 4 weeks</option>${weeks.map(w => `<option value="${w}" ${callUI.week===w?'selected':''}>Week of ${esc(fmtDate(w))}</option>`).join('')}<option value="all" ${callUI.week==='all'?'selected':''}>Everything stored (12 weeks)</option></select></label>
         <label class="sel">Show <select id="csRisk"><option value="all">All calls</option><option value="flagged" ${callUI.risk==='flagged'?'selected':''}>Flagged (high + watch)</option><option value="high" ${callUI.risk==='high'?'selected':''}>High risk</option><option value="medium" ${callUI.risk==='medium'?'selected':''}>Watch</option><option value="nosummary" ${callUI.risk==='nosummary'?'selected':''}>No Otter summary</option></select></label>
         <label class="sel">Mood <select id="csMood"><option value="all">Any</option>${Object.entries(MOOD).map(([k,v]) => `<option value="${k}" ${callUI.mood===k?'selected':''}>${v}</option>`).join('')}</select></label>
         <input class="search" id="csQ" placeholder="Search clients, wins, concerns, next steps" value="${esc(callUI.q)}" style="max-width:340px">
       </div>
-      <div class="stats" style="margin-top:10px"><div class="stat"><b>${inWeek.length}</b><span>Calls</span></div><div class="stat"><b style="color:#F85149">${inWeek.filter(x=>x.risk==='high').length}</b><span>High risk</span></div><div class="stat"><b style="color:#E3B341">${inWeek.filter(x=>x.risk==='medium').length}</b><span>Watch</span></div><div class="stat"><b style="color:#3FB950">${inWeek.filter(x=>x.mood==='positive').length}</b><span>Positive</span></div><div class="stat"><b>${inWeek.filter(x=>!x.summary).length}</b><span>No summary</span></div>${callUI.week!=='all'?`<div class="stat"><b>${notCalled.length}</b><span>Active, no call recorded</span></div>`:''}</div>
-      ${notCalled.length ? `<p class="empty" style="margin:0">No call recorded this week: ${notCalled.map(c => `<button class="linkbtn" data-go="${esc(c.id)}">${esc(c.name)}</button>`).join(', ')}.</p>` : ''}
+      <div class="stats" style="margin-top:10px"><div class="stat"><b>${inWeek.length}</b><span>Calls</span></div><div class="stat"><b style="color:#F85149">${inWeek.filter(x=>x.risk==='high').length}</b><span>High risk</span></div><div class="stat"><b style="color:#E3B341">${inWeek.filter(x=>x.risk==='medium').length}</b><span>Watch</span></div><div class="stat"><b style="color:#3FB950">${inWeek.filter(x=>x.mood==='positive').length}</b><span>Positive</span></div><div class="stat"><b>${inWeek.filter(x=>!x.summary).length}</b><span>No summary</span></div>${callUI.week!=='all'?`<div class="stat"><b>${notCalled.length}</b><span>Active, no call ${callUI.week==='rolling'?'in 4 weeks':'that week'}</span></div>`:''}</div>
+      ${notCalled.length ? `<p class="empty" style="margin:0">No call recorded ${callUI.week==='rolling'?'in the last 4 weeks':'that week'}: ${notCalled.map(c => `<button class="linkbtn" data-go="${esc(c.id)}">${esc(c.name)}</button>`).join(', ')}.</p>` : ''}
       ${um.length ? `<p class="empty" style="margin:4px 0 0">Not matched to a client: ${um.map(u => esc(u.title) + (u.note ? ' (' + esc(u.note) + ')' : '')).join('; ')}.</p>` : ''}`
       : '<p class="empty">No calls synced yet. Ask Claude to "sync this week\'s calls" to pull them from Otter.</p>'}</section>
     ${calls.length ? `<p class="empty" style="margin:4px 2px 10px">${shown.length} ${shown.length===1?'call':'calls'} shown${callUI.risk==='all'?', high risk first':''}.</p><div class="cs-list">${shown.map(card).join('') || '<p class="empty">No calls match these filters.</p>'}</div>` : ''}
@@ -2612,11 +2616,142 @@ function renderCallsView(){
   if($('csRisk')) $('csRisk').addEventListener('change', e => { callUI.risk = e.target.value; re(); });
   if($('csMood')) $('csMood').addEventListener('change', e => { callUI.mood = e.target.value; re(); });
   if($('csQ')) $('csQ').addEventListener('input', e => { callUI.q = e.target.value; const pos = e.target.selectionStart; re(); const n = $('csQ'); n.focus(); n.setSelectionRange(pos, pos); });
+  if($('csSync')) $('csSync').addEventListener('click', () => syncOtter(true));
   if($('csDigest')) $('csDigest').addEventListener('click', async () => {
-    const w = callUI.week === 'all' ? (weeks[0] || TODAY) : callUI.week;
+    const w = (callUI.week === 'all' || callUI.week === 'rolling') ? (weeks[0] || weekOf(TODAY)) : callUI.week;
     const txt = callDigest(calls.filter(x => weekOf(x.date) === w), w);
     try { await navigator.clipboard.writeText(txt); toast('Weekly digest copied. Paste it into Slack or an email.'); } catch(e){ toast('Copy failed.'); }
   });
+}
+
+
+/* ================= live Otter sync (rolling 4 weeks) ================= */
+const OTTER_SERVER = 'Otter.ai', CALL_WINDOW_DAYS = 28, CALL_KEEP_DAYS = 84, SYNC_STALE_MS = 6 * 3600 * 1000;
+let mcpNs = null, syncing = false, syncMsg = '';
+const CALL_ALIASES = [
+  [/ripe? ?tide/, 'Rip Tide Brazilian Jiu Jitsu'], [/longo/, 'Ray Longo MMA'], [/wisconsin|national karate/, 'National Karate (New Berlin)'],
+  [/si(gn|ng)ature/, 'Singature of Jiu-Jitsu'], [/eden pra/, 'Academy Eden Prairie'], [/\bgfv\b|farmington/, 'Gracie Farmington Valley Brazilian Jiu Jitsu'],
+  [/scottsdale/, 'Academy Of Jiu Jitsu Scottsdale'], [/killer ?b/, 'Killer B Sports Combat'], [/hive|orlando/, '10th Planet Orlando (The Hive MMA)'],
+  [/fresno|machado/, 'Jean Jacques Machado Brazilian Jiu Jitsu Fresno'], [/san jose/, 'Gracie Jiu Jitsu East San Jose']
+];
+const normName = s => String(s||'').toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9]+/g,' ')
+  .replace(/\b(the|of|bjj|brazilian|jiu|jitsu|jujitsu|mma|academy|martial|arts|sports|combat|grappling|studio|barber|and|performance|strategy)\b/g,' ').replace(/\s+/g,' ').trim();
+function matchCallTitle(title, m){
+  const raw = String(title||'').replace(/^\s*strategy\s*\|\s*/i, '');
+  const parts = raw.split('/').map(p => p.trim()).filter(Boolean);
+  const out = [];
+  parts.forEach(part => {
+    const k = normName(part), low = part.toLowerCase();
+    const pool = S.clients.slice().sort((a,b) => isGone(a) - isGone(b));
+    let hit = null;
+    for(const [re, name] of CALL_ALIASES) if(re.test(low)){ hit = pool.find(c => c.name === name); if(hit) break; }
+    if(!hit) hit = pool.find(c => normName(c.name) === k);
+    if(!hit && k.length >= 4) hit = pool.filter(c => { const ck = normName(c.name); return ck.length >= 4 && (ck.includes(k) || k.includes(ck)); }).sort((a,b) => (isGone(a) - isGone(b)) || (normName(b.name).length - normName(a.name).length))[0] || null;
+    if(hit && !out.includes(hit)) out.push(hit);
+  });
+  return out.length > 1 && m ? splitSharedCall(out, m) : out;
+}
+/* A shared Zoom (e.g. "Bodega/Soma") belongs to whichever client's weekly slot falls on the meeting's weekday
+   (calls board: Soma Tuesday, Bodega Friday). Failing that, whichever client the notes talk about. Otherwise both. */
+function splitSharedCall(cs, m){
+  const d = String(m.start_time || '').slice(0,10).replace(/\//g,'-');
+  const wd = d ? parse(d).toLocaleDateString('en-US', {weekday:'long'}).toLowerCase() : '';
+  const byDay = cs.filter(c => c.sb && c.sb.callDay && c.sb.callDay.toLowerCase() === wd);
+  if(byDay.length === 1) return byDay;
+  const text = (String(m.short_summary || '') + ' ' + (m.action_items || []).join(' ')).toLowerCase();
+  const hits = cs.map(c => { const w = normName(c.name).split(' ')[0]; return {c, n: w && w.length >= 3 ? text.split(w).length - 1 : 0}; }).sort((a,b) => b.n - a.n);
+  if(hits[0].n > 0 && hits[0].n >= 2 * (hits[1] ? hits[1].n : 0)) return [hits[0].c];
+  return cs;
+}
+const otterDate = d => d.replace(/-/g, '/');
+const durMins = d => { const t = String(d||''); const h = /(\d+)\s*h/.exec(t), m = /(\d+)\s*m/.exec(t), sec = /(\d+)\s*s/.exec(t); return (h ? +h[1]*60 : 0) + (m ? +m[1] : 0) + (sec && +sec[1] >= 30 ? 1 : 0); };
+function parsePayload(res){
+  if(res && res.payload && typeof res.payload === 'object') return res.payload;
+  const t = res && res.content && res.content.find(b => b.type === 'text');
+  try { return t ? JSON.parse(t.text) : null; } catch(e){ return null; }
+}
+async function fetchOtterCalls(fromIso, toIso){
+  const out = []; let cursor = null, guard = 0;
+  do {
+    const input = cursor ? {cursor, page_size:25} : {created_after: otterDate(fromIso), created_before: otterDate(toIso), title_contains:'Strategy', page_size:25, rationale:'Grand Cast rolling call sync'};
+    const res = await mcpNs.callTool(OTTER_SERVER, 'otter_search', input, {cache:false});
+    const p = parsePayload(res) || {};
+    (p.results || []).forEach(r => out.push(r));
+    cursor = p.next_cursor || null; guard++;
+  } while(cursor && guard < 12);
+  return out;
+}
+async function summarizeCalls(meetings){
+  const prompt = `You turn meeting notes from weekly strategy calls between Ground Standard (a marketing agency) and martial arts gym owners into short structured summaries for a client-health dashboard.
+For EACH meeting below return an object with:
+- id: the meeting id, unchanged
+- summary: 1-2 plain sentences on what was discussed and decided
+- wins: up to 3 short strings (good news for the gym or the relationship)
+- concerns: up to 4 short strings (problems, complaints, risks)
+- actions: up to 3 short strings, Ground Standard's own next steps
+- mood: "positive", "neutral" or "concerned" (the gym owner's mood about GS and results)
+- risk: "high" if the client is cancelling, threatening to cancel, disputing value or charges, pausing services, or the business is in financial danger; "medium" for serious problems worth watching (ads turned off, heavy member churn, unhappy with lead quality); "low" for minor issues; "" if none
+- riskNote: one sentence explaining the risk, or "" if risk is ""
+Use only the notes given. Be specific with numbers that appear in the notes. Return JSON: {"calls":[...]}.
+
+MEETINGS:
+${JSON.stringify(meetings.map(m => ({id:m.id, title:m.title, date:m.start_time, summary:m.short_summary, action_items:(m.action_items||[]).slice(0,12)})))}`;
+  const r = await askSampler.json(prompt, {cache:false});
+  return (r && r.calls) || [];
+}
+async function syncOtter(manual){
+  if(syncing || !mcpNs || !canWrite) return;
+  if(!askSampler || !askSampler.json){ syncMsg = 'Live sync needs Claude access on this page.'; renderCallsView(); return; }
+  syncing = true; syncMsg = 'Checking Otter for new calls…'; renderCallsView();
+  try {
+    const d0 = parse(TODAY); d0.setDate(d0.getDate() - CALL_WINDOW_DAYS); const fromIso = iso(d0);
+    const meetings = await fetchOtterCalls(fromIso, TODAY);
+    const known = new Set(S.clients.flatMap(c => (c.calls||[]).map(x => x.id)));
+    const unmatched = [], perClient = new Map(), fresh = [];
+    meetings.forEach(m => {
+      const cs = matchCallTitle(m.title, m);
+      if(!cs.length){ unmatched.push({title:m.title, note:fmtDate((m.start_time||'').slice(0,10).replace(/\//g,'-'))}); return; }
+      if(!known.has(m.id)) fresh.push({m, cs});
+    });
+    const withNotes = fresh.filter(f => f.m.short_summary && !/no summary available/i.test(f.m.short_summary));
+    const summaries = new Map();
+    for(let i = 0; i < withNotes.length; i += 8){
+      syncMsg = `Summarizing new calls (${Math.min(i + 8, withNotes.length)} of ${withNotes.length})…`; renderCallsView();
+      (await summarizeCalls(withNotes.slice(i, i + 8).map(f => f.m))).forEach(s => s && s.id && summaries.set(s.id, s));
+    }
+    fresh.forEach(({m, cs}) => {
+      const s = summaries.get(m.id) || {};
+      const rec = {id:m.id, date:(m.start_time||'').slice(0,10).replace(/\//g,'-'), mins:durMins(m.duration), url:m.url || ('https://otter.ai/u/' + m.id), title:m.title,
+        mood:s.mood || '', risk:s.risk || '', riskNote:s.riskNote || '', summary:s.summary || '', wins:s.wins || [], concerns:s.concerns || [], actions:s.actions || [], source:'otter'};
+      cs.forEach(c => { if(!perClient.has(c.id)) perClient.set(c.id, []); perClient.get(c.id).push(rec); });
+    });
+    const keepFrom = (() => { const d = parse(TODAY); d.setDate(d.getDate() - CALL_KEEP_DAYS); return iso(d); })();
+    let wrote = 0;
+    for(const c of S.clients){
+      const add = perClient.get(c.id) || [];
+      const old = c.calls || [];
+      const pruned = old.filter(x => x.date >= keepFrom);
+      if(!add.length && pruned.length === old.length) continue;
+      const ids = new Set(pruned.map(x => x.id));
+      if(await patchClient(c.id, {calls: pruned.concat(add.filter(x => !ids.has(x.id)))})) wrote++;
+    }
+    OTTER_META = {syncedAt: TODAY, syncedAtMs: Date.now(), range: `${fmtDate(fromIso, true)} to ${fmtDate(TODAY, true)}`, unmatched: unmatched.slice(0, 20)};
+    await SETTINGS_IO.save({rules: RULES, targets: TARGETS, views: TEAM_VIEWS.map(v => ({id:v.id, name:v.name, cols:v.cols, who:v.who, sort:v.sort})), otter: OTTER_META});
+    syncMsg = fresh.length ? `Added ${fresh.length} new ${fresh.length===1?'call':'calls'} (${withNotes.length} summarized).` : 'Up to date. No new calls in Otter.';
+    if(manual || fresh.length) toast(syncMsg, 3500);
+  } catch(e){
+    const code = e && e.code;
+    syncMsg = code === 'server_not_connected' || code === 'server_not_found' ? 'Otter.ai isn\'t connected for you. Connect it in claude.ai settings to sync calls.'
+      : code === 'needs_reauth' ? 'Otter.ai needs you to sign in again (claude.ai, Settings, Connectors).'
+      : code === 'not_granted' || code === 'consent_required' ? 'Otter access was not allowed for this page.'
+      : code === 'rate_limited' ? 'Otter or Claude is busy. Try syncing again in a minute.'
+      : 'Sync failed' + (e && e.message ? ': ' + e.message : '.') ;
+  } finally { syncing = false; renderCallsView(); }
+}
+function maybeAutoSync(){
+  if(!mcpNs || !canWrite || syncing || !askSampler || !S.clientsLoaded) return;
+  const last = OTTER_META && OTTER_META.syncedAtMs;
+  if(!last || Date.now() - last > SYNC_STALE_MS) syncOtter(false);
 }
 
 /* ================= boot ================= */
@@ -2628,6 +2763,7 @@ renderAll(true);
     const info = await B.init();
     canWrite = !!info.canWrite; myId = info.userId || null; needsSignIn = !!info.needsSignIn;
     askSampler = typeof B.sample === 'function' ? B.sample : null;
+    mcpNs = B.otter || null; // optional: an object with callTool(server, tool, input) that reaches Otter
   } catch(e){ console.error(e); B = null; loadError = 'Could not connect to the database. Check GRAND_CAST_CONFIG at the top of this file.'; renderChrome(); return; }
   if(needsSignIn){ renderAll(false); return; }
   let first = true;
