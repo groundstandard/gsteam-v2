@@ -315,6 +315,24 @@ td.thin{color:var(--muted);font-style:italic}
 .tv-tabs .chip{background:var(--surface);border:1px solid var(--line)}
 .tv-tabs .chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
 .tv-tabs .chip[aria-pressed="true"] small{color:inherit !important;opacity:.7}
+
+.call-ul{margin:2px 0 0;padding-left:18px;font-size:14px}
+.entry a{color:inherit;text-decoration-color:var(--ref)}
+
+/* call summaries */
+.cs-filters{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.cs-list{display:flex;flex-direction:column;gap:12px}
+.cs-card{border-left:5px solid var(--line)}
+.cs-card.cs-high{border-left-color:#F85149}.cs-card.cs-med{border-left-color:#E3B341}
+.cs-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.cs-who{display:flex;gap:12px;flex-wrap:wrap}
+.cs-name{display:inline-flex;align-items:center;gap:8px;font:700 17px var(--display);text-decoration:none}
+.cs-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.cs-meta a{color:inherit}
+.cs-risk{margin:8px 0 0;font-weight:600}
+.cs-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:6px}
+.cs-h{margin:6px 0 2px;font:700 14px var(--display);letter-spacing:.03em;color:var(--muted);text-transform:uppercase}
+.views{flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -418,14 +436,14 @@ function supabaseBackend(cfg){
     notice_on: nz(c.noticeOn), cancel_category: nz(c.cancelCategory), root_category: nz(c.rootCategory), root_reason: nz(c.rootReason),
     controllable: nz(c.controllable), contract_timing: nz(c.contractTiming), warned: nz(c.warned), first_warning_on: nz(c.firstWarningOn),
     competitor: nz(c.competitor), win_back: nz(c.winBack), win_back_on: nz(c.winBackOn), saves: c.saves || [],
-    sb: c.sb || null, ...(c.sb ? {scoreboard_id: c.sb.id} : {}), health_source: nz(c.healthSource), tests: c.tests || [],
+    sb: c.sb || null, ...(c.sb ? {scoreboard_id: c.sb.id} : {}), health_source: nz(c.healthSource), tests: c.tests || [], calls: c.calls || [],
     updated_at: new Date().toISOString()
   });
   const FIELD = {name:'name', serviceId:'service_id', status:'status', since:'since', cancelledOn:'cancelled_on', cancelReason:'cancel_reason',
     cancelNote:'cancel_note', health:'health', lastCall:'last_call', lastContact:'last_contact', price:'price', manager:'manager', location:'location',
     notes:'notes', logo:'logo_url', logoAssetId:'logo_path', referredBy:'referred_by', referredByOther:'referred_by_other', addons:'addons',
     noticeOn:'notice_on', cancelCategory:'cancel_category', rootCategory:'root_category', rootReason:'root_reason', controllable:'controllable',
-    contractTiming:'contract_timing', warned:'warned', firstWarningOn:'first_warning_on', competitor:'competitor', winBack:'win_back', winBackOn:'win_back_on', saves:'saves', sb:'sb', healthSource:'health_source', tests:'tests'};
+    contractTiming:'contract_timing', warned:'warned', firstWarningOn:'first_warning_on', competitor:'competitor', winBack:'win_back', winBackOn:'win_back_on', saves:'saves', sb:'sb', healthSource:'health_source', tests:'tests', calls:'calls'};
   const fromClientRow = r => ({
     id: r.id, name: r.name, serviceId: r.service_id || '', status: r.status, since: r.since || '', cancelledOn: r.cancelled_on || '',
     cancelReason: r.cancel_reason || '', cancelNote: r.cancel_note || '', health: r.health || '', lastCall: r.last_call || '',
@@ -434,7 +452,7 @@ function supabaseBackend(cfg){
     addons: r.addons || [], noticeOn: r.notice_on || '', cancelCategory: r.cancel_category || '', rootCategory: r.root_category || '',
     rootReason: r.root_reason || '', controllable: r.controllable || '', contractTiming: r.contract_timing || '', warned: r.warned || '',
     firstWarningOn: r.first_warning_on || '', competitor: r.competitor || '', winBack: r.win_back || '', winBackOn: r.win_back_on || '',
-    saves: r.saves || [], sb: r.sb || null, healthSource: r.health_source || '', tests: r.tests || [], updatedAt: r.updated_at
+    saves: r.saves || [], sb: r.sb || null, healthSource: r.health_source || '', tests: r.tests || [], calls: r.calls || [], updatedAt: r.updated_at
   });
   const fromPlanRow = r => ({id:r.id, name:r.name, color:r.color, term:r.term||0, cadence:r.cadence||0, standard:!!r.standard, blurb:r.blurb||''});
   const fromLogRow = r => ({id:r.id, clientId:r.client_id, kind:r.kind, text:r.text||'', at:r.at, authorId:r.author_id||'', authorName:r.author_name||''});
@@ -475,7 +493,7 @@ function supabaseBackend(cfg){
     async saveClient(c){ const { error } = await sb.from(T.clients).upsert(toClientRow(c)); fail(error); },
     async updateClient(id, fields){
       const row = {updated_at: new Date().toISOString()};
-      Object.entries(fields).forEach(([k,v]) => { if(FIELD[k]) row[FIELD[k]] = (k === 'sb') ? (v||null) : (k === 'addons' || k === 'saves' || k === 'tests') ? (v||[]) : (k === 'health' ? (v||'') : nz(v)); });
+      Object.entries(fields).forEach(([k,v]) => { if(FIELD[k]) row[FIELD[k]] = (k === 'sb') ? (v||null) : (k === 'addons' || k === 'saves' || k === 'tests' || k === 'calls') ? (v||[]) : (k === 'health' ? (v||'') : nz(v)); });
       const { error } = await sb.from(T.clients).update(row).eq('id', id); fail(error);
     },
     async deleteClient(id){ const { error } = await sb.from(T.clients).delete().eq('id', id); fail(error); }, // log rows cascade
@@ -707,7 +725,9 @@ function flagsFor(c){
   }
   if(c.health === 'red') f.push({level:'red', key:'health', text:'Marked at risk'});
   else if(c.health === 'yellow') f.push({level:'amber', key:'health', text:'Marked as watch'});
-  if(c.lastContact){ const n = days(c.lastContact, TODAY); if(n > RULES.contactAmber) f.push({level:'amber', key:'contact', text:`No contact in ${n} days`}); }
+  const cr = callRisk(c); if(cr) f.push({level: cr.risk === 'high' ? 'red' : 'amber', key:'callrisk', text:`Call ${fmtDate(cr.date, true)}: ${cr.riskNote}`});
+  const lc = [c.lastContact, (latestCall(c) || {}).date].filter(Boolean).sort().pop();
+  if(lc){ const n = days(lc, TODAY); if(n > RULES.contactAmber) f.push({level:'amber', key:'contact', text:`No contact in ${n} days`}); }
   return f;
 }
 const needsAttention = c => flagsFor(c).some(f => f.level === 'red' || f.level === 'amber');
@@ -794,7 +814,7 @@ root.innerHTML = `
     <div><h1>The Grand Cast</h1><p id="sub">Loading clients…</p></div></div>
   <div class="actions">
     <div class="views" role="group" aria-label="View">
-      <button data-v="map">Map</button><button data-v="table">Table</button><button data-v="insights">Insights<span class="count" id="attnCount" hidden></span></button><button data-v="health">Health rules</button>
+      <button data-v="map">Map</button><button data-v="table">Table</button><button data-v="insights">Insights<span class="count" id="attnCount" hidden></span></button><button data-v="calls">Call summaries</button><button data-v="health">Health rules</button>
     </div>
     <button class="btn primary" id="editBtn" hidden>Manage clients</button>
   </div>
@@ -826,6 +846,7 @@ root.innerHTML = `
 </main>
 <div id="tableView" hidden style="flex:1;min-height:0;display:flex;flex-direction:column"></div>
 <div id="insightsView" class="insights" hidden><div id="askBox"></div><div id="insightsBody"></div></div>
+<div id="callsView" hidden style="flex:1;min-height:0;display:flex;flex-direction:column"></div>
 <div id="healthView" hidden style="flex:1;min-height:0;display:flex;flex-direction:column"></div>
 <div id="drawerWrap" hidden><div class="scrim" id="scrim"></div><section class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Manage clients"></section></div>
 <div class="toast" id="toast" role="status"></div>`;
@@ -858,14 +879,15 @@ $('q').addEventListener('keydown', e => {
 function setView(v){
   ui.view = v; saveUI();
   document.querySelectorAll('.views button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v));
-  $('stage').hidden = v !== 'map'; $('tableView').hidden = v !== 'table'; $('insightsView').hidden = v !== 'insights'; $('healthView').hidden = v !== 'health';
+  $('stage').hidden = v !== 'map'; $('tableView').hidden = v !== 'table'; $('insightsView').hidden = v !== 'insights'; $('healthView').hidden = v !== 'health'; $('callsView').hidden = v !== 'calls';
   ['groupBy','colorBy','showReferrals'].forEach(id => $(id).closest('label').hidden = v !== 'map');
-  $('showCancelled').closest('label').hidden = v === 'insights' || v === 'health';
-  $('q').closest('.toolbar').hidden = v === 'insights' || v === 'health';
+  $('showCancelled').closest('label').hidden = v === 'insights' || v === 'health' || v === 'calls';
+  $('q').closest('.toolbar').hidden = v === 'insights' || v === 'health' || v === 'calls';
   if(v === 'map'){ requestAnimationFrame(() => refit()); renderMap(); }
   if(v === 'table') renderTable();
   if(v === 'insights') renderInsights();
   if(v === 'health') renderHealthView();
+  if(v === 'calls') renderCallsView();
 }
 
 function renderChrome(){
@@ -890,6 +912,7 @@ function renderAll(refit){
   if(ui.view === 'table') renderTable();
   if(ui.view === 'insights') renderInsights();
   if(ui.view === 'health') renderHealthView();
+  if(ui.view === 'calls' && !(document.activeElement && document.activeElement.id === 'csQ')) renderCallsView();
   if(!$('drawerWrap').hidden && dTab === 'clients' && !editing) renderClientList();
 }
 
@@ -1180,6 +1203,7 @@ function showClientPanel(c){
     ${c.notes?`<div class="p-notes">${esc(c.notes)}</div>`:''}
     ${sbHTML(c)}
     ${bottleneckPanelHTML(c)}
+    ${callsPanelHTML(c)}
     ${testsPanelHTML(c)}
     ${gone && churnMissing(c).length ? `<div class="flags"><div class="flag amber">Churn details missing: ${esc(churnMissing(c).join(', '))}</div></div>` : ''}
     ${canWrite?`<div class="quick"><button class="btn" id="pEdit">${gone && churnMissing(c).length ? 'Complete churn details' : 'Edit client'}</button>${!gone?'<button class="btn" id="pSave">Record a save attempt</button>':''}${!gone && c.sb ? '<button class="btn" id="pReport">Monthly report</button>' : ''}</div>
@@ -1263,6 +1287,7 @@ const COLS = [
   {k:'cpl90', t:'Meta CPL 90d', v:c=>c.sb&&c.sb.meta90&&c.sb.meta90.cpl!=null?c.sb.meta90.cpl:9999},
   {k:'churn', t:'Churn reason', v:c=>isGone(c)?churnLabel(churnOf(c).cat, churnOf(c).reason):''},
   {k:'ctrl', t:'Controllable', v:c=>isGone(c)?(churnOf(c).ctrl||'z'):''},
+  {k:'lastcall', t:'Last call', v:c=>{ const x = latestCall(c); return x ? x.date : ''; }},
   {k:'cxon', t:'Cancelled on', v:c=>isGone(c)?(c.cancelledOn||''):''},
   {k:'gaps', t:'Data gaps', v:c=>gapsOf(c).length},
   {k:'ref', t:'Referred by', v:c=>(byId(c.referredBy)?.name||c.referredByOther||'').toLowerCase()},
@@ -1271,7 +1296,7 @@ const COLS = [
 /* ---------- table views ---------- */
 const BUILTIN_VIEWS = [
   {id:'overview', name:'Overview', cols:['name','plan','health','score','price','renewal','manager'], who:'active', sort:['name',1]},
-  {id:'renewals', name:'Renewals & risk', cols:['name','health','score','attn','renewal','price','bneck'], who:'active', sort:['renewal',1]},
+  {id:'renewals', name:'Renewals & risk', cols:['name','health','score','attn','lastcall','renewal','price','bneck'], who:'active', sort:['renewal',1]},
   {id:'results', name:'Results', cols:['name','leads','close','lconv','spu','cpl90','bneck'], who:'active', sort:['bneck',1]},
   {id:'revenue', name:'Revenue', cols:['name','price','plan','tenure','ref','refs'], who:'active', sort:['price',-1]},
   {id:'churn', name:'Churn', cols:['name','cxon','churn','ctrl','tenure','price'], who:'cancelled', sort:['cxon',-1]},
@@ -1344,6 +1369,7 @@ function renderTable(){
       case 'price': return `<td>${c.price?money(c.price):''}</td>`;
       case 'manager': return `<td>${esc(c.manager||'')}</td>`;
       case 'location': return `<td>${esc(c.location||'')}</td>`;
+      case 'lastcall': { const x = latestCall(c); if(!x) return '<td></td>'; return `<td>${esc(fmtDate(x.date))}${x.risk && CALL_RISK[x.risk] && x.risk !== 'low' ? ` <span class="tchip ${CALL_RISK[x.risk].tone}">${CALL_RISK[x.risk].label}</span>` : ''}</td>`; }
       case 'cxon': return `<td>${isGone(c)?esc(fmtDate(c.cancelledOn)):''}</td>`;
       case 'gaps': { const g = gapsOf(c); return `<td style="white-space:normal;min-width:220px">${g.length ? g.map(x => `<span class="tchip amber">${esc(x)}</span>`).join(' ') : '<span style="color:var(--muted)">None</span>'}</td>`; }
       case 'ref': { const r = byId(c.referredBy); return `<td>${r?`<button class="linkbtn" data-go="${esc(r.id)}">${esc(r.name)}</button>`:esc(c.referredByOther||'')}</td>`; }
@@ -1849,8 +1875,8 @@ const RULE_INFO = [
   {k:'minMetaLeads', label:'Enough data: Meta leads (90 days)', unit:'leads', why:'Cost-per-lead rankings need at least this many Meta leads.'},
 ];
 let RULES = Object.assign({}, RULE_DEFAULTS), TARGETS = {}, settingsLoaded = false;
-function applySettings(s){ RULES = Object.assign({}, RULE_DEFAULTS, (s && s.rules) || {}); TARGETS = Object.assign({}, (s && s.targets) || {}); TEAM_VIEWS = ((s && s.views) || []).map(v => Object.assign({}, v, {team:true})); settingsLoaded = true; }
-async function persistSettings(){ try { await SETTINGS_IO.save({rules: RULES, targets: TARGETS, views: TEAM_VIEWS.map(v => ({id:v.id, name:v.name, cols:v.cols, who:v.who, sort:v.sort}))}); toast('Saved'); } catch(e){ writeError(e); } }
+function applySettings(s){ RULES = Object.assign({}, RULE_DEFAULTS, (s && s.rules) || {}); TARGETS = Object.assign({}, (s && s.targets) || {}); TEAM_VIEWS = ((s && s.views) || []).map(v => Object.assign({}, v, {team:true})); OTTER_META = (s && s.otter) || null; settingsLoaded = true; }
+async function persistSettings(){ try { await SETTINGS_IO.save({rules: RULES, targets: TARGETS, views: TEAM_VIEWS.map(v => ({id:v.id, name:v.name, cols:v.cols, who:v.who, sort:v.sort})), otter: OTTER_META}); toast('Saved'); } catch(e){ writeError(e); } }
 
 /* ================= book-level numbers ================= */
 const priceOf = c => +c.price || 0;
@@ -1926,6 +1952,7 @@ function topOfMind(B){
     if(c.health === 'red' && sb.score != null) add(Math.max(0, 60 - sb.score) * 0.5, 'Low score', 'red');
     const r = nextRenewal(c);
     if(r){ const d = days(TODAY, r); if(d <= RULES.renewRed) add(30, `Renews in ${d} days`, 'red'); else if(d <= RULES.renewAmber) add(20, `Renews in ${d} days`, 'amber'); else if(d <= RULES.renewInfo) add(10, `Renews in ${d} days`, 'muted'); }
+    const cr = callRisk(c); if(cr) add(cr.risk === 'high' ? 25 : 12, 'Call: ' + (cr.riskNote.length > 60 ? cr.riskNote.slice(0,57) + '…' : cr.riskNote), cr.risk === 'high' ? 'red' : 'amber');
     const p = priceOf(c);
     if(p) add(Math.min(2.5, p / avg) * 12, `${money(p)}/mo` + (p >= avg * 1.5 ? ` (${(p/avg).toFixed(1)}× avg)` : ''), p >= avg * 1.5 ? 'amber' : 'muted');
     const refs = referralsOf(c.id).filter(x => !isGone(x)).length;
@@ -1952,6 +1979,7 @@ function topOfMindHTML(B){
       <li><b>Revenue:</b> 12 points × the account's price compared with the average (${money(B.arpa)}), capped at 30.</li>
       <li><b>Referral network:</b> 5 per active client they referred, capped at 20. Losing them can cost more than one account.</li>
       <li><b>New client:</b> 10 in the first 120 days, when early churn is most likely.</li>
+      <li><b>Risk raised on a call (last 14 days):</b> high 25, watch 12.</li>
       <li><b>No contact:</b> 10 after ${RULES.contactAmber} days without contact. <b>No results logged last month:</b> 5, because you're flying blind.</li></ul></details></section>`;
 }
 
@@ -2053,6 +2081,7 @@ function renderInsights(){
     ${topOfMindHTML(B)}
     ${scorecardHTML(B)}
     ${tierHead(1, 'Act this week', 'Check daily or weekly', 'Clients and revenue that need someone to do something now.')}
+    ${callsInsightsHTML(B)}
     ${t1}
     ${tierHead(2, 'Health of the book', 'Review monthly', 'Is the agency growing, holding revenue, and spreading risk well?')}
     ${t2}
@@ -2154,7 +2183,8 @@ What the fields mean:
 - price: the client's monthly retainer in USD. MRR = sum of active clients' prices.
 - plan and nextRenewal: contracts renew in blocks of the plan's term from the start date (since).
 - health: green = Healthy, yellow = Watch, red = At risk. It comes from the scoreboard score unless healthSource is "manual" (a person overrode it).
-- flags: the client's current red or amber alerts (renewals coming up, health, no recent contact).
+- flags: the client's current red or amber alerts (renewals coming up, health, risk raised on a recent call, no recent contact).
+- recentCalls: summaries of weekly strategy calls from Otter.ai (AI-generated; may be wrong). risk high/medium means something on the call needs attention.
 - scoreboard: a snapshot from GS Team Scoreboard read on 2026-10-08. score is 0-100; band is on track / watch / at risk; the score's formula is not known.
 - scoreboard.allMonths and aug2026: monthly results logged by the team. "closed" is TOTAL sign-ups from the gym's membership system, including family members, walk-ins, referrals and reactivations, so closed can exceed showed. Whenever you use closed (close rate, % of leads converted, ad spend per sign-up), mark it with an asterisk and note it is approximate. Results are logged about 10 days after each month ends; many months are missing; August 2026 is the latest. months = how many months were logged.
 - meta90: Meta ad spend, leads and cost per lead over the last 90 days (as of the snapshot).
@@ -2183,6 +2213,7 @@ function askDataset(){
     if(c.notes) o.notes = c.notes;
     if(!isGone(c) && c.sb){ const bn = bottleneckOf(c); o.bottleneck = bn.status === 'found' ? {step:bn.step.label, value:bn.step.v, typical:bn.step.m} : bn.status; o.enoughData = enoughData(c); }
     if(c.tests && c.tests.length) o.tests = c.tests;
+    const cl = callsOf(c).slice(0,4); if(cl.length) o.recentCalls = cl.map(x => ({date:x.date, mood:x.mood, risk:x.risk, riskNote:x.riskNote, summary:x.summary || 'no Otter summary', wins:x.wins, concerns:x.concerns, nextSteps:x.actions}));
     if(sb.id) o.scoreboard = {score:sb.score ?? null, band:sb.health || '', weeklyCall:sb.callDay ? sb.callDay + ' ' + sb.callTime : '',
       allMonths:L ? {months:L.months, leads:L.leads, booked:L.booked, showed:L.showed, closed:L.closed, adSpend:L.adSpend, avgGymRevenue:L.avgGymRevenue} : null,
       aug2026:A ? {leads:A.leads, booked:A.booked, showed:A.showed, closed:A.closed, adSpend:A.adSpend} : null,
@@ -2408,7 +2439,8 @@ function reportData(c){
   const good = metrics.filter(x => x.change != null && (x.higherBetter ? x.change >= 0.1 : x.change <= -0.1));
   const bad = metrics.filter(x => x.change != null && (x.higherBetter ? x.change <= -0.1 : x.change >= 0.1));
   const tests = (c.tests||[]).filter(t => !t.result || (t.end && days(t.end, TODAY) <= 45));
-  return {c, L, A, per, metrics, good, bad, b, tests, enough: enoughData(c), thin: thinReason(c)};
+  const calls = callsOf(c).filter(x => x.summary && days(x.date, TODAY) <= 31);
+  return {c, L, A, per, metrics, good, bad, b, tests, calls, enough: enoughData(c), thin: thinReason(c)};
 }
 function reportHTML(d, narrative){
   const c = d.c, s = svcById(c.serviceId);
@@ -2425,6 +2457,7 @@ function reportHTML(d, narrative){
     : `<section><h2>Results</h2><p>${d.L ? `No results are logged for August yet. Across ${d.L.months} logged months: ${d.L.leads.toLocaleString('en-US')} leads, ${d.L.booked} booked, ${Math.max(0,d.L.showed)} showed and ${d.L.closed} closed*, on ${money(d.L.adSpend)} of ad spend.` : 'No results have been logged for this client yet.'}</p></section>`}
     <section><h2>The one thing to fix</h2>${d.b.status === 'found' ? `<p><b>${esc(d.b.step.label)}.</b> ${esc(d.b.step.what)} is ${d.b.step.fmt(d.b.step.v)}, against a typical ${d.b.step.fmt(d.b.step.m)} across GS clients.</p><p>${esc(d.b.step.fix)}</p>` : d.b.status === 'clear' ? '<p>No single step stands out: every part of the funnel is close to typical or better. The focus is volume and consistency.</p>' : `<p>Not enough reliable data yet to name one (${esc(d.b.why || 'no results logged')}).</p>`}</section>
     <section><h2>Return on ad spend</h2>${d.L && d.L.closed > 0 ? `<p>Across all logged months, every ${money(d.L.adSpend / d.L.closed)} of ad spend has produced one new sign-up*. That is ${Math.round(d.L.closed / d.L.adSpend * 1000)} sign-ups per $1,000.${d.L.avgGymRevenue ? ` The gym reports about ${money(d.L.avgGymRevenue)} in monthly revenue on average.` : ''}</p>` : '<p>Not enough logged results to calculate yet.</p>'}${d.thin ? `<p class="rp-note">Early numbers: ${esc(d.thin)}. Expect these to move as more months come in.</p>` : ''}</section>
+    ${d.calls && d.calls.length ? `<section><h2>What we discussed</h2><ul>${d.calls.map(x => `<li><b>${esc(fmtDate(x.date))}:</b> ${esc(x.summary)}${x.actions && x.actions.length ? ` Next: ${esc(x.actions.slice(0,2).join('; '))}.` : ''}</li>`).join('')}</ul></section>` : ''}
     ${d.tests.length ? `<section><h2>What we're testing</h2><ul>${d.tests.map(t => `<li>${esc(t.change)} (${esc(t.area)}, ${t.result ? esc(TEST_RESULTS[t.result]).toLowerCase() : 'running since ' + esc(fmtDate(t.start))})</li>`).join('')}</ul></section>` : ''}
     <p class="rp-note">*Closed counts every new member from the gym's membership system, including family members, walk-ins, referrals and reactivations, so close rate and cost per sign-up are approximate.</p>
   </article>`;
@@ -2464,6 +2497,127 @@ function saveFile(filename, data, type){
   const url = URL.createObjectURL(new Blob([data], {type})); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); toast('Downloaded');
 }
 const REPORT_CSS = `body{font-family:Barlow,'Segoe UI',Arial,sans-serif;color:#0d1b2a;max-width:760px;margin:24px auto;padding:0 16px}.report header{display:flex;gap:14px;align-items:center;border-bottom:3px solid #F5A623;padding-bottom:12px;margin-bottom:12px}.rp-badge{width:44px;height:44px;border-radius:50%;background:#F5A623;display:grid;place-items:center;font-weight:800}.report h1{margin:0;font-size:26px}.report h2{font-size:17px;margin:16px 0 6px}.report table{border-collapse:collapse;width:100%;font-size:14px}.report th,.report td{text-align:left;padding:5px 8px;border-bottom:1px solid #d6dde6}.rp-up{color:#21612a;font-weight:600}.rp-down{color:#c2343f;font-weight:600}.rp-note{font-size:12px;color:#5b6b7c}.rp-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}`;
+
+
+/* ================= calls (Otter.ai) ================= */
+const CALL_RISK = {high:{label:'High risk', tone:'red'}, medium:{label:'Watch', tone:'amber'}, low:{label:'Minor', tone:'muted'}};
+const MOOD = {positive:'Positive', neutral:'Neutral', concerned:'Concerned'};
+let OTTER_META = null;
+const callsOf = c => (c.calls || []).slice().sort((a,b) => (b.date||'').localeCompare(a.date||''));
+const latestCall = c => callsOf(c)[0] || null;
+function callRisk(c){
+  const recent = callsOf(c).filter(x => x.risk && (x.risk === 'high' || x.risk === 'medium') && days(x.date, TODAY) <= 14);
+  return recent.find(x => x.risk === 'high') || recent[0] || null;
+}
+function callCardHTML(x, open){
+  if(!x.summary) return `<div class="entry"><div class="meta"><span>${esc(fmtDate(x.date))}</span><span>${x.mins} min</span></div><p class="empty" style="margin:2px 0 0">Otter has no summary or transcript for this call. <a href="${esc(x.url)}" target="_blank" rel="noopener">Open in Otter</a></p></div>`;
+  const list = (t, a) => a && a.length ? `<p style="margin:6px 0 2px;font-weight:600">${t}</p><ul class="call-ul">${a.map(i => `<li>${esc(i)}</li>`).join('')}</ul>` : '';
+  return `<div class="entry"><div class="meta"><span>${esc(fmtDate(x.date))}</span><span>${x.mins} min</span>${x.mood?`<span class="tchip ${x.mood==='concerned'?'red':x.mood==='positive'?'':'muted'}">${esc(MOOD[x.mood])}</span>`:''}${x.risk && CALL_RISK[x.risk]?`<span class="tchip ${CALL_RISK[x.risk].tone}">${esc(CALL_RISK[x.risk].label)}</span>`:''}</div>
+    ${x.riskNote?`<p style="margin:4px 0 0"><b>${esc(x.riskNote)}</b></p>`:''}
+    <p style="margin:4px 0 0">${esc(x.summary)}</p>
+    ${open ? list('Wins', x.wins) + list('Concerns', x.concerns) + list('GS next steps', x.actions) : ''}
+    <p style="margin:4px 0 0;font-size:12px"><a href="${esc(x.url)}" target="_blank" rel="noopener">Open in Otter</a></p></div>`;
+}
+function callsPanelHTML(c){
+  const cs = callsOf(c); if(!cs.length) return '';
+  const m30 = cs.filter(x => days(x.date, TODAY) <= 31);
+  return `<div class="log"><h3>Calls</h3><p class="empty" style="margin:0 0 4px;font-size:12px">From Otter.ai. Summaries are AI-generated, so check the recording before acting on anything important.</p>
+    ${callCardHTML(cs[0], true)}
+    ${cs.length > 1 ? `<details class="tom-how"><summary>Earlier calls (${cs.length - 1})</summary>${cs.slice(1).map(x => callCardHTML(x, false)).join('')}</details>` : ''}
+    <p class="empty" style="margin:6px 0 0">Last 30 days: ${m30.length} ${m30.length===1?'call':'calls'}${m30.filter(x=>x.risk==='high').length?`, ${m30.filter(x=>x.risk==='high').length} high risk`:''}.</p></div>`;
+}
+function callsInsightsHTML(B){
+  const since = addMonths(TODAY, 0); // placeholder for clarity
+  const wk = B.all.flatMap(c => callsOf(c).filter(x => days(x.date, TODAY) <= 10).map(x => ({c, x})));
+  const uniq = new Map(); wk.forEach(r => uniq.set(r.x.id + r.c.id, r));
+  const rows = [...uniq.values()];
+  const risky = rows.filter(r => r.x.risk === 'high' || r.x.risk === 'medium').sort((a,b) => (a.x.risk === 'high' ? 0 : 1) - (b.x.risk === 'high' ? 0 : 1));
+  const noSum = rows.filter(r => !r.x.summary);
+  const called = new Set(rows.map(r => r.c.id));
+  const notCalled = B.active.filter(c => !called.has(c.id));
+  const um = (OTTER_META && OTTER_META.unmatched) || [];
+  return `<section class="card wide"><h2>This week's calls</h2><p class="sub">From Otter.ai${OTTER_META && OTTER_META.syncedAt ? `, last synced ${esc(fmtDate(OTTER_META.syncedAt))} (${esc(OTTER_META.range || '')})` : ''}. Risk is judged from each call's summary, so open the recording before acting.</p>
+    <div class="stats"><div class="stat"><b>${new Set(rows.map(r=>r.x.id)).size}</b><span>Calls</span></div><div class="stat"><b style="color:#F85149">${risky.filter(r=>r.x.risk==='high').length}</b><span>High risk</span></div><div class="stat"><b style="color:#E3B341">${risky.filter(r=>r.x.risk==='medium').length}</b><span>Watch</span></div><div class="stat"><b>${noSum.length}</b><span>No Otter summary</span></div><div class="stat"><b>${notCalled.length}</b><span>Active, no call recorded</span></div></div>
+    ${risky.length ? `<ul class="ilist">${risky.map(r => `<li><button data-go="${esc(r.c.id)}">${mini(r.c)}<span class="nm2">${esc(r.c.name)}</span><span class="why" style="white-space:normal;max-width:60%">${esc(r.x.riskNote)}</span><span class="dot" style="background:${r.x.risk==='high'?'#F85149':'#E3B341'}"></span></button></li>`).join('')}</ul>` : ''}
+    ${noSum.length ? `<p class="empty">No summary or transcript in Otter: ${[...new Set(noSum.map(r => r.c.name))].map(esc).join(', ')}.</p>` : ''}
+    ${notCalled.length ? `<p class="empty">Active clients with no call recorded this week: ${notCalled.map(c => esc(c.name)).join(', ')}.</p>` : ''}
+    ${um.length ? `<p class="empty">Calls that don't match a client: ${um.map(u => esc(u.title) + (u.note ? ' (' + esc(u.note) + ')' : '')).join('; ')}.</p>` : ''}</section>`;
+}
+
+
+/* ================= call summaries view ================= */
+const callUI = {q:'', risk:'all', mood:'all', week:''};
+const weekOf = d => { const t = parse(d); const wd = (t.getDay() + 6) % 7; t.setDate(t.getDate() - wd); return iso(t); };
+function allCalls(){
+  const m = new Map();
+  S.clients.forEach(c => callsOf(c).forEach(x => { const e = m.get(x.id) || Object.assign({}, x, {clients: []}); e.clients.push(c); m.set(x.id, e); }));
+  return [...m.values()].sort((a,b) => (b.date||'').localeCompare(a.date||'') || (a.clients[0].name).localeCompare(b.clients[0].name));
+}
+function callDigest(list, week){
+  const line = x => `- ${x.clients.map(c => c.name).join(' / ')} (${fmtDate(x.date, true)})${x.riskNote ? ': ' + x.riskNote : ''}`;
+  const hi = list.filter(x => x.risk === 'high'), md = list.filter(x => x.risk === 'medium');
+  const wins = list.filter(x => x.mood === 'positive' && x.wins && x.wins.length);
+  const none = list.filter(x => !x.summary);
+  const called = new Set(list.flatMap(x => x.clients.map(c => c.id)));
+  const notCalled = S.clients.filter(c => !isGone(c) && !called.has(c.id));
+  return [`Call summaries, week of ${fmtDate(week)} (${list.length} calls)`,
+    hi.length ? `\nHigh risk:\n${hi.map(line).join('\n')}` : '',
+    md.length ? `\nWatch:\n${md.map(line).join('\n')}` : '',
+    wins.length ? `\nWins:\n${wins.map(x => `- ${x.clients.map(c => c.name).join(' / ')}: ${x.wins[0]}`).join('\n')}` : '',
+    none.length ? `\nNo Otter summary: ${none.map(x => x.clients.map(c => c.name).join(' / ')).join(', ')}` : '',
+    notCalled.length ? `\nNo call recorded: ${notCalled.map(c => c.name).join(', ')}` : ''].filter(Boolean).join('\n');
+}
+function renderCallsView(){
+  const el = $('callsView'); if(!el) return;
+  const calls = allCalls();
+  const weeks = [...new Set(calls.map(x => weekOf(x.date)))].sort().reverse();
+  if(!callUI.week || (callUI.week !== 'all' && !weeks.includes(callUI.week))) callUI.week = weeks[0] || 'all';
+  const q = callUI.q.toLowerCase();
+  const inWeek = calls.filter(x => callUI.week === 'all' || weekOf(x.date) === callUI.week);
+  const shown = inWeek.filter(x =>
+    (callUI.risk === 'all' || (callUI.risk === 'flagged' ? (x.risk === 'high' || x.risk === 'medium') : callUI.risk === 'nosummary' ? !x.summary : x.risk === callUI.risk)) &&
+    (callUI.mood === 'all' || x.mood === callUI.mood) &&
+    (!q || x.clients.some(c => c.name.toLowerCase().includes(q)) || [x.summary, x.riskNote].concat(x.wins||[], x.concerns||[], x.actions||[]).join(' ').toLowerCase().includes(q)));
+  const order = {high:0, medium:1, low:2, '':3};
+  shown.sort((a,b) => (callUI.risk === 'all' ? (order[a.risk||'']??3) - (order[b.risk||'']??3) : 0) || (b.date||'').localeCompare(a.date||''));
+  const called = new Set(inWeek.flatMap(x => x.clients.map(c => c.id)));
+  const notCalled = callUI.week === 'all' ? [] : S.clients.filter(c => !isGone(c) && !called.has(c.id));
+  const um = (OTTER_META && OTTER_META.unmatched) || [];
+  const list = (t, a, cls) => a && a.length ? `<div><p class="cs-h">${t}</p><ul class="call-ul ${cls||''}">${a.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>` : '';
+  const card = x => `<article class="card cs-card ${x.risk==='high'?'cs-high':x.risk==='medium'?'cs-med':''}">
+      <div class="cs-top"><div class="cs-who">${x.clients.map(c => `<button class="linkbtn cs-name" data-go="${esc(c.id)}">${mini(c)} ${esc(c.name)}</button>`).join(' ')}</div>
+        <div class="cs-meta"><span>${esc(fmtDate(x.date))}</span><span>${x.mins} min</span>${x.mood?`<span class="tchip ${x.mood==='concerned'?'red':x.mood==='positive'?'':'muted'}">${esc(MOOD[x.mood])}</span>`:''}${x.risk && CALL_RISK[x.risk]?`<span class="tchip ${CALL_RISK[x.risk].tone}">${esc(CALL_RISK[x.risk].label)}</span>`:''}<a href="${esc(x.url)}" target="_blank" rel="noopener">Open in Otter</a></div></div>
+      ${x.summary ? `${x.riskNote ? `<p class="cs-risk">${esc(x.riskNote)}</p>` : ''}<p style="margin:6px 0 0">${esc(x.summary)}</p>
+        <div class="cs-cols">${list('Wins', x.wins)}${list('Concerns', x.concerns)}${list('GS next steps', x.actions)}</div>`
+        : '<p class="empty" style="margin:6px 0 0">Otter has no summary or transcript for this call. Open the recording to review it.</p>'}
+    </article>`;
+  el.innerHTML = `<div class="insights">
+    <section class="card wide"><div class="tier-head"><div><h2>Call summaries</h2><p class="sub">Weekly strategy calls from Otter.ai${OTTER_META && OTTER_META.syncedAt ? `, last synced ${esc(fmtDate(OTTER_META.syncedAt))}` : ''}. Summaries and risk ratings are AI-generated, so open the recording before acting on anything important.</p></div>
+      ${calls.length ? '<button class="btn small" id="csDigest">Copy weekly digest</button>' : ''}</div>
+      ${calls.length ? `<div class="cs-filters">
+        <label class="sel">Week <select id="csWeek">${weeks.map(w => `<option value="${w}" ${callUI.week===w?'selected':''}>Week of ${esc(fmtDate(w))}</option>`).join('')}<option value="all" ${callUI.week==='all'?'selected':''}>All weeks</option></select></label>
+        <label class="sel">Show <select id="csRisk"><option value="all">All calls</option><option value="flagged" ${callUI.risk==='flagged'?'selected':''}>Flagged (high + watch)</option><option value="high" ${callUI.risk==='high'?'selected':''}>High risk</option><option value="medium" ${callUI.risk==='medium'?'selected':''}>Watch</option><option value="nosummary" ${callUI.risk==='nosummary'?'selected':''}>No Otter summary</option></select></label>
+        <label class="sel">Mood <select id="csMood"><option value="all">Any</option>${Object.entries(MOOD).map(([k,v]) => `<option value="${k}" ${callUI.mood===k?'selected':''}>${v}</option>`).join('')}</select></label>
+        <input class="search" id="csQ" placeholder="Search clients, wins, concerns, next steps" value="${esc(callUI.q)}" style="max-width:340px">
+      </div>
+      <div class="stats" style="margin-top:10px"><div class="stat"><b>${inWeek.length}</b><span>Calls</span></div><div class="stat"><b style="color:#F85149">${inWeek.filter(x=>x.risk==='high').length}</b><span>High risk</span></div><div class="stat"><b style="color:#E3B341">${inWeek.filter(x=>x.risk==='medium').length}</b><span>Watch</span></div><div class="stat"><b style="color:#3FB950">${inWeek.filter(x=>x.mood==='positive').length}</b><span>Positive</span></div><div class="stat"><b>${inWeek.filter(x=>!x.summary).length}</b><span>No summary</span></div>${callUI.week!=='all'?`<div class="stat"><b>${notCalled.length}</b><span>Active, no call recorded</span></div>`:''}</div>
+      ${notCalled.length ? `<p class="empty" style="margin:0">No call recorded this week: ${notCalled.map(c => `<button class="linkbtn" data-go="${esc(c.id)}">${esc(c.name)}</button>`).join(', ')}.</p>` : ''}
+      ${um.length ? `<p class="empty" style="margin:4px 0 0">Not matched to a client: ${um.map(u => esc(u.title) + (u.note ? ' (' + esc(u.note) + ')' : '')).join('; ')}.</p>` : ''}`
+      : '<p class="empty">No calls synced yet. Ask Claude to "sync this week\'s calls" to pull them from Otter.</p>'}</section>
+    ${calls.length ? `<p class="empty" style="margin:4px 2px 10px">${shown.length} ${shown.length===1?'call':'calls'} shown${callUI.risk==='all'?', high risk first':''}.</p><div class="cs-list">${shown.map(card).join('') || '<p class="empty">No calls match these filters.</p>'}</div>` : ''}
+  </div>`;
+  el.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => selectClient(b.dataset.go, true)));
+  const re = () => { const y = el.querySelector('.insights').scrollTop; renderCallsView(); el.querySelector('.insights').scrollTop = y; };
+  if($('csWeek')) $('csWeek').addEventListener('change', e => { callUI.week = e.target.value; re(); });
+  if($('csRisk')) $('csRisk').addEventListener('change', e => { callUI.risk = e.target.value; re(); });
+  if($('csMood')) $('csMood').addEventListener('change', e => { callUI.mood = e.target.value; re(); });
+  if($('csQ')) $('csQ').addEventListener('input', e => { callUI.q = e.target.value; const pos = e.target.selectionStart; re(); const n = $('csQ'); n.focus(); n.setSelectionRange(pos, pos); });
+  if($('csDigest')) $('csDigest').addEventListener('click', async () => {
+    const w = callUI.week === 'all' ? (weeks[0] || TODAY) : callUI.week;
+    const txt = callDigest(calls.filter(x => weekOf(x.date) === w), w);
+    try { await navigator.clipboard.writeText(txt); toast('Weekly digest copied. Paste it into Slack or an email.'); } catch(e){ toast('Copy failed.'); }
+  });
+}
 
 /* ================= boot ================= */
 setView(ui.view);
